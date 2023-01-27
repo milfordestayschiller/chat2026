@@ -1,0 +1,102 @@
+html {
+    height: 100vh;
+}
+body {
+    min-height: 100vh;
+}
+
+/************************
+ * Main CSS Grid Layout *
+ ************************/
+
+.chat-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 0, 0, 0.2);
+    padding: 10px;
+
+    display: grid;
+    column-gap: 10px;
+    row-gap: 10px;
+    grid-template-columns: 260px 1fr 260px;
+    grid-template-rows: 1fr auto;
+}
+
+/* Left column: DMs and channels */
+.chat-container > .left-column {
+    grid-column: 1;
+    overflow: hidden;
+}
+
+/* Main column: chat history */
+.chat-container > .chat-column {
+    grid-column: 2;
+    grid-row: 1;
+    background-color: yellow;
+    overflow: hidden;
+}
+
+/* Footer row: message entry box */
+.chat-container > .chat-footer {
+    grid-column: 1 / 4;
+    grid-row: 2 / 2;
+}
+
+/* Right column: Who List */
+.chat-container > .right-column {
+    grid-column: 3;
+    overflow: hidden;
+}
+
+/***********************************************
+ * Reusable CSS Grid-based Bulma Card layouts  *
+ * with a fixed header, full size scrollable   *
+ * content, and (optionally) video-feeds under *
+ * the header (main chat card only)            *
+ ***********************************************/
+
+.grid-card {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+}
+
+.grid-card > .card-header {
+    grid-row: 1;
+}
+
+.grid-card > .video-feeds {
+    grid-row: 2;
+}
+
+.grid-card > .card-content {
+    grid-row: 3;
+    /* background-color: magenta; */
+    overflow-y: scroll;
+}
+
+/*******************
+ * Video Feeds CSS *
+ *******************/
+
+.video-feeds {
+    background-color: yellow;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: scroll;
+
+    display: flex;
+    align-items: left;
+}
+
+.video-feeds > .feed {
+    flex: 10 0 auto;
+    width: 120px;
+    height: 80px;
+    background-color: black;
+    margin: 5px;
+}
