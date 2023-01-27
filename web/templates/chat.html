@@ -223,7 +223,8 @@
                                 <div class="column">[[ u.username ]]</div>
                                 <div class="column is-narrow">
                                     <button type="button" class="button is-small"
-                                        :disabled="!u.videoActive">
+                                        :disabled="!u.videoActive"
+                                        @click="openVideo(u)">
                                         <i class="fa fa-video"></i>
                                     </button>
                                 </div>

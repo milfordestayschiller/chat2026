@@ -3,6 +3,7 @@ package barertc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -61,12 +62,14 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnMessage(sub, msg)
 			case ActionMe:
 				s.OnMe(sub, msg)
+			case ActionOpen:
+				s.OnOpen(sub, msg)
+			case ActionCandidate:
+				s.OnCandidate(sub, msg)
+			case ActionSDP:
+				s.OnSDP(sub, msg)
 			default:
-				sub.SendJSON(Message{
-					Action:   ActionMessage,
-					Username: "ChatServer",
-					Message:  "Unsupported message type.",
-				})
+				sub.ChatServer("Unsupported message type.")
 			}
 		}
 	}()
@@ -88,6 +91,15 @@ func (sub *Subscriber) SendMe() {
 		Action:      ActionMe,
 		Username:    sub.Username,
 		VideoActive: sub.VideoActive,
+	})
+}
+
+// ChatServer is a convenience function to deliver a ChatServer error to the client.
+func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
+	sub.SendJSON(Message{
+		Action:   ActionError,
+		Username: "ChatServer",
+		Message:  fmt.Sprintf(message, v...),
 	})
 }
 
@@ -152,6 +164,18 @@ func (s *Server) AddSubscriber(sub *Subscriber) {
 	s.subscribersMu.Unlock()
 }
 
+// GetSubscriber by username.
+func (s *Server) GetSubscriber(username string) (*Subscriber, error) {
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+	for _, sub := range s.IterSubscribers(true) {
+		if sub.Username == username {
+			return sub, nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
 // DeleteSubscriber removes a subscriber from the server.
 func (s *Server) DeleteSubscriber(sub *Subscriber) {
 	log.Error("DeleteSubscriber: %s", sub.Username)
@@ -162,31 +186,24 @@ func (s *Server) DeleteSubscriber(sub *Subscriber) {
 
 // IterSubscribers loops over the subscriber list with a read lock. If the
 // caller already holds a lock, pass the optional `true` parameter for isLocked.
-func (s *Server) IterSubscribers(isLocked ...bool) chan *Subscriber {
-	var out = make(chan *Subscriber)
-	go func() {
-		log.Debug("IterSubscribers START..")
+func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
+	log.Debug("IterSubscribers START..")
 
-		var result = []*Subscriber{}
+	var result = []*Subscriber{}
 
-		// Has the caller already taken the read lock or do we get it?
-		if locked := len(isLocked) > 0 && isLocked[0]; !locked {
-			log.Debug("Taking the lock")
-			s.subscribersMu.RLock()
-			defer s.subscribersMu.RUnlock()
-		}
+	// Has the caller already taken the read lock or do we get it?
+	if locked := len(isLocked) > 0 && isLocked[0]; !locked {
+		log.Debug("Taking the lock")
+		s.subscribersMu.RLock()
+		defer s.subscribersMu.RUnlock()
+	}
 
-		for sub := range s.subscribers {
-			result = append(result, sub)
-		}
+	for sub := range s.subscribers {
+		result = append(result, sub)
+	}
 
-		for _, r := range result {
-			out <- r
-		}
-		close(out)
-		log.Debug("IterSubscribers STOP!")
-	}()
-	return out
+	log.Debug("IterSubscribers STOP..")
+	return result
 }
 
 // Broadcast a message to the chat room.
@@ -194,7 +211,7 @@ func (s *Server) Broadcast(msg Message) {
 	log.Debug("Broadcast: %+v", msg)
 	s.subscribersMu.RLock()
 	defer s.subscribersMu.RUnlock()
-	for sub := range s.IterSubscribers(true) {
+	for _, sub := range s.IterSubscribers(true) {
 		sub.SendJSON(Message{
 			Action:   msg.Action,
 			Username: msg.Username,
@@ -205,15 +222,19 @@ func (s *Server) Broadcast(msg Message) {
 
 // SendWhoList broadcasts the connected members to everybody in the room.
 func (s *Server) SendWhoList() {
-	var users = []WhoList{}
-	for sub := range s.IterSubscribers() {
+	var (
+		users       = []WhoList{}
+		subscribers = s.IterSubscribers()
+	)
+
+	for _, sub := range subscribers {
 		users = append(users, WhoList{
 			Username:    sub.Username,
 			VideoActive: sub.VideoActive,
 		})
 	}
 
-	for sub := range s.IterSubscribers() {
+	for _, sub := range subscribers {
 		sub.SendJSON(Message{
 			Action:  ActionWhoList,
 			WhoList: users,

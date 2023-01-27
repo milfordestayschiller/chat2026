@@ -16,12 +16,7 @@ func IndexPage() http.HandlerFunc {
 		tmpl.Funcs(template.FuncMap{
 			// Cache busting random string for JS and CSS dependency.
 			"CacheHash": func() string {
-				const charset = "abcdefghijklmnopqrstuvwxyz"
-				var result = make([]byte, 8)
-				for i := 0; i < 8; i++ {
-					result[i] = charset[rand.Intn(len(charset))]
-				}
-				return string(result)
+				return RandomString(8)
 			},
 		})
 		tmpl, err := tmpl.ParseFiles("web/templates/chat.html")
@@ -33,4 +28,14 @@ func IndexPage() http.HandlerFunc {
 		log.Info("Index route hit")
 		tmpl.ExecuteTemplate(w, "index", nil)
 	})
+}
+
+// RandomString returns a random string of any length.
+func RandomString(n int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz"
+	var result = make([]byte, n)
+	for i := 0; i < n; i++ {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(result)
 }

@@ -1,5 +1,13 @@
 console.log("BareRTC!");
 
+// WebRTC configuration.
+const configuration = {
+    iceServers: [{
+        urls: 'stun:stun.l.google.com:19302'
+    }]
+};
+
+
 const app = Vue.createApp({
     delimiters: ['[[', ']]'],
     data() {
@@ -25,6 +33,15 @@ const app = Vue.createApp({
                 active: false,
                 elem: null,   // <video id="localVideo"> element
                 stream: null, // MediaStream object
+            },
+
+            // WebRTC sessions with other users.
+            WebRTC: {
+                // Streams per username.
+                streams: {},
+
+                // RTCPeerConnections per username.
+                pc: {},
             },
 
             // Chat history.
@@ -54,6 +71,10 @@ const app = Vue.createApp({
             this.loginModal.visible = false;
             this.dial();
         },
+
+        /**
+         * Chat API Methods (WebSocket packets sent/received)
+         */
 
         sendMessage() {
             if (!this.message) {
@@ -87,9 +108,34 @@ const app = Vue.createApp({
             // in our choice of username.
             if (this.username != msg.username) {
                 this.ChatServer(`Your username has been changed to ${msg.username}.`);
+                this.username = msg.username;
             }
 
             this.ChatClient(`User sync from backend: ${JSON.stringify(msg)}`);
+        },
+
+        // Send a video request to access a user's camera.
+        sendOpen(username) {
+            this.ws.conn.send(JSON.stringify({
+                action: "open",
+                username: username,
+            }));
+        },
+        onOpen(msg) {
+            // Response for the opener to begin WebRTC connection.
+            const secret = msg.openSecret;
+            console.log("OPEN: connect to %s with secret %s", msg.username, secret);
+            this.ChatClient(`Connecting to stream for ${msg.username}.`);
+
+            this.startWebRTC(msg.username, true);
+        },
+        onRing(msg) {
+            // Message for the receiver to begin WebRTC connection.
+            const secret = msg.openSecret;
+            console.log("RING: connection from %s with secret %s", msg.username, secret);
+            this.ChatServer(`${msg.username} has opened your camera.`);
+
+            this.startWebRTC(msg.username, false);
         },
 
         // Handle messages sent in chat.
@@ -102,6 +148,7 @@ const app = Vue.createApp({
 
         // Dial the WebSocket connection.
         dial() {
+            console.log("Dialing WebSocket...");
             const conn = new WebSocket(`ws://${location.host}/ws`);
 
             conn.addEventListener("close", ev => {
@@ -152,6 +199,24 @@ const app = Vue.createApp({
                             message: msg.message,
                         });
                         break;
+                    case "ring":
+                        this.onRing(msg);
+                        break;
+                    case "open":
+                        this.onOpen(msg);
+                        break;
+                    case "candidate":
+                        this.onCandidate(msg);
+                        break;
+                    case "sdp":
+                        this.onSDP(msg);
+                        break;
+                    case "error":
+                        this.pushHistory({
+                            username: msg.username || 'Internal Server Error',
+                            message: msg.message,
+                            isChatServer: true,
+                        });
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
                 }
@@ -159,6 +224,120 @@ const app = Vue.createApp({
 
             this.ws.conn = conn;
         },
+
+        /**
+         * WebRTC concerns.
+         */
+
+        // Start WebRTC with the other username.
+        startWebRTC(username, isOfferer) {
+            this.ChatClient(`Begin WebRTC with ${username}.`);
+            let pc = new RTCPeerConnection(configuration);
+            this.WebRTC.pc[username] = pc;
+
+            // 'onicecandidate' notifies us whenever an ICE agent needs to deliver a
+            // message to the other peer through the signaling server.
+            pc.onicecandidate = event => {
+                this.ChatClient("On ICE Candidate called");
+                console.log(event);
+                console.log(event.candidate);
+                if (event.candidate) {
+                    this.ChatClient(`Send ICE candidate: ${event.candidate}`);
+                    this.ws.conn.send(JSON.stringify({
+                        action: "candidate",
+                        username: username,
+                        candidate: event.candidate,
+                    }));
+                }
+            };
+
+            // If the user is offerer let the 'negotiationneeded' event create the offer.
+            if (isOfferer) {
+                this.ChatClient("Sending offer:");
+                pc.onnegotiationneeded = () => {
+                    this.ChatClient("Negotiation Needed, creating WebRTC offer.");
+                    pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
+                };
+            }
+
+            // When a remote stream arrives.
+            pc.ontrack = event => {
+                const stream = event.streams[0];
+
+                // Do we already have it?
+                this.ChatClient(`Received a video stream from ${username}.`);
+                if (this.WebRTC.streams[username] == undefined ||
+                    this.WebRTC.streams[username].id !== stream.id) {
+                    this.WebRTC.streams[username] = stream;
+                }
+            };
+
+            // If we were already broadcasting video, send our stream to
+            // the connecting user.
+            if (!isOfferer && this.webcam.active) {
+                this.ChatClient(`Sharing our video stream to ${username}.`);
+                this.webcam.stream.getTracks().forEach(track => pc.addTrack(track, this.webcam.stream));
+            }
+
+            // If we are the offerer, begin the connection.
+            if (isOfferer) {
+                pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
+            }
+        },
+
+        // Common handler function for
+        localDescCreated(pc, username) {
+            return (desc) => {
+                this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
+                pc.setLocalDescription(
+                    new RTCSessionDescription(desc),
+                    () => {
+                        this.ws.conn.send(JSON.stringify({
+                            action: "sdp",
+                            username: username,
+                            description: JSON.stringify(pc.localDescription),
+                        }));
+                    },
+                    console.error,
+                )
+            };
+        },
+
+        // Handle inbound WebRTC signaling messages proxied by the websocket.
+        onCandidate(msg) {
+            if (this.WebRTC.pc[msg.username] == undefined) return;
+            let pc = this.WebRTC.pc[msg.username];
+
+            // Add the new ICE candidate.
+            console.log("Add ICE candidate: %s", msg.candidate);
+            this.ChatClient(`Received an ICE candidate from ${username}: ${msg.candidate}`);
+            pc.addIceCandidate(
+                new RTCIceCandidate(
+                    msg.candidate,
+                    () => {},
+                    console.error,
+                )
+            );
+        },
+        onSDP(msg) {
+            if (this.WebRTC.pc[msg.username] == undefined) return;
+            let pc = this.WebRTC.pc[msg.username];
+            let description = JSON.parse(msg.description);
+
+            // Add the new ICE candidate.
+            console.log("Set description: %s", description);
+            this.ChatClient(`Received a Remote Description from ${msg.username}: ${msg.description}.`);
+            pc.setRemoteDescription(new RTCSessionDescription(description), () => {
+                // When receiving an offer let's answer it.
+                if (pc.remoteDescription.type === 'offer') {
+                    pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
+                }
+            }, console.error);
+        },
+
+        /**
+         * Front-end web app concerns.
+         */
 
         // Start broadcasting my webcam.
         startVideo() {
@@ -180,6 +359,16 @@ const app = Vue.createApp({
             }).finally(() => {
                 this.webcam.busy = false;
             })
+        },
+
+        // Begin connecting to someone else's webcam.
+        openVideo(user) {
+            if (user.username === this.username) {
+                this.ChatClient("You can already see your own webcam.");
+                return;
+            }
+
+            this.sendOpen(user.username);
         },
 
         // Stop broadcasting.
