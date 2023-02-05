@@ -14,6 +14,11 @@ const app = Vue.createApp({
         return {
             busy: false,
 
+            // Website configuration provided by chat.html template.
+            config: {
+                channels: PublicChannels,
+            },
+
             channel: "lobby",
             username: "", //"test",
             message: "",
@@ -46,8 +51,33 @@ const app = Vue.createApp({
 
             // Chat history.
             history: [],
+            channels: {
+                // There will be values here like:
+                // "lobby": {
+                //   "history": [],
+                //   "updated": timestamp,
+                //   "unread": 4,
+                // },
+                // "@username": {
+                //   "history": [],
+                //   ...
+                // }
+            },
             historyScrollbox: null,
             DMs: {},
+
+            // Responsive CSS for mobile.
+            responsive: {
+                leftDrawerOpen: false,
+                rightDrawerOpen: false,
+                nodes: {
+                    // DOM nodes for the CSS grid cells.
+                    $container: null,
+                    $left: null,
+                    $center: null,
+                    $right: null,
+                }
+            },
 
             loginModal: {
                 visible: false,
@@ -58,6 +88,22 @@ const app = Vue.createApp({
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
 
+        this.responsive.nodes = {
+            $container: document.querySelector(".chat-container"),
+            $left: document.querySelector(".left-column"),
+            $center: document.querySelector(".chat-column"),
+            $right: document.querySelector(".right-column"),
+        };
+
+        window.addEventListener("resize", () => {
+            // Reset CSS overrides for responsive display on any window size change.
+            this.resetResponsiveCSS();
+        });
+
+        for (let channel of this.config.channels) {
+            this.initHistory(channel.ID);
+        }
+
         this.ChatServer("Welcome to BareRTC!")
 
         if (!this.username) {
@@ -65,6 +111,46 @@ const app = Vue.createApp({
         } else {
             this.signIn();
         }
+    },
+    computed: {
+        chatHistory() {
+            if (this.channels[this.channel] == undefined) {
+                return [];
+            }
+
+            let history = this.channels[this.channel].history;
+
+            // How channels work:
+            // - Everything going to a public channel like "lobby" goes
+            //   into the "lobby" channel in the front-end
+            // - Direct messages are different: they are all addressed
+            //   "to" the channel of the current @user, but they are
+            //   divided into DM threads based on the username.
+            if (this.channel.indexOf("@") === 0) {
+                // DM thread, divide them by sender.
+                // let username = this.channel.substring(1);
+                // return history.filter(v => {
+                //     return v.username === username;
+                // });
+            }
+            return history;
+        },
+        channelName() {
+            // Return a suitable channel title.
+            if (this.channel.indexOf("@") === 0) {
+                // A DM, return it directly as is.
+                return this.channel;
+            }
+
+            // Find the friendly name from our config.
+            for (let channel of this.config.channels) {
+                if (channel.ID === this.channel) {
+                    return channel.Name;
+                }
+            }
+
+            return this.channel;
+        },
     },
     methods: {
         signIn() {
@@ -89,6 +175,7 @@ const app = Vue.createApp({
             console.debug("Send message: %s", this.message);
             this.ws.conn.send(JSON.stringify({
                 action: "message",
+                channel: this.channel,
                 message: this.message,
             }));
 
@@ -111,7 +198,21 @@ const app = Vue.createApp({
                 this.username = msg.username;
             }
 
-            this.ChatClient(`User sync from backend: ${JSON.stringify(msg)}`);
+            // this.ChatClient(`User sync from backend: ${JSON.stringify(msg)}`);
+        },
+
+        // WhoList updates.
+        onWho(msg) {
+            this.whoList = msg.whoList;
+
+            // If we had a camera open with any of these and they have gone
+            // off camera, close our side of the connection.
+            for (let row of this.whoList) {
+                if (this.WebRTC.streams[row.username] != undefined &&
+                    row.videoActive !== true) {
+                    this.closeVideo(row.username);
+                }
+            }
         },
 
         // Send a video request to access a user's camera.
@@ -125,7 +226,7 @@ const app = Vue.createApp({
             // Response for the opener to begin WebRTC connection.
             const secret = msg.openSecret;
             console.log("OPEN: connect to %s with secret %s", msg.username, secret);
-            this.ChatClient(`onOpen called for ${msg.username}.`);
+            // this.ChatClient(`onOpen called for ${msg.username}.`);
 
             this.startWebRTC(msg.username, true);
         },
@@ -139,13 +240,13 @@ const app = Vue.createApp({
         },
         onUserExited(msg) {
             // A user has logged off the server. Clean up any WebRTC connections.
-            delete(this.WebRTC.streams[msg.username]);
-            delete(this.WebRTC.pc[msg.username]);
+            this.closeVideo(msg.username);
         },
 
         // Handle messages sent in chat.
         onMessage(msg) {
             this.pushHistory({
+                channel: msg.channel,
                 username: msg.username,
                 message: msg.message,
             });
@@ -189,7 +290,7 @@ const app = Vue.createApp({
                 switch (msg.action) {
                     case "who":
                         console.log("Got the Who List: %s", msg);
-                        this.whoList = msg.whoList;
+                        this.onWho(msg);
                         break;
                     case "me":
                         console.log("Got a self-update: %s", msg);
@@ -226,7 +327,7 @@ const app = Vue.createApp({
                         this.pushHistory({
                             username: msg.username || 'Internal Server Error',
                             message: msg.message,
-                            isChatServer: true,
+                            isChatClient: true,
                         });
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
@@ -242,7 +343,7 @@ const app = Vue.createApp({
 
         // Start WebRTC with the other username.
         startWebRTC(username, isOfferer) {
-            this.ChatClient(`Begin WebRTC with ${username}.`);
+            // this.ChatClient(`Begin WebRTC with ${username}.`);
             let pc = new RTCPeerConnection(configuration);
             this.WebRTC.pc[username] = pc;
 
@@ -271,7 +372,7 @@ const app = Vue.createApp({
 
             // If the user is offerer let the 'negotiationneeded' event create the offer.
             if (isOfferer) {
-                this.ChatClient("We are the offerer - set up onNegotiationNeeded");
+                // this.ChatClient("We are the offerer - set up onNegotiationNeeded");
                 pc.onnegotiationneeded = () => {
                     console.error("WebRTC OnNegotiationNeeded called!");
                     this.ChatClient("Negotiation Needed, creating WebRTC offer.");
@@ -281,19 +382,19 @@ const app = Vue.createApp({
 
             // When a remote stream arrives.
             pc.ontrack = event => {
-                this.ChatServer("ON TRACK CALLED!!!");
+                // this.ChatServer("ON TRACK CALLED!!!");
                 console.error("WebRTC OnTrack called!", event);
                 const stream = event.streams[0];
 
                 // Do we already have it?
-                this.ChatClient(`Received a video stream from ${username}.`);
+                // this.ChatClient(`Received a video stream from ${username}.`);
                 if (this.WebRTC.streams[username] == undefined ||
                     this.WebRTC.streams[username].id !== stream.id) {
                     this.WebRTC.streams[username] = stream;
                 }
 
                 window.requestAnimationFrame(() => {
-                    this.ChatServer("Setting <video> srcObject for "+username);
+                    this.ChatServer("Setting <video> srcObject for " + username);
                     let $ref = document.getElementById(`videofeed-${username}`);
                     console.log("Video elem:", $ref);
                     $ref.srcObject = stream;
@@ -306,8 +407,8 @@ const app = Vue.createApp({
             // TODO: currently both users need to have video on for the connection
             // to succeed - if offerer doesn't addTrack it won't request a video channel
             // and so the answerer (who has video) won't actually send its
-            if (this.webcam.active) {
-                this.ChatClient(`Sharing our video stream to ${username}.`);
+            if (!isOfferer && this.webcam.active) {
+                // this.ChatClient(`Sharing our video stream to ${username}.`);
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     console.error("Add stream track to WebRTC", stream, track);
@@ -317,14 +418,17 @@ const app = Vue.createApp({
 
             // If we are the offerer, begin the connection.
             if (isOfferer) {
-                pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
+                pc.createOffer({
+                    offerToReceiveVideo: true,
+                    offerToReceiveAudio: true,
+                }).then(this.localDescCreated(pc, username)).catch(this.ChatClient);
             }
         },
 
         // Common handler function for
         localDescCreated(pc, username) {
             return (desc) => {
-                this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
+                // this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
                 pc.setLocalDescription(
                     new RTCSessionDescription(desc),
                     () => {
@@ -354,7 +458,7 @@ const app = Vue.createApp({
             pc.addIceCandidate(
                 new RTCIceCandidate(
                     msg.candidate,
-                    () => {},
+                    () => { },
                     console.error,
                 )
             );
@@ -370,7 +474,7 @@ const app = Vue.createApp({
 
             // Add the new ICE candidate.
             console.log("Set description:", message);
-            this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);
+            // this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);
             pc.setRemoteDescription(new RTCSessionDescription(message), () => {
                 // When receiving an offer let's answer it.
                 if (pc.remoteDescription.type === 'offer') {
@@ -386,7 +490,7 @@ const app = Vue.createApp({
                     //     });
                     // }
 
-                    this.ChatClient(`setRemoteDescription callback. Offer recieved - sending answer. Cam active? ${this.webcam.active}`);
+                    // this.ChatClient(`setRemoteDescription callback. Offer recieved - sending answer. Cam active? ${this.webcam.active}`);
                     console.warn("Creating answer now");
                     pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
                 }
@@ -396,6 +500,79 @@ const app = Vue.createApp({
         /**
          * Front-end web app concerns.
          */
+
+        // Set active chat room.
+        setChannel(channel) {
+            this.channel = typeof(channel) === "string" ? channel : channel.ID;
+            this.scrollHistory();
+            this.channels[this.channel].unread = 0;
+        },
+        hasUnread(channel) {
+            if (this.channels[channel] == undefined) {
+                return 0;
+            }
+            return this.channels[channel].unread;
+        },
+        openDMs(user) {
+            let channel = "@" + user.username;
+            this.initHistory(channel);
+            this.setChannel(channel);
+        },
+        leaveDM() {
+            // Validate we're in a DM currently.
+            if (this.channel.indexOf("@") !== 0) return;
+
+            if (!window.confirm(
+                "Do you want to close this chat thread? Your conversation history will " +
+                "be forgotten on your computer, but your chat partner may still have " +
+                "your chat thread open on their end."
+            )) {
+                return;
+            }
+
+            let channel = this.channel;
+            this.setChannel(this.config.channels[0].ID);
+            delete(this.channels[channel]);
+        },
+
+        activeChannels() {
+            // List of current channels, unread indicators etc.
+            let result = [];
+            for (let channel of this.config.channels) {
+                let data = {
+                    ID: channel.ID,
+                    Name: channel.Name,
+                };
+                if (this.channels[channel] != undefined) {
+                    data.Unread = this.channels[channel].unread;
+                    data.Updated = this.channels[channel].updated;
+                }
+                result.push(data);
+            }
+            return result;
+        },
+        activeDMs() {
+            // List your currently open DM threads, sorted by most recent.
+            let result = [];
+            for (let channel of Object.keys(this.channels)) {
+                // @mentions only
+                if (channel.indexOf("@") !== 0) {
+                    continue;
+                }
+
+                result.push({
+                    channel: channel,
+                    name: channel.substring(1),
+                    updated: this.channels[channel].updated,
+                    unread: this.channels[channel].unread,
+                });
+            }
+
+            result.sort((a, b) => {
+                return a.updated < b.updated;
+            });
+            return result;
+        },
 
         // Start broadcasting my webcam.
         startVideo() {
@@ -426,15 +603,30 @@ const app = Vue.createApp({
                 return;
             }
 
+            // Camera is already open? Then disconnect the connection.
+            if (this.WebRTC.pc[user.username] != undefined) {
+                // TODO: this breaks the connection both ways :(
+                // this.closeVideo(user.username);
+                // return;
+            }
+
             // We need to broadcast video to connect to another.
             // TODO: because if the offerer doesn't add video tracks they
             // won't request video support so the answerer's video isn't sent
             if (!this.webcam.active) {
                 this.ChatServer("You will need to turn your own camera on first before you can connect to " + user.username + ".");
-                return;
+                // return;
             }
 
             this.sendOpen(user.username);
+        },
+        closeVideo(username) {
+            // A user has logged off the server. Clean up any WebRTC connections.
+            delete (this.WebRTC.streams[username]);
+            if (this.WebRTC.pc[username] != undefined) {
+                this.WebRTC.pc[username].close();
+                delete (this.WebRTC.pc[username]);
+            }
         },
 
         // Stop broadcasting.
@@ -443,12 +635,36 @@ const app = Vue.createApp({
             this.webcam.stream = null;
             this.webcam.active = false;
 
+            // Close all WebRTC sessions.
+            for (username of Object.keys(this.WebRTC.pc)) {
+                this.closeVideo(username);
+            }
+
             // Tell backend our camera state.
             this.sendMe();
         },
 
-        pushHistory({username, message, action="message", isChatServer, isChatClient}) {
-            this.history.push({
+        initHistory(channel) {
+            if (this.channels[channel] == undefined) {
+                this.channels[channel] = {
+                    history: [],
+                    updated: Date.now(),
+                    unread: 0,
+                };
+            }
+        },
+        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient }) {
+            // Default channel = your current channel.
+            if (!channel) {
+                channel = this.channel;
+            }
+
+            // Initialize this channel's history?
+            this.initHistory(channel);
+
+            // Append the message.
+            this.channels[channel].updated = Date.now();
+            this.channels[channel].history.push({
                 action: action,
                 username: username,
                 message: message,
@@ -456,6 +672,11 @@ const app = Vue.createApp({
                 isChatClient,
             });
             this.scrollHistory();
+
+            // Mark unread notifiers if this is not our channel.
+            if (this.channel !== channel) {
+                this.channels[channel].unread++;
+            }
         },
 
         scrollHistory() {
@@ -466,6 +687,43 @@ const app = Vue.createApp({
                 });
             });
 
+        },
+
+        // Responsive CSS controls for mobile. Notes for maintenance:
+        // - The chat.css has responsive CSS to hide the left/right panels
+        //   and set the grid-template-columns for devices < 1024px width
+        // - These functions override w/ style tags to force the drawer to
+        //   be visible and change the grid-template-columns.
+        // - On window resize (e.g. device rotation) or when closing one
+        //   of the side drawers, we reset our CSS overrides to default so
+        //   the main chat window reappears.
+        openChannelsPanel() {
+            // Open the left drawer
+            let $container = this.responsive.nodes.$container,
+                $drawer = this.responsive.nodes.$left;
+
+            $container.style.gridTemplateColumns = "1fr 0 0";
+            $drawer.style.display = "block";
+        },
+        openWhoPanel() {
+            // Open the right drawer
+            let $container = this.responsive.nodes.$container,
+                $drawer = this.responsive.nodes.$right;
+
+            $container.style.gridTemplateColumns = "0 0 1fr";
+            $drawer.style.display = "block";
+        },
+        openChatPanel() {
+            this.resetResponsiveCSS();
+        },
+        resetResponsiveCSS() {
+            let $container = this.responsive.nodes.$container,
+                $left = this.responsive.nodes.$left,
+                $right = this.responsive.nodes.$right;
+
+            $left.style.removeProperty("display");
+            $right.style.removeProperty("display");
+            $container.style.removeProperty("grid-template-columns");
         },
 
         // Send a chat message as ChatServer

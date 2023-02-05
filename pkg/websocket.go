@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/log"
@@ -229,9 +230,28 @@ func (s *Server) Broadcast(msg Message) {
 	for _, sub := range s.IterSubscribers(true) {
 		sub.SendJSON(Message{
 			Action:   msg.Action,
+			Channel:  msg.Channel,
 			Username: msg.Username,
 			Message:  msg.Message,
 		})
+	}
+}
+
+// SendTo sends a message to a given username.
+func (s *Server) SendTo(username string, msg Message) {
+	log.Debug("SendTo(%s): %+v", username, msg)
+	username = strings.TrimPrefix(username, "@")
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+	for _, sub := range s.IterSubscribers(true) {
+		if sub.Username == username {
+			sub.SendJSON(Message{
+				Action:   msg.Action,
+				Channel:  msg.Channel,
+				Username: msg.Username,
+				Message:  msg.Message,
+			})
+		}
 	}
 }
 

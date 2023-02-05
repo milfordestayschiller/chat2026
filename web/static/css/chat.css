@@ -5,6 +5,10 @@ body {
     min-height: 100vh;
 }
 
+.float-right {
+    float: right;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/
@@ -49,6 +53,27 @@ body {
 .chat-container > .right-column {
     grid-column: 3;
     overflow: hidden;
+}
+
+/* Responsive CSS styles */
+@media screen and (min-width: 1024px) {
+    .mobile-only {
+        display: none;
+    }
+}
+@media screen and (max-width: 1024px) {
+    .chat-container {
+        grid-template-columns: 0px 1fr 0px;
+        column-gap: 0;
+    }
+
+    .left-column {
+        display: none;
+    }
+
+    .right-column {
+        display: none;
+    }
 }
 
 /***********************************************

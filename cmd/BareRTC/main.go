@@ -6,6 +6,7 @@ import (
 	"time"
 
 	barertc "git.kirsle.net/apps/barertc/pkg"
+	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
 )
 
@@ -26,6 +27,9 @@ func main() {
 	if debug {
 		log.SetDebug(true)
 	}
+
+	// Load configuration.
+	config.LoadSettings()
 
 	app := barertc.NewServer()
 	app.Setup()

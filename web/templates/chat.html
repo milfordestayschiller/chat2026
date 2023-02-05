@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css">
     <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{CacheHash}}">
+    <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
     <title>BareRTC</title>
 </head>
 <body>
@@ -45,12 +45,21 @@
     </div>
 
     <div class="chat-container">
+
+        <!-- Left Column: Channels & DMs -->
         <div class="left-column">
             <div class="card grid-card">
                 <header class="card-header has-background-success-dark">
-                    <p class="card-header-title has-text-light">
-                        Channels
-                    </p>
+                    <div class="columns is-mobile card-header-title has-text-light">
+                        <div class="column is-narrow mobile-only">
+                            <button type="button"
+                                class="button is-success"
+                                @click="openChatPanel">
+                                <i class="fa fa-arrow-left"></i>
+                            </button>
+                        </div>
+                        <div class="column">Channels</div>
+                    </div>
                 </header>
                 <div class="card-content">
                     <aside class="menu">
@@ -59,7 +68,18 @@
                         </p>
 
                         <ul class="menu-list">
-                            <li><a href="#" class="is-active">Chat Room</a></li>
+                            <li v-for="c in activeChannels()"
+                                v-bind:key="c.ID">
+                                <a :href="'#'+c.ID"
+                                    @click.prevent="setChannel(c)"
+                                    :class="{'is-active': c.ID == channel}">
+                                    [[c.Name]]
+                                    <span v-if="hasUnread(c.ID)"
+                                        class="tag is-danger">
+                                        [[hasUnread(c.ID)]]
+                                    </span>
+                                </a>
+                            </li>
                         </ul>
 
                         <p class="menu-label">
@@ -67,26 +87,19 @@
                         </p>
 
                         <ul class="menu-list">
-                            <li><a href="#">Chat Room</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
-                            <li><a href="#">DMs</a></li>
+                            <li v-for="c in activeDMs()"
+                                v-bind:key="c.channel">
+                                <a :href="'#'+c.channel"
+                                    @click.prevent="setChannel(c.channel)"
+                                    :class="{'is-active': c.channel == channel}">
+                                    [[c.name]]
+
+                                    <span v-if="hasUnread(c.channel)"
+                                        class="tag is-danger">
+                                        [[hasUnread(c.channel)]]
+                                    </span>
+                                </a>
+                            </li>
                         </ul>
                     </aside>
 
@@ -97,11 +110,36 @@
         <div class="chat-column">
             <div class="card grid-card">
                 <header class="card-header has-background-link">
-                    <p class="card-header-title has-text-light">
-                        Chat Room
-                    </p>
+                    <div class="columns is-mobile card-header-title has-text-light">
+                        <div class="column is-narrow mobile-only">
+                            <!-- Responsive mobile button to pan to Left Column -->
+                            <button type="button"
+                                class="button is-success"
+                                @click="openChannelsPanel">
+                                <i class="fa fa-message"></i>
+                            </button>
+                        </div>
+                        <div class="column">[[channelName]]</div>
+                        <div class="column is-narrow">
+                            <!-- DMs: Leave convo button -->
+                            <button type="button"
+                                v-if="channel.indexOf('@') === 0"
+                                class="float-right button is-small is-warning is-outline"
+                                @click="leaveDM()">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="column is-narrow mobile-only">
+                            <!-- Responsive mobile button to pan to Right Column -->
+                            <button type="button"
+                                class="button is-success"
+                                @click="openWhoPanel">
+                                <i class="fa fa-user-group"></i>
+                            </button>
+                        </div>
+                    </div>
                 </header>
-                <div class="video-feeds">
+                <div class="video-feeds" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
                     <video class="feed"
                         v-show="webcam.active"
                         id="localVideo"
@@ -114,49 +152,10 @@
                         :id="'videofeed-'+username"
                         autoplay muted>
                     </video>
-                    <div v-for="(stream, username) in WebRTC.streams" class="feed">
-                        [[username]] - [[stream]]
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
-                    <div class="feed">
-                        y
-                    </div>
                 </div>
                 <div class="card-content" id="chatHistory">
 
-                    <div v-for="(msg, i) in history" v-bind:key="i">
+                    <div v-for="(msg, i) in chatHistory" v-bind:key="i">
                         <div>
                             <label class="label"
                                 :class="{'has-text-success is-dark': msg.isChatServer,
@@ -172,6 +171,7 @@
                         <div v-else>
                             [[msg.message]]
                         </div>
+
                     </div>
 
                 </div>
@@ -214,12 +214,20 @@
             </div>
         </div>
 
+        <!-- Right Column: Who Is Online -->
         <div class="right-column">
             <div class="card grid-card">
                 <header class="card-header has-background-success-dark">
-                    <p class="card-header-title has-text-light">
-                        Who Is Online
-                    </p>
+                    <div class="columns is-mobile card-header-title has-text-light">
+                        <div class="column">Who Is Online</div>
+                        <div class="column is-narrow mobile-only">
+                            <button type="button"
+                                class="button is-success"
+                                @click="openChatPanel">
+                                <i class="fa fa-arrow-left"></i>
+                            </button>
+                        </div>
+                    </div>
                 </header>
                 <div class="card-content p-2">
 
@@ -228,6 +236,13 @@
                             <div class="columns is-mobile">
                                 <div class="column">[[ u.username ]]</div>
                                 <div class="column is-narrow">
+                                    <button type="button"
+                                        class="button is-small px-2 py-1"
+                                        @click="openDMs(u)"
+                                        :disabled="u.username === username">
+                                        <i class="fa fa-message"></i>
+                                    </button>
+
                                     <button type="button" class="button is-small"
                                         :disabled="!u.videoActive"
                                         @click="openVideo(u)">
@@ -244,8 +259,13 @@
     </div>
 
 </div><!-- /app -->
+
+<script type="text/javascript">
+const PublicChannels = {{.Config.GetChannels}};
+</script>
+
 <script src="/static/js/vue-3.2.45.js"></script>
-<script src="/static/js/BareRTC.js?{{CacheHash}}"></script>
+<script src="/static/js/BareRTC.js?{{.CacheHash}}"></script>
 
 </body>
 </html>

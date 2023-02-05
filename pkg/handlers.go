@@ -2,9 +2,11 @@ package barertc
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/util"
 )
 
 // OnLogin handles "login" actions from the client.
@@ -52,9 +54,28 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		return
 	}
 
+	// Message to be echoed to the channel.
+	var message = Message{
+		Action:   ActionMessage,
+		Channel:  msg.Channel,
+		Username: sub.Username,
+		Message:  msg.Message,
+	}
+
+	// Is this a DM?
+	if strings.HasPrefix(msg.Channel, "@") {
+		// Echo the message only to both parties.
+		// message.Channel = "@" + sub.Username
+		s.SendTo(sub.Username, message)
+		message.Channel = "@" + sub.Username
+		s.SendTo(msg.Channel, message)
+		return
+	}
+
 	// Broadcast a chat message to the room.
 	s.Broadcast(Message{
 		Action:   ActionMessage,
+		Channel:  msg.Channel,
 		Username: sub.Username,
 		Message:  msg.Message,
 	})
@@ -82,7 +103,7 @@ func (s *Server) OnOpen(sub *Subscriber, msg Message) {
 	}
 
 	// Make up a WebRTC shared secret and send it to both of them.
-	secret := RandomString(16)
+	secret := util.RandomString(16)
 	log.Info("WebRTC: %s opens %s with secret %s", sub.Username, other.Username, secret)
 
 	// Ring the target of this request and give them the secret.

@@ -1,5 +1,7 @@
 git.kirsle.net/go/log v0.0.0-20200902035305-70ac2848949b h1:TDxEEWOJqMzsu9JW8/QgmT1lgQ9WD2KWlb2lKN/Ql2o=
 git.kirsle.net/go/log v0.0.0-20200902035305-70ac2848949b/go.mod h1:jl+Qr58W3Op7OCxIYIT+b42jq8xFncJXzPufhrvza7Y=
+github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
+github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=

@@ -2,8 +2,9 @@ package barertc
 
 type Message struct {
 	Action   string `json:"action,omitempty"`
+	Channel  string `json:"channel,omitempty"`
 	Username string `json:"username,omitempty"`
-	Message  string `json:"message",omitempty`
+	Message  string `json:"message,omitempty"`
 
 	// WhoList for `who` actions
 	WhoList []WhoList `json:"whoList,omitempty"`
