@@ -15,8 +15,8 @@ type Message struct {
 	OpenSecret string `json:"openSecret,omitempty"`
 
 	// Parameters sent on WebRTC signaling messages.
-	Candidate   string `json:"candidate,omitempty"`   // candidate
-	Description string `json:"description,omitempty"` // sdp
+	Candidate   map[string]interface{} `json:"candidate,omitempty"`   // candidate
+	Description map[string]interface{} `json:"description,omitempty"` // sdp
 }
 
 const (
@@ -30,6 +30,7 @@ const (
 	ActionRing    = "ring"    // receiver of a WebRTC open request
 
 	// Actions sent by server only
+	ActionPing     = "ping"
 	ActionWhoList  = "who"      // server pushes the Who List
 	ActionPresence = "presence" // a user joined or left the room
 	ActionError    = "error"    // ChatServer errors

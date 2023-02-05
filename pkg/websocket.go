@@ -20,6 +20,7 @@ type Subscriber struct {
 	VideoActive bool
 	conn        *websocket.Conn
 	ctx         context.Context
+	cancel      context.CancelFunc
 	messages    chan []byte
 	closeSlow   func()
 }
@@ -30,7 +31,7 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 		for {
 			msgType, data, err := sub.conn.Read(sub.ctx)
 			if err != nil {
-				log.Error("ReadLoop error: %+v", err)
+				log.Error("ReadLoop error(%s): %+v", sub.Username, err)
 				s.DeleteSubscriber(sub)
 				s.Broadcast(Message{
 					Action:   ActionPresence,
@@ -119,11 +120,12 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		// CloseRead starts a goroutine that will read from the connection
 		// until it is closed.
 		// ctx := c.CloseRead(r.Context())
-		ctx, _ := context.WithCancel(r.Context())
+		ctx, cancel := context.WithCancel(r.Context())
 
 		sub := &Subscriber{
 			conn:     c,
 			ctx:      ctx,
+			cancel:   cancel,
 			messages: make(chan []byte, s.subscriberMessageBuffer),
 			closeSlow: func() {
 				c.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
@@ -134,6 +136,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		// defer s.DeleteSubscriber(sub)
 
 		go sub.ReadLoop(s)
+		pinger := time.NewTicker(PingInterval)
 		for {
 			select {
 			case msg := <-sub.messages:
@@ -141,7 +144,13 @@ func (s *Server) WebSocket() http.HandlerFunc {
 				if err != nil {
 					return
 				}
+			case timestamp := <-pinger.C:
+				sub.SendJSON(Message{
+					Action:  ActionPing,
+					Message: timestamp.Format(time.RFC3339),
+				})
 			case <-ctx.Done():
+				pinger.Stop()
 				return
 			}
 		}
@@ -179,6 +188,12 @@ func (s *Server) GetSubscriber(username string) (*Subscriber, error) {
 // DeleteSubscriber removes a subscriber from the server.
 func (s *Server) DeleteSubscriber(sub *Subscriber) {
 	log.Error("DeleteSubscriber: %s", sub.Username)
+
+	// Cancel its context to clean up the for-loop goroutine.
+	if sub.cancel != nil {
+		sub.cancel()
+	}
+
 	s.subscribersMu.Lock()
 	delete(s.subscribers, sub)
 	s.subscribersMu.Unlock()

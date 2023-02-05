@@ -108,8 +108,14 @@
                         autoplay muted>
                         x
                     </video>
-                    <div class="feed">
-                        y
+                    <video class="feed"
+                        v-for="(stream, username) in WebRTC.streams"
+                        v-bind:key="username"
+                        :id="'videofeed-'+username"
+                        autoplay muted>
+                    </video>
+                    <div v-for="(stream, username) in WebRTC.streams" class="feed">
+                        [[username]] - [[stream]]
                     </div>
                     <div class="feed">
                         y

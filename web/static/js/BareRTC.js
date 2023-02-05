@@ -125,7 +125,7 @@ const app = Vue.createApp({
             // Response for the opener to begin WebRTC connection.
             const secret = msg.openSecret;
             console.log("OPEN: connect to %s with secret %s", msg.username, secret);
-            this.ChatClient(`Connecting to stream for ${msg.username}.`);
+            this.ChatClient(`onOpen called for ${msg.username}.`);
 
             this.startWebRTC(msg.username, true);
         },
@@ -136,6 +136,11 @@ const app = Vue.createApp({
             this.ChatServer(`${msg.username} has opened your camera.`);
 
             this.startWebRTC(msg.username, false);
+        },
+        onUserExited(msg) {
+            // A user has logged off the server. Clean up any WebRTC connections.
+            delete(this.WebRTC.streams[msg.username]);
+            delete(this.WebRTC.pc[msg.username]);
         },
 
         // Handle messages sent in chat.
@@ -149,7 +154,8 @@ const app = Vue.createApp({
         // Dial the WebSocket connection.
         dial() {
             console.log("Dialing WebSocket...");
-            const conn = new WebSocket(`ws://${location.host}/ws`);
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const conn = new WebSocket(`${proto}://${location.host}/ws`);
 
             conn.addEventListener("close", ev => {
                 this.ws.connected = false;
@@ -193,6 +199,11 @@ const app = Vue.createApp({
                         this.onMessage(msg);
                         break;
                     case "presence":
+                        // TODO: make a dedicated leave event
+                        if (msg.message.indexOf("has exited the room!") > -1) {
+                            // Clean up data about this user.
+                            this.onUserExited(msg);
+                        }
                         this.pushHistory({
                             action: msg.action,
                             username: msg.username,
@@ -235,14 +246,21 @@ const app = Vue.createApp({
             let pc = new RTCPeerConnection(configuration);
             this.WebRTC.pc[username] = pc;
 
+            // Create a data channel so we have something to connect over even if
+            // the local user is not broadcasting their own camera.
+            let dataChannel = pc.createDataChannel("data");
+            dataChannel.addEventListener("open", event => {
+                // beginTransmission(dataChannel);
+            })
+
             // 'onicecandidate' notifies us whenever an ICE agent needs to deliver a
             // message to the other peer through the signaling server.
             pc.onicecandidate = event => {
-                this.ChatClient("On ICE Candidate called");
-                console.log(event);
-                console.log(event.candidate);
+                console.error("WebRTC OnICECandidate called!", event);
+                // this.ChatClient("On ICE Candidate called!");
                 if (event.candidate) {
-                    this.ChatClient(`Send ICE candidate: ${event.candidate}`);
+                    // this.ChatClient(`Send ICE candidate: ${JSON.stringify(event.candidate)}`);
+                    console.log("Sending candidate to websockets:", event.candidate);
                     this.ws.conn.send(JSON.stringify({
                         action: "candidate",
                         username: username,
@@ -253,8 +271,9 @@ const app = Vue.createApp({
 
             // If the user is offerer let the 'negotiationneeded' event create the offer.
             if (isOfferer) {
-                this.ChatClient("Sending offer:");
+                this.ChatClient("We are the offerer - set up onNegotiationNeeded");
                 pc.onnegotiationneeded = () => {
+                    console.error("WebRTC OnNegotiationNeeded called!");
                     this.ChatClient("Negotiation Needed, creating WebRTC offer.");
                     pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
                 };
@@ -262,6 +281,8 @@ const app = Vue.createApp({
 
             // When a remote stream arrives.
             pc.ontrack = event => {
+                this.ChatServer("ON TRACK CALLED!!!");
+                console.error("WebRTC OnTrack called!", event);
                 const stream = event.streams[0];
 
                 // Do we already have it?
@@ -270,13 +291,28 @@ const app = Vue.createApp({
                     this.WebRTC.streams[username].id !== stream.id) {
                     this.WebRTC.streams[username] = stream;
                 }
+
+                window.requestAnimationFrame(() => {
+                    this.ChatServer("Setting <video> srcObject for "+username);
+                    let $ref = document.getElementById(`videofeed-${username}`);
+                    console.log("Video elem:", $ref);
+                    $ref.srcObject = stream;
+                    // this.$refs[`videofeed-${username}`].srcObject = stream;
+                });
             };
 
             // If we were already broadcasting video, send our stream to
             // the connecting user.
-            if (!isOfferer && this.webcam.active) {
+            // TODO: currently both users need to have video on for the connection
+            // to succeed - if offerer doesn't addTrack it won't request a video channel
+            // and so the answerer (who has video) won't actually send its
+            if (this.webcam.active) {
                 this.ChatClient(`Sharing our video stream to ${username}.`);
-                this.webcam.stream.getTracks().forEach(track => pc.addTrack(track, this.webcam.stream));
+                let stream = this.webcam.stream;
+                stream.getTracks().forEach(track => {
+                    console.error("Add stream track to WebRTC", stream, track);
+                    pc.addTrack(track, stream)
+                });
             }
 
             // If we are the offerer, begin the connection.
@@ -295,7 +331,7 @@ const app = Vue.createApp({
                         this.ws.conn.send(JSON.stringify({
                             action: "sdp",
                             username: username,
-                            description: JSON.stringify(pc.localDescription),
+                            description: pc.localDescription,
                         }));
                     },
                     console.error,
@@ -305,12 +341,16 @@ const app = Vue.createApp({
 
         // Handle inbound WebRTC signaling messages proxied by the websocket.
         onCandidate(msg) {
-            if (this.WebRTC.pc[msg.username] == undefined) return;
+            console.error("onCandidate() called:", msg);
+            if (this.WebRTC.pc[msg.username] == undefined) {
+                console.error("DID NOT FIND RTCPeerConnection for username:", msg.username);
+                return;
+            }
             let pc = this.WebRTC.pc[msg.username];
 
             // Add the new ICE candidate.
             console.log("Add ICE candidate: %s", msg.candidate);
-            this.ChatClient(`Received an ICE candidate from ${username}: ${msg.candidate}`);
+            // this.ChatClient(`Received an ICE candidate from ${msg.username}: ${JSON.stringify(msg.candidate)}`);
             pc.addIceCandidate(
                 new RTCIceCandidate(
                     msg.candidate,
@@ -320,16 +360,34 @@ const app = Vue.createApp({
             );
         },
         onSDP(msg) {
-            if (this.WebRTC.pc[msg.username] == undefined) return;
+            console.error("onSDP() called:", msg);
+            if (this.WebRTC.pc[msg.username] == undefined) {
+                console.error("DID NOT FIND RTCPeerConnection for username:", msg.username);
+                return;
+            }
             let pc = this.WebRTC.pc[msg.username];
-            let description = JSON.parse(msg.description);
+            let message = msg.description;
 
             // Add the new ICE candidate.
-            console.log("Set description: %s", description);
-            this.ChatClient(`Received a Remote Description from ${msg.username}: ${msg.description}.`);
-            pc.setRemoteDescription(new RTCSessionDescription(description), () => {
+            console.log("Set description:", message);
+            this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);
+            pc.setRemoteDescription(new RTCSessionDescription(message), () => {
                 // When receiving an offer let's answer it.
                 if (pc.remoteDescription.type === 'offer') {
+                    console.error("Webcam:", this.webcam);
+
+                    // Add our local video tracks to the connection.
+                    // if (this.webcam.active) {
+                    //     this.ChatClient(`Sharing our video stream to ${msg.username}.`);
+                    //     let stream = this.webcam.stream;
+                    //     stream.getTracks().forEach(track => {
+                    //         console.error("Add stream track to WebRTC", stream, track);
+                    //         pc.addTrack(track, stream)
+                    //     });
+                    // }
+
+                    this.ChatClient(`setRemoteDescription callback. Offer recieved - sending answer. Cam active? ${this.webcam.active}`);
+                    console.warn("Creating answer now");
                     pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
                 }
             }, console.error);
@@ -365,6 +423,14 @@ const app = Vue.createApp({
         openVideo(user) {
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
+                return;
+            }
+
+            // We need to broadcast video to connect to another.
+            // TODO: because if the offerer doesn't add video tracks they
+            // won't request video support so the answerer's video isn't sent
+            if (!this.webcam.active) {
+                this.ChatServer("You will need to turn your own camera on first before you can connect to " + user.username + ".");
                 return;
             }
 
