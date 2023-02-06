@@ -32,6 +32,8 @@ const (
 	ActionMe      = "me"      // user self-info sent by FE or BE
 	ActionOpen    = "open"    // user wants to view a webcam (open WebRTC)
 	ActionRing    = "ring"    // receiver of a WebRTC open request
+	ActionWatch   = "watch"   // user has received video and is watching you
+	ActionUnwatch = "unwatch" // user has closed your video
 
 	// Actions sent by server only
 	ActionPing     = "ping"

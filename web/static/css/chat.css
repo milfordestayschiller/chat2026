@@ -28,14 +28,22 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255, 0, 0, 0.2);
     padding: 10px;
+
+    background: rgb(190,190,190);
+    background: linear-gradient(0deg, rgb(172, 172, 172) 0%, rgb(214, 214, 214) 100%);
 
     display: grid;
     column-gap: 10px;
     row-gap: 10px;
     grid-template-columns: 260px 1fr 280px;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto 1fr auto;
+}
+
+/* Header row */
+.chat-container > .chat-header {
+    grid-column: 1 / 4;
+    grid-row: 1;
 }
 
 /* Left column: DMs and channels */
@@ -47,7 +55,7 @@ body {
 /* Main column: chat history */
 .chat-container > .chat-column {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     background-color: yellow;
     overflow: hidden;
 }
@@ -55,7 +63,7 @@ body {
 /* Footer row: message entry box */
 .chat-container > .chat-footer {
     grid-column: 1 / 4;
-    grid-row: 2 / 2;
+    grid-row: 3;
 }
 
 /* Right column: Who List */
@@ -118,7 +126,7 @@ body {
  *******************/
 
 .video-feeds {
-    background-color: yellow;
+    background-color: #222;
     width: 100%;
     max-width: 100%;
     overflow-x: scroll;
@@ -128,9 +136,38 @@ body {
 }
 
 .video-feeds > .feed {
-    flex: 10 0 auto;
-    width: 120px;
-    height: 80px;
+    position: relative;
+    flex: 0 0 144px;
+    width: 168px;
+    height: 112px;
     background-color: black;
     margin: 5px;
+}
+
+.video-feeds > .feed > video {
+    width: 100%;
+    height: 100%;
+}
+
+.video-feeds > .feed > .controls {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.75);
+    right: 4px;
+    bottom: 4px;
+}
+
+.video-feeds > .feed > .close {
+    position: absolute;
+    right: 4px;
+    top: 0;
+}
+
+.video-feeds > .feed > .caption {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    top: 4px;
+    left: 4px;
+    font-size: small;
+    padding: 2px 4px;
 }

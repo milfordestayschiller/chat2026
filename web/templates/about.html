@@ -1,0 +1,55 @@
+{{define "index"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css">
+    <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
+    <title>About BareRTC</title>
+</head>
+<body>
+
+    <div class="container is-fullhd">
+        <div class="content mt-5">
+            <h1>About BareRTC</h1>
+
+            <p>
+            This chat room software is called <strong>BareRTC</strong> and this
+            page contains information about the software and how to use it.
+            </p>
+
+            <p>
+            BareRTC is an open source project released under the GNU General Public
+            License with code available
+            <a href="https://git.kirsle.net/apps/BareRTC" target="_blank">here</a>.
+            </p>
+
+            <h1>About {{AsHTML .Config.Title}}</h1>
+
+            <p>
+            <strong>{{AsHTML .Config.Title}}</strong> is the name of this particular
+            BareRTC server. The administrator may have left some links to more
+            info below:
+            </p>
+
+            <ul>
+                <li><strong>Website:</strong>
+                    <a href="{{.Config.WebsiteURL}}" target="_blank">{{.Config.WebsiteURL}}</a>
+                </li>
+            </ul>
+
+            <hr>
+
+            <p>
+            This page will be fleshed out later with help and tips for using this
+            chat room.
+            </p>
+        </div>
+    </div>
+
+</body>
+</html>
+{{end}}

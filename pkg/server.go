@@ -31,6 +31,7 @@ func (s *Server) Setup() error {
 	var mux = http.NewServeMux()
 
 	mux.Handle("/", IndexPage())
+	mux.Handle("/about", AboutPage())
 	mux.Handle("/ws", s.WebSocket())
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 

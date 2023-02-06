@@ -198,3 +198,33 @@ func (s *Server) OnSDP(sub *Subscriber, msg Message) {
 		Description: msg.Description,
 	})
 }
+
+// OnWatch communicates video watching status between users.
+func (s *Server) OnWatch(sub *Subscriber, msg Message) {
+	// Look up the other subscriber.
+	other, err := s.GetSubscriber(msg.Username)
+	if err != nil {
+		sub.ChatServer(err.Error())
+		return
+	}
+
+	other.SendJSON(Message{
+		Action:   ActionWatch,
+		Username: sub.Username,
+	})
+}
+
+// OnUnwatch communicates video Unwatching status between users.
+func (s *Server) OnUnwatch(sub *Subscriber, msg Message) {
+	// Look up the other subscriber.
+	other, err := s.GetSubscriber(msg.Username)
+	if err != nil {
+		sub.ChatServer(err.Error())
+		return
+	}
+
+	other.SendJSON(Message{
+		Action:   ActionUnwatch,
+		Username: sub.Username,
+	})
+}

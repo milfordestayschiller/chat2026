@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css">
     <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
     <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
     <title>BareRTC</title>
@@ -45,6 +46,61 @@
     </div>
 
     <div class="chat-container">
+
+        <!-- Top header panel -->
+        <header class="chat-header">
+            <div class="columns is-mobile">
+                <div class="column is-narrow">
+                    <strong class="is-6">{{AsHTML .Config.Title}}</strong>
+                </div>
+                <div class="column">
+                    <!-- Stop/Start video buttons -->
+                    <button type="button"
+                        v-if="webcam.active"
+                        class="button is-small is-danger"
+                        @click="stopVideo()">
+                        <i class="fa fa-camera mr-2"></i>
+                        Stop
+                    </button>
+                    <button type="button"
+                        v-else
+                        class="button is-small is-success"
+                        @click="startVideo()"
+                        :disabled="webcam.busy">
+                        <i class="fa fa-camera mr-2"></i>
+                        Start
+                    </button>
+
+                    <!-- Mute/Unmute my mic buttons (if streaming)-->
+                    <button type="button"
+                        v-if="webcam.active && !webcam.muted"
+                        class="button is-small is-danger is-outlined ml-2"
+                        @click="muteMe()">
+                        <i class="fa fa-microphone mr-2"></i>
+                        Mute
+                    </button>
+                    <button type="button"
+                        v-if="webcam.active && webcam.muted"
+                        class="button is-small is-danger ml-2"
+                        @click="muteMe()">
+                        <i class="fa fa-microphone mr-2"></i>
+                        Unmute
+                    </button>
+
+                    <!-- Watchers button -->
+                    <button type="button"
+                        v-if="webcam.active"
+                        class="button is-small is-info is-outlined ml-2"
+                        @click="showViewers()">
+                        <i class="fa fa-eye mr-2"></i>
+                        [[Object.keys(webcam.watching).length]]
+                    </button>
+                </div>
+                <div class="column is-narrow">
+                    <a href="/about" target="_blank" class="button is-small is-link">About</a>
+                </div>
+            </div>
+        </header>
 
         <!-- Left Column: Channels & DMs -->
         <div class="left-column">
@@ -107,6 +163,7 @@
             </div>
         </div>
 
+        <!-- Middle Column: Chat Room/History -->
         <div class="chat-column">
             <div class="card grid-card">
                 <header class="card-header has-background-link">
@@ -154,18 +211,49 @@
                     </div>
                 </header>
                 <div class="video-feeds" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
+                    <!-- Video Feeds-->
+
+                    <!-- My video -->
                     <video class="feed"
                         v-show="webcam.active"
                         id="localVideo"
                         autoplay muted>
-                        x
                     </video>
-                    <video class="feed"
-                        v-for="(stream, username) in WebRTC.streams"
-                        v-bind:key="username"
-                        :id="'videofeed-'+username"
-                        autoplay muted>
-                    </video>
+
+                    <!-- Others' videos -->
+                    <div class="feed" v-for="(stream, username) in WebRTC.streams" v-bind:key="username">
+                        <video class="feed"
+                            :id="'videofeed-'+username"
+                            autoplay>
+                        </video>
+                        <div class="caption">
+                            [[username]]
+                        </div>
+                        <div class="close">
+                            <a href="#"
+                                class="has-text-danger"
+                                title="Close video"
+                                @click="closeVideo(username)">
+                                <i class="fa fa-close"></i>
+                            </a>
+                        </div>
+                        <div class="controls">
+                            <button type="button"
+                                v-if="isMuted(username)"
+                                class="button is-small is-danger is-outlined p-1"
+                                title="Unmute this video"
+                                @click="muteVideo(username)">
+                                <i class="fa fa-volume-xmark"></i>
+                            </button>
+                            <button type="button"
+                                v-else
+                                class="button is-small is-danger is-outlined p-1"
+                                title="Mute this video"
+                                @click="muteVideo(username)">
+                                <i class="fa fa-volume-high"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-content" id="chatHistory">
 
@@ -243,22 +331,7 @@
                             </form>
                         </div>
                         <div class="column is-narrow">
-                            <button type="button"
-                                v-if="webcam.active"
-                                class="button is-danger"
-                                @click="stopVideo()">
-                                <i class="fa fa-camera mr-2"></i>
-                                Stop
-                            </button>
 
-                            <button type="button"
-                                v-else
-                                class="button is-success"
-                                @click="startVideo()"
-                                :disabled="webcam.busy">
-                                <i class="fa fa-camera mr-2"></i>
-                                Start
-                            </button>
                         </div>
                     </div>
 

@@ -47,12 +47,17 @@ const app = Vue.createApp({
                 active: false,
                 elem: null,   // <video id="localVideo"> element
                 stream: null, // MediaStream object
+                muted: false, // our outgoing mic is muted, not by default
+
+                // Who all is watching me? map of users.
+                watching: {},
             },
 
             // WebRTC sessions with other users.
             WebRTC: {
                 // Streams per username.
                 streams: {},
+                muted: {}, // muted bool per username
 
                 // RTCPeerConnections per username.
                 pc: {},
@@ -113,7 +118,7 @@ const app = Vue.createApp({
             this.initHistory(channel.ID);
         }
 
-        this.ChatServer("Welcome to BareRTC!")
+        this.ChatClient("Welcome to BareRTC!");
 
         // Auto login with JWT token?
         // TODO: JWT validation on the WebSocket as well.
@@ -236,6 +241,12 @@ const app = Vue.createApp({
                     row.videoActive !== true) {
                     this.closeVideo(row.username);
                 }
+            }
+
+            // Has the back-end server forgotten we are on video? This can
+            // happen if we disconnect/reconnect while we were streaming.
+            if (this.webcam.active && !this.whoMap[this.username]?.videoActive) {
+                this.sendMe();
             }
         },
 
@@ -361,6 +372,12 @@ const app = Vue.createApp({
                     case "sdp":
                         this.onSDP(msg);
                         break;
+                    case "watch":
+                        this.onWatch(msg);
+                        break;
+                    case "unwatch":
+                        this.onUnwatch(msg);
+                        break;
                     case "error":
                         this.pushHistory({
                             channel: msg.channel,
@@ -414,7 +431,7 @@ const app = Vue.createApp({
                 // this.ChatClient("We are the offerer - set up onNegotiationNeeded");
                 pc.onnegotiationneeded = () => {
                     console.error("WebRTC OnNegotiationNeeded called!");
-                    this.ChatClient("Negotiation Needed, creating WebRTC offer.");
+                    // this.ChatClient("Negotiation Needed, creating WebRTC offer.");
                     pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
                 };
             }
@@ -433,12 +450,14 @@ const app = Vue.createApp({
                 }
 
                 window.requestAnimationFrame(() => {
-                    this.ChatServer("Setting <video> srcObject for " + username);
                     let $ref = document.getElementById(`videofeed-${username}`);
                     console.log("Video elem:", $ref);
                     $ref.srcObject = stream;
                     // this.$refs[`videofeed-${username}`].srcObject = stream;
                 });
+
+                // Inform them they are being watched.
+                this.sendWatch(username, true);
             };
 
             // If we were already broadcasting video, send our stream to
@@ -534,6 +553,21 @@ const app = Vue.createApp({
                     pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
                 }
             }, console.error);
+        },
+        onWatch(msg) {
+            // The user has our video feed open now.
+            this.webcam.watching[msg.username] = true;
+        },
+        onUnwatch(msg) {
+            // The user has closed our video feed.
+            delete(this.webcam.watching[msg.username]);
+        },
+        sendWatch(username, watching) {
+            // Send the watch or unwatch message to backend.
+            this.ws.conn.send(JSON.stringify({
+                action: watching ? "watch" : "unwatch",
+                username: username,
+            }));
         },
 
         /**
@@ -689,26 +723,36 @@ const app = Vue.createApp({
             // Camera is already open? Then disconnect the connection.
             if (this.WebRTC.pc[user.username] != undefined) {
                 // TODO: this breaks the connection both ways :(
-                // this.closeVideo(user.username);
-                // return;
-            }
-
-            // We need to broadcast video to connect to another.
-            // TODO: because if the offerer doesn't add video tracks they
-            // won't request video support so the answerer's video isn't sent
-            if (!this.webcam.active) {
-                this.ChatServer("You will need to turn your own camera on first before you can connect to " + user.username + ".");
-                // return;
+                this.closeVideo(user.username);
+                return;
             }
 
             this.sendOpen(user.username);
+
+            // Responsive CSS -> go to chat panel to see the camera
+            this.openChatPanel();
         },
         closeVideo(username) {
             // A user has logged off the server. Clean up any WebRTC connections.
             delete (this.WebRTC.streams[username]);
+            delete (this.webcam.watching[username]);
             if (this.WebRTC.pc[username] != undefined) {
                 this.WebRTC.pc[username].close();
                 delete (this.WebRTC.pc[username]);
+            }
+
+            // Inform backend we have closed it.
+            this.sendWatch(username, false);
+        },
+
+        // Show who watches our video.
+        showViewers() {
+            // TODO: for now, ChatClient is our bro.
+            let users = Object.keys(this.webcam.watching);
+            if (users.length === 0) {
+                this.ChatClient("There is currently nobody viewing your camera.");
+            } else {
+                this.ChatClient("Your current webcam viewers are:<br><br>" + users.join(", "));
             }
         },
 
@@ -725,6 +769,29 @@ const app = Vue.createApp({
 
             // Tell backend our camera state.
             this.sendMe();
+        },
+
+        // Mute my microphone if broadcasting.
+        muteMe() {
+            this.webcam.muted = !this.webcam.muted;
+            this.webcam.stream.getAudioTracks().forEach(track => {
+                console.error("Set audio track enabled=%s", !this.webcam.muted, track);
+                track.enabled = !this.webcam.muted;
+            });
+        },
+        isMuted(username) {
+            return this.WebRTC.muted[username] === true;
+        },
+        muteVideo(username) {
+            this.WebRTC.muted[username] = !this.isMuted(username);
+            console.error("muteVideo(%s) is not muted=%s", username, this.WebRTC.muted[username]);
+
+            // Find the <video> tag to mute it.
+            let $ref = document.getElementById(`videofeed-${username}`);
+            console.log("Video elem:", $ref);
+            if ($ref) {
+                $ref.muted = this.WebRTC.muted[username];
+            }
         },
 
         initHistory(channel) {

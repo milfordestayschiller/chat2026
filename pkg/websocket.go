@@ -73,6 +73,10 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnCandidate(sub, msg)
 			case ActionSDP:
 				s.OnSDP(sub, msg)
+			case ActionWatch:
+				s.OnWatch(sub, msg)
+			case ActionUnwatch:
+				s.OnUnwatch(sub, msg)
 			default:
 				sub.ChatServer("Unsupported message type.")
 			}

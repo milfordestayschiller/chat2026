@@ -61,12 +61,9 @@ func IndexPage() http.HandlerFunc {
 		}
 
 		tmpl.Funcs(template.FuncMap{
-			// Cache busting random string for JS and CSS dependency.
-			// "CacheHash": func() string {
-			// 	return util.RandomString(8)
-			// },
-
-			//
+			"AsHTML": func(v string) template.HTML {
+				return template.HTML(v)
+			},
 		})
 		tmpl, err := tmpl.ParseFiles("web/templates/chat.html")
 		if err != nil {
@@ -75,6 +72,35 @@ func IndexPage() http.HandlerFunc {
 		// END load the template
 
 		log.Info("Index route hit")
+		tmpl.ExecuteTemplate(w, "index", values)
+	})
+}
+
+// AboutPage returns the HTML template for the about page.
+func AboutPage() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Load the template, TODO: once on server startup.
+		tmpl := template.New("index")
+
+		// Variables to give to the front-end page.
+		var values = map[string]interface{}{
+			// A cache-busting hash for JS and CSS includes.
+			"CacheHash": util.RandomString(8),
+
+			// The current website settings.
+			"Config": config.Current,
+		}
+
+		tmpl.Funcs(template.FuncMap{
+			"AsHTML": func(v string) template.HTML {
+				return template.HTML(v)
+			},
+		})
+		tmpl, err := tmpl.ParseFiles("web/templates/about.html")
+		if err != nil {
+			panic(err.Error())
+		}
+
 		tmpl.ExecuteTemplate(w, "index", values)
 	})
 }

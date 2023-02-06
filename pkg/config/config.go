@@ -18,6 +18,7 @@ type Config struct {
 		SecretKey string
 	}
 
+	Title      string
 	WebsiteURL string
 
 	PublicChannels []Channel
@@ -46,6 +47,7 @@ var Current = DefaultConfig()
 // settings.toml file to disk.
 func DefaultConfig() Config {
 	var c = Config{
+		Title:      "BareRTC",
 		WebsiteURL: "https://www.example.com",
 		PublicChannels: []Channel{
 			{
