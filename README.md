@@ -2,6 +2,8 @@
 
 BareRTC is a simple WebRTC-based chat room application. It is especially designed to be plugged into any existing website, with or without a pre-existing base of users.
 
+**Live demo:** [BareRTC Demo Chat](https://chat.kirsle.net/)
+
 ![Screenshot of BareRTC](screenshot.png)
 
 It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
