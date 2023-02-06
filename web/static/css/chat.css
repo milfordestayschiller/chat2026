@@ -63,7 +63,6 @@ body {
 .chat-container > .chat-column {
     grid-column: 2;
     grid-row: 2;
-    background-color: yellow;
     overflow: hidden;
 }
 

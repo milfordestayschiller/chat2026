@@ -481,11 +481,12 @@
                         <li v-for="(u, i) in whoList" v-bind:key="i">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
-                                <div class="column is-narrow pr-0"
-                                    v-if="u.avatar">
-                                    <img :src="avatarURL(u)"
+                                <div class="column is-narrow pr-0">
+                                    <img v-if="u.avatar" :src="avatarURL(u)"
                                         width="24" height="24"
                                         :alt="'Avatar image for ' + u.username">
+                                    <img v-else src="/static/img/shy.png"
+                                        width="24" height="24">
                                 </div>
                                 <div class="column pr-0"
                                     :class="{'pl-1': u.avatar}">
