@@ -2,9 +2,9 @@
 
 BareRTC is a simple WebRTC-based chat room application. It is especially designed to be plugged into any existing website, with or without a pre-existing base of users.
 
-It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
+![Screenshot of BareRTC](screenshot.png)
 
-This is still a **work in progress** and see the features it still needs, below.
+It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
 
 # Features
 
@@ -15,25 +15,25 @@ This is still a **work in progress** and see the features it still needs, below.
 * Mobile friendly: works best on iPads and above but adapts to smaller screens well.
 * WebRTC means peer-to-peer video streaming so cheap on hosting costs!
 * Simple integration with your existing userbase via signed JWT tokens.
+* User configurable sound effects to be notified of DMs or users entering/exiting the room.
 
-Some important features it still needs:
+Some important features still lacking:
 
-* JWT authentication, and admin user permissions (kick/ban/etc.)
-    * Support for profile URLs, custom avatar image URLs, custom profile fields to show in-app
-* See who all is looking at your camera right now, and kick them off.
-* Lots of UI cleanup.
+* Operator controls (kick/ban users)
 
 # Configuration
 
-Work in progress. On first run it will create the settings.toml file for you:
+On first run it will create the default settings.toml file for you which you may then customize to your liking:
 
 ```toml
-WebsiteURL = "http://localhost:8080"
+Title = "BareRTC"
+Branding = "BareRTC"
+WebsiteURL = "https://www.example.com"
 
 [JWT]
-  Enabled = true
+  Enabled = false
   Strict = true
-  SecretKey = "change me"
+  SecretKey = ""
 
 [[PublicChannels]]
   ID = "lobby"
@@ -49,6 +49,12 @@ WebsiteURL = "http://localhost:8080"
 
 A description of the config directives includes:
 
+* Website settings:
+    * **Title** goes in the title bar of the chat page.
+    * **Branding** is the title shown in the corner of the page. HTML is permitted here! You may write an `<img>` tag to embed an image or use custom markup to color and prettify your logo.
+    * **WebsiteURL** is the base URL of your actual website which is used in a couple of places:
+        * The About page will link to your website.
+        * If using [JWT authentication](#authentication), avatar and profile URLs may be relative (beginning with a "/") and will append to your website URL to safe space on the JWT token size!
 * **JWT**: settings for JWT [Authentication](#authentication).
     * Enabled (bool): activate the JWT token authentication feature.
     * Strict (bool): if true, **only** valid signed JWT tokens may log in. If false, users with no/invalid token can enter their own username without authentication.
@@ -91,6 +97,8 @@ Configure a shared secret key (random text string) in both the BareRTC settings 
     "iat": 1675644784,   // Issued At (time)
 }
 ```
+
+**Notice:** your picture and profile URL may be relative URIs beginning with a forward slash as seen above; BareRTC will append them to the end of your WebsiteURL and you can save space on your JWT token size this way. Full URLs beginning with `https?://` will also be accepted and used as-is.
 
 An example how to sign your JWT tokens in Go (using [golang-jwt](https://github.com/golang-jwt/jwt)):
 

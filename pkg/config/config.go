@@ -49,6 +49,7 @@ var Current = DefaultConfig()
 func DefaultConfig() Config {
 	var c = Config{
 		Title:      "BareRTC",
+		Branding:   "BareRTC",
 		WebsiteURL: "https://www.example.com",
 		PublicChannels: []Channel{
 			{
