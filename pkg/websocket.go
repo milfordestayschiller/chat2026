@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"nhooyr.io/websocket"
 )
@@ -16,14 +17,16 @@ import (
 // Subscriber represents a connected WebSocket session.
 type Subscriber struct {
 	// User properties
-	ID          int // ID assigned by server
-	Username    string
-	VideoActive bool
-	conn        *websocket.Conn
-	ctx         context.Context
-	cancel      context.CancelFunc
-	messages    chan []byte
-	closeSlow   func()
+	ID            int // ID assigned by server
+	Username      string
+	VideoActive   bool
+	JWTClaims     *jwt.Claims
+	authenticated bool // has passed the login step
+	conn          *websocket.Conn
+	ctx           context.Context
+	cancel        context.CancelFunc
+	messages      chan []byte
+	closeSlow     func()
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -228,6 +231,10 @@ func (s *Server) Broadcast(msg Message) {
 	s.subscribersMu.RLock()
 	defer s.subscribersMu.RUnlock()
 	for _, sub := range s.IterSubscribers(true) {
+		if !sub.authenticated {
+			continue
+		}
+
 		sub.SendJSON(Message{
 			Action:   msg.Action,
 			Channel:  msg.Channel,
@@ -263,10 +270,20 @@ func (s *Server) SendWhoList() {
 	)
 
 	for _, sub := range subscribers {
-		users = append(users, WhoList{
+		if !sub.authenticated {
+			continue
+		}
+
+		who := WhoList{
 			Username:    sub.Username,
 			VideoActive: sub.VideoActive,
-		})
+		}
+		if sub.JWTClaims != nil {
+			who.Operator = sub.JWTClaims.IsAdmin
+			who.Avatar = sub.JWTClaims.Avatar
+			who.ProfileURL = sub.JWTClaims.ProfileURL
+		}
+		users = append(users, who)
 	}
 
 	for _, sub := range subscribers {

@@ -20,6 +20,7 @@ Some important features it still needs:
 
 * JWT authentication, and admin user permissions (kick/ban/etc.)
     * Support for profile URLs, custom avatar image URLs, custom profile fields to show in-app
+* See who all is looking at your camera right now, and kick them off.
 * Lots of UI cleanup.
 
 # Configuration
@@ -27,41 +28,128 @@ Some important features it still needs:
 Work in progress. On first run it will create the settings.toml file for you:
 
 ```toml
+WebsiteURL = "http://localhost:8080"
+
 [JWT]
-  Enabled = false
-  SecretKey = ""
+  Enabled = true
+  Strict = true
+  SecretKey = "change me"
 
 [[PublicChannels]]
   ID = "lobby"
   Name = "Lobby"
   Icon = "fa fa-gavel"
+  WelcomeMessages = ["Welcome to the chat server!", "Please follow the basic rules:\n\n1. Have fun\n2. Be kind"]
 
 [[PublicChannels]]
   ID = "offtopic"
   Name = "Off Topic"
+  WelcomeMessages = ["Welcome to the Off Topic channel!"]
 ```
+
+A description of the config directives includes:
+
+* **JWT**: settings for JWT [Authentication](#authentication).
+    * Enabled (bool): activate the JWT token authentication feature.
+    * Strict (bool): if true, **only** valid signed JWT tokens may log in. If false, users with no/invalid token can enter their own username without authentication.
+    * SecretKey (string): the JWT signing secret shared with your back-end app.
+* **PublicChannels**: list the public channels and their configuration. The default channel will be the first one listed.
+    * ID (string): an arbitrary 'username' for the chat channel, like "lobby".
+    * Name (string): the user friendly name for the channel, like "Off Topic"
+    * Icon (string, optional): CSS class names for FontAwesome icon for the channel, like "fa fa-message"
+    * WelcomeMessages ([]string, optional): messages that are delivered by ChatServer to the user when they connect to the server. Useful to give an introduction to each channel, list its rules, etc.
 
 # Authentication
 
-BareRTC supports custom (user-defined) authentication with your app in the form
-of JSON Web Tokens (JWTs). Configure a shared Secret Key in the ChatRTC settings
-and have your app create a signed JWT with the same key and the following custom
-claims:
+BareRTC supports custom (user-defined) authentication with your app in the form of JSON Web Tokens (JWTs). JWTs will allow your existing app to handle authentication for users by signing a token that vouches for them, and the BareRTC app will trust your signed token.
 
-```json
+The workflow is as follows:
+
+1. Your existing app already has the user logged-in and you trust who they are. To get them into the chat room, your server signs a JWT token using a secret key that both it and BareRTC knows.
+2. Your server redirects the user to your BareRTC website sending the JWT token as a `jwt` parameter, either in the query string (GET) or POST request.
+    * e.g. you send them to `https://chat.example.com/?jwt=TOKEN`
+    * If the JWT token is too long to fit in a query string, you may create a `<form>` with `method="POST"` that posts the `jwt` as a form field.
+3. The BareRTC server will parse and validate the token using the shared Secret Key that only it and your back-end website knows.
+
+There are JWT libraries available for most programming languages.
+
+Configure a shared secret key (random text string) in both the BareRTC settings and in your app, and your app will sign a JWT including claims that look like the following (using signing method HS264):
+
+```javascript
+// JSON Web Token "claims" expected by BareRTC
 {
-    "username": "Soandso",
-    "icon": "https://path/to/square/icon.png",
-    "admin": false,
+    // Custom claims
+    "sub": "username", // Username for chat (standard JWT claim)
+    "op": true,  // User will have admin/operator permissions.
+    "img": "/static/photos/username.jpg", // user picture URL
+    "url": "/u/username",                 // user profile URL
+
+    // Standard JWT claims that we support:
+    "iss": "my own app", // Issuer name
+    "exp": 1675645084,   // Expires at (time): 5 minutes out is plenty!
+    "nbf": 1675644784,   // Not Before (time)
+    "iat": 1675644784,   // Issued At (time)
 }
 ```
 
-This feature is not hooked up yet. JWT authenticated users sent by your app is the primary supported userbase and will bring many features such as:
+An example how to sign your JWT tokens in Go (using [golang-jwt](https://github.com/golang-jwt/jwt)):
 
-* Admin user permissions: you tell us who the admin is and they can moderate the chat room.
-* User profile URLs that can be opened from the Who List.
-* Custom avatar image URLs for your users.
-* Extra profile fields/icons that you can customize the display with.
+```golang
+import "github.com/golang-jwt/jwt/v4"
+
+// JWT signing key - keep it a secret on your back-end shared between
+// your app and BareRTC, do not use it in front-end javascript code or
+// where a user can find it.
+const SECRET = "change me"
+
+// Your custom JWT claims.
+type CustomClaims struct {
+    // Custom claims used by BareRTC.
+    Avatar     string `json:"img"`  // URI to user profile picture
+    ProfileURL string `json:"url"`  // URI to user's profile page
+    IsAdmin    bool   `json:"op"`   // give operator permission
+
+    // Standard JWT claims
+    jwt.RegisteredClaims
+}
+
+// Assuming your internal User struct looks anything at all like:
+type User struct {
+    Username       string
+    IsAdmin        bool
+    ProfilePicture string  // like "/static/photos/username.jpg"
+}
+
+// Create a JWT token for this user.
+func SignForUser(user User) string {
+    claims := CustomClaims{
+        // Custom claims
+        ProfileURL: "/users/" + user.Username,
+        Avatar:     user.ProfilePicture,
+        IsAdmin:    user.IsAdmin,
+
+        // Standard claims
+        Subject:   user.Username, // their chat username!
+        ExpiresAt: time.Now().Add(5 * time.Minute),
+        IssuedAt:  time.Now(),
+        NotBefore: time.Now(),
+        Issuer:    "my own app",
+        ID:        user.ID,
+    }
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    tokenStr, err := token.SignedString(SECRET)
+    if err != nil {
+        panic(err)
+    }
+    return tokenstr
+}
+```
+
+## JWT Strict Mode
+
+You can enable JWT authentication in a mixed mode: users presenting a valid token will get a profile picture and operator status (if applicable) and users who don't have a JWT token are asked to pick their own username and don't get any special flair.
+
+In strict mode (default/recommended), only a valid JWT token can sign a user into the chat room. Set `[JWT]/Strict=false` in your settings.toml to disable strict JWT verification and allow "guest users" to log in. Note that this can have the same caveats as [running without authentication](#running-without-authentication) and is not a recommended use case.
 
 ## Running Without Authentication
 

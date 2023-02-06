@@ -17,6 +17,14 @@ const app = Vue.createApp({
             // Website configuration provided by chat.html template.
             config: {
                 channels: PublicChannels,
+                website: WebsiteURL,
+            },
+
+            // User JWT settings if available.
+            jwt: {
+                token: UserJWTToken,
+                valid: UserJWTValid,
+                claims: UserJWTClaims
             },
 
             channel: "lobby",
@@ -31,6 +39,7 @@ const app = Vue.createApp({
 
             // Who List for the room.
             whoList: [],
+            whoMap: {}, // map username to wholist entry
 
             // My video feed.
             webcam: {
@@ -106,6 +115,15 @@ const app = Vue.createApp({
 
         this.ChatServer("Welcome to BareRTC!")
 
+        // Auto login with JWT token?
+        // TODO: JWT validation on the WebSocket as well.
+        if (this.jwt.valid && this.jwt.claims.sub) {
+            this.username = this.jwt.claims.sub;
+        }
+
+        // Scrub JWT token from query string parameters.
+        history.pushState(null, "", location.href.split("?")[0]);
+
         if (!this.username) {
             this.loginModal.visible = true;
         } else {
@@ -150,6 +168,10 @@ const app = Vue.createApp({
             }
 
             return this.channel;
+        },
+        isDM() {
+            // Is the current channel a DM?
+            return this.channel.indexOf("@") === 0;
         },
     },
     methods: {
@@ -204,10 +226,12 @@ const app = Vue.createApp({
         // WhoList updates.
         onWho(msg) {
             this.whoList = msg.whoList;
+            this.whoMap = {};
 
             // If we had a camera open with any of these and they have gone
             // off camera, close our side of the connection.
             for (let row of this.whoList) {
+                this.whoMap[row.username] = row;
                 if (this.WebRTC.streams[row.username] != undefined &&
                     row.videoActive !== true) {
                     this.closeVideo(row.username);
@@ -252,6 +276,25 @@ const app = Vue.createApp({
             });
         },
 
+        // User logged in or out.
+        onPresence(msg) {
+            // TODO: make a dedicated leave event
+            if (msg.message.indexOf("has exited the room!") > -1) {
+                // Clean up data about this user.
+                this.onUserExited(msg);
+            }
+
+            // Push it to the history of all public channels.
+            for (let channel of this.config.channels) {
+                this.pushHistory({
+                    channel: channel.ID,
+                    action: msg.action,
+                    username: msg.username,
+                    message: msg.message,
+                });
+            }
+        },
+
         // Dial the WebSocket connection.
         dial() {
             console.log("Dialing WebSocket...");
@@ -259,6 +302,9 @@ const app = Vue.createApp({
             const conn = new WebSocket(`${proto}://${location.host}/ws`);
 
             conn.addEventListener("close", ev => {
+                // Lost connection to server - scrub who list.
+                this.onWho({whoList: []});
+
                 this.ws.connected = false;
                 this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
 
@@ -276,6 +322,7 @@ const app = Vue.createApp({
                 this.ws.conn.send(JSON.stringify({
                     action: "login",
                     username: this.username,
+                    jwt: this.jwt.token,
                 }));
             });
 
@@ -300,16 +347,7 @@ const app = Vue.createApp({
                         this.onMessage(msg);
                         break;
                     case "presence":
-                        // TODO: make a dedicated leave event
-                        if (msg.message.indexOf("has exited the room!") > -1) {
-                            // Clean up data about this user.
-                            this.onUserExited(msg);
-                        }
-                        this.pushHistory({
-                            action: msg.action,
-                            username: msg.username,
-                            message: msg.message,
-                        });
+                        this.onPresence(msg);
                         break;
                     case "ring":
                         this.onRing(msg);
@@ -325,9 +363,10 @@ const app = Vue.createApp({
                         break;
                     case "error":
                         this.pushHistory({
+                            channel: msg.channel,
                             username: msg.username || 'Internal Server Error',
                             message: msg.message,
-                            isChatClient: true,
+                            isChatServer: true,
                         });
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
@@ -506,6 +545,9 @@ const app = Vue.createApp({
             this.channel = typeof(channel) === "string" ? channel : channel.ID;
             this.scrollHistory();
             this.channels[this.channel].unread = 0;
+
+            // Responsive CSS: switch back to chat panel upon selecting a channel.
+            this.openChatPanel();
         },
         hasUnread(channel) {
             if (this.channels[channel] == undefined) {
@@ -517,6 +559,47 @@ const app = Vue.createApp({
             let channel = "@" + user.username;
             this.initHistory(channel);
             this.setChannel(channel);
+
+            // Responsive CSS: switch back to chat panel upon opening a DM.
+            this.openChatPanel();
+        },
+        openProfile(user) {
+            let url = this.profileURLForUsername(user.username);
+            if (url) {
+                window.open(url);
+            }
+        },
+        avatarURL(user) {
+            // Resolve the avatar URL of this user.
+            if (user.avatar.match(/^https?:/i)) {
+                return user.avatar;
+            } else if (user.avatar.indexOf("/") === 0) {
+                return this.config.website.replace(/\/+$/, "") + user.avatar;
+            }
+            return "";
+        },
+        avatarForUsername(username) {
+            if (this.whoMap[username] != undefined && this.whoMap[username].avatar) {
+                return this.avatarURL(this.whoMap[username]);
+            }
+            return null;
+        },
+        profileURLForUsername(username) {
+            if (!username) return;
+            username = username.replace(/^@/, "");
+            if (this.whoMap[username] != undefined && this.whoMap[username].profileURL) {
+                let url = this.whoMap[username].profileURL;
+                if (url.match(/^https?:/i)) {
+                    return url;
+                } else if (url.indexOf("/") === 0) {
+                    // Subdirectory relative to our WebsiteURL
+                    return this.config.website.replace(/\/+$/, "") + url;
+                } else {
+                    this.ChatClient("Didn't know how to open profile URL: " + url);
+                }
+                return url;
+            }
+            return null;
         },
         leaveDM() {
             // Validate we're in a DM currently.
@@ -675,7 +758,10 @@ const app = Vue.createApp({
 
             // Mark unread notifiers if this is not our channel.
             if (this.channel !== channel) {
-                this.channels[channel].unread++;
+                // Don't notify about presence broadcasts.
+                if (action !== "presence") {
+                    this.channels[channel].unread++;
+                }
             }
         },
 

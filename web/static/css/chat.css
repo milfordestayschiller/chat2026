@@ -9,6 +9,15 @@ body {
     float: right;
 }
 
+.cursor-default {
+    cursor: default;
+}
+
+/* Bulma override */
+.media-content {
+    overflow: hidden !important;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/
@@ -25,7 +34,7 @@ body {
     display: grid;
     column-gap: 10px;
     row-gap: 10px;
-    grid-template-columns: 260px 1fr 260px;
+    grid-template-columns: 260px 1fr 280px;
     grid-template-rows: 1fr auto;
 }
 

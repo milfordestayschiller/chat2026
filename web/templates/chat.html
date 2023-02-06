@@ -111,25 +111,39 @@
             <div class="card grid-card">
                 <header class="card-header has-background-link">
                     <div class="columns is-mobile card-header-title has-text-light">
-                        <div class="column is-narrow mobile-only">
+                        <div class="column is-narrow mobile-only pr-0">
                             <!-- Responsive mobile button to pan to Left Column -->
                             <button type="button"
                                 class="button is-success"
+                                :class="{'is-small': isDM}"
                                 @click="openChannelsPanel">
-                                <i class="fa fa-message"></i>
+                                <i v-if="isDM" class="fa fa-arrow-left"></i>
+                                <i v-else class="fa fa-message"></i>
                             </button>
                         </div>
-                        <div class="column">[[channelName]]</div>
+                        <div class="column">
+                            [[channelName]]
+                        </div>
                         <div class="column is-narrow">
+                            <!-- If a DM thread and the user has a profile URL -->
+                            <button type="button"
+                                v-if="this.channel.indexOf('@') === 0 && profileURLForUsername(this.channel)"
+                                class="button is-small is-outlined is-light mr-1"
+                                @click="openProfile({username: this.channel})">
+                                <i class="fa fa-user"></i>
+                            </button>
+
                             <!-- DMs: Leave convo button -->
                             <button type="button"
                                 v-if="channel.indexOf('@') === 0"
-                                class="float-right button is-small is-warning is-outline"
+                                class="float-right button is-small is-warning is-outlined"
                                 @click="leaveDM()">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>
-                        <div class="column is-narrow mobile-only">
+
+                        <!-- Who List button, only shown on public channel view -->
+                        <div v-if="!isDM" class="column is-narrow mobile-only">
                             <!-- Responsive mobile button to pan to Right Column -->
                             <button type="button"
                                 class="button is-success"
@@ -155,21 +169,59 @@
                 </div>
                 <div class="card-content" id="chatHistory">
 
-                    <div v-for="(msg, i) in chatHistory" v-bind:key="i">
-                        <div>
-                            <label class="label"
-                                :class="{'has-text-success is-dark': msg.isChatServer,
-                                         'has-text-warning is-dark': msg.isAdmin,
-                                         'has-text-danger': msg.isChatClient}">
-                                [[msg.username]]
-                            </label>
+                    <!-- No history? -->
+                    <div v-if="chatHistory.length === 0">
+                        <em v-if="isDM">
+                            Starting a direct message chat with [[channel]]. Type a message and say hello!
+                        </em>
+                        <em v-else>
+                            There are no messages in this channel yet.
+                        </em>
+                    </div>
+
+                    <div v-for="(msg, i) in chatHistory" v-bind:key="i" class="mb-2">
+                        <div class="media mb-0">
+                            <div class="media-left">
+                                <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
+                                    :class="{'cursor-default': !profileURLForUsername(msg.username)}">
+                                    <figure class="image is-24x24">
+                                        <img v-if="msg.isChatServer"
+                                            src="/static/img/server.png">
+                                        <img v-else-if="msg.isChatClient"
+                                            src="/static/img/client.png">
+                                        <img v-else-if="avatarForUsername(msg.username)"
+                                            :src="avatarForUsername(msg.username)">
+                                        <img v-else src="/static/img/shy.png">
+                                    </figure>
+                                </a>
+                            </div>
+                            <div class="media-content">
+                                <div class="columns is-mobile">
+                                    <div class="column">
+                                        <label class="label"
+                                            :class="{'has-text-success is-dark': msg.isChatServer,
+                                                    'has-text-warning is-dark': msg.isAdmin,
+                                                    'has-text-danger': msg.isChatClient}">
+                                            [[msg.username]]
+                                        </label>
+                                    </div>
+                                    <div class="column is-narrow"
+                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username)">
+                                        <button type="button"
+                                            class="button is-dark is-outlined is-small"
+                                            @click="openDMs({username: msg.username})">
+                                            <i class="fa fa-message"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div v-if="msg.action === 'presence'">
                             <em>[[msg.message]]</em>
                         </div>
-                        <div v-else>
-                            [[msg.message]]
+                        <div v-else class="content">
+                            <div v-html="msg.message"></div>
                         </div>
 
                     </div>
@@ -234,17 +286,43 @@
                     <ul class="menu-list">
                         <li v-for="(u, i) in whoList" v-bind:key="i">
                             <div class="columns is-mobile">
-                                <div class="column">[[ u.username ]]</div>
-                                <div class="column is-narrow">
+                                <!-- Avatar URL if available -->
+                                <div class="column is-narrow pr-0"
+                                    v-if="u.avatar">
+                                    <img :src="avatarURL(u)"
+                                        width="24" height="24"
+                                        :alt="'Avatar image for ' + u.username">
+                                </div>
+                                <div class="column pr-0"
+                                    :class="{'pl-1': u.avatar}">
+                                    <i class="fa fa-gavel has-text-warning-dark"
+                                        v-if="u.op"
+                                        title="Operator"></i>
+                                    [[ u.username ]]
+                                </div>
+                                <div class="column is-narrow pl-0">
+                                    <!-- Profile button -->
+                                    <button type="button"
+                                        v-if="u.profileURL"
+                                        class="button is-small px-2 py-1"
+                                        @click="openProfile(u)"
+                                        title="Open profile page">
+                                        <i class="fa fa-user"></i>
+                                    </button>
+
+                                    <!-- DM button -->
                                     <button type="button"
                                         class="button is-small px-2 py-1"
                                         @click="openDMs(u)"
+                                        title="Start direct message thread"
                                         :disabled="u.username === username">
                                         <i class="fa fa-message"></i>
                                     </button>
 
-                                    <button type="button" class="button is-small"
+                                    <!-- Video button -->
+                                    <button type="button" class="button is-small px-2 py-1"
                                         :disabled="!u.videoActive"
+                                        title="Open video stream"
                                         @click="openVideo(u)">
                                         <i class="fa fa-video"></i>
                                     </button>
@@ -262,6 +340,10 @@
 
 <script type="text/javascript">
 const PublicChannels = {{.Config.GetChannels}};
+const WebsiteURL = "{{.Config.WebsiteURL}}";
+const UserJWTToken = {{.JWTTokenString}};
+const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
+const UserJWTClaims = {{.JWTClaims.ToJSON}};
 </script>
 
 <script src="/static/js/vue-3.2.45.js"></script>

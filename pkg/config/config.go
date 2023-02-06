@@ -14,8 +14,11 @@ import (
 type Config struct {
 	JWT struct {
 		Enabled   bool
+		Strict    bool
 		SecretKey string
 	}
+
+	WebsiteURL string
 
 	PublicChannels []Channel
 }
@@ -31,6 +34,9 @@ type Channel struct {
 	ID   string // Like "lobby"
 	Name string // Like "Main Chat Room"
 	Icon string `toml:",omitempty"` // CSS class names for room icon (optional)
+
+	// ChatServer messages to send to the user immediately upon connecting.
+	WelcomeMessages []string
 }
 
 // Current loaded configuration.
@@ -40,18 +46,27 @@ var Current = DefaultConfig()
 // settings.toml file to disk.
 func DefaultConfig() Config {
 	var c = Config{
+		WebsiteURL: "https://www.example.com",
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",
 				Name: "Lobby",
 				Icon: "fa fa-gavel",
+				WelcomeMessages: []string{
+					"Welcome to the chat server!",
+					"Please follow the basic rules:\n\n1. Have fun\n2. Be kind",
+				},
 			},
 			{
 				ID:   "offtopic",
 				Name: "Off Topic",
+				WelcomeMessages: []string{
+					"Welcome to the Off Topic channel!",
+				},
 			},
 		},
 	}
+	c.JWT.Strict = true
 	return c
 }
 

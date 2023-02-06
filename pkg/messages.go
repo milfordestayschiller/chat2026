@@ -6,6 +6,9 @@ type Message struct {
 	Username string `json:"username,omitempty"`
 	Message  string `json:"message,omitempty"`
 
+	// JWT token for `login` actions.
+	JWTToken string `json:"jwt,omitempty"`
+
 	// WhoList for `who` actions
 	WhoList []WhoList `json:"whoList,omitempty"`
 
@@ -45,4 +48,9 @@ const (
 type WhoList struct {
 	Username    string `json:"username"`
 	VideoActive bool   `json:"videoActive"`
+
+	// JWT auth extra settings.
+	Operator   bool   `json:"op"`
+	Avatar     string `json:"avatar"`
+	ProfileURL string `json:"profileURL"`
 }
