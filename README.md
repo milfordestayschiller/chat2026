@@ -171,6 +171,44 @@ This app is not designed to run without JWT authentication for users enabled. In
 
 Note that they would not get past history of those DMs as this server only pushes _new_ messages to users after they connect.
 
+# Deploying This App
+
+It is recommended to use a reverse proxy such as nginx in front of this app. You will need to configure nginx to forward WebSocket related headers:
+
+```nginx
+server {
+    server_name chat.example.com;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+
+    ssl_certificate /etc/letsencrypt/live/chat.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/chat.example.com/privkey.pem;
+
+    # Proxy pass to BareRTC.
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+
+        # WebSocket headers to forward along.
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+}
+```
+
+You can run the BareRTC app itself using any service supervisor you like. I use [Supervisor](http://supervisord.org/introduction.html) and you can configure BareRTC like so:
+
+```ini
+# /etc/supervisor/conf.d/barertc.conf
+[program:barertc]
+command = /home/user/git/BareRTC/BareRTC -address 127.0.0.1:9000
+directory = /home/user/git/BareRTC
+user = user
+```
+
+Then `sudo supervisorctl reread && sudo supervisorctl add barertc` to start the app.
+
 # License
 
 GPLv3.
