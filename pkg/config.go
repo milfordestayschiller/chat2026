@@ -2,4 +2,4 @@ package barertc
 
 import "time"
 
-const PingInterval = 60 * time.Second
+const PingInterval = 15 * time.Second

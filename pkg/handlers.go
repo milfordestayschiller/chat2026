@@ -144,7 +144,7 @@ func (s *Server) OnOpen(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		sub.ChatServer(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -172,7 +172,7 @@ func (s *Server) OnCandidate(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		sub.ChatServer(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -188,7 +188,7 @@ func (s *Server) OnSDP(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		sub.ChatServer(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -204,7 +204,7 @@ func (s *Server) OnWatch(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		sub.ChatServer(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -219,7 +219,7 @@ func (s *Server) OnUnwatch(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		sub.ChatServer(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
