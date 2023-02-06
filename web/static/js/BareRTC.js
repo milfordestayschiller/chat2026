@@ -1,4 +1,4 @@
-console.log("BareRTC!");
+// console.log("BareRTC!");
 
 // WebRTC configuration.
 const configuration = {
@@ -212,7 +212,7 @@ const app = Vue.createApp({
                 return;
             }
 
-            console.debug("Send message: %s", this.message);
+            // console.debug("Send message: %s", this.message);
             this.ws.conn.send(JSON.stringify({
                 action: "message",
                 channel: this.channel,
@@ -273,7 +273,7 @@ const app = Vue.createApp({
         onOpen(msg) {
             // Response for the opener to begin WebRTC connection.
             const secret = msg.openSecret;
-            console.log("OPEN: connect to %s with secret %s", msg.username, secret);
+            // console.log("OPEN: connect to %s with secret %s", msg.username, secret);
             // this.ChatClient(`onOpen called for ${msg.username}.`);
 
             this.startWebRTC(msg.username, true);
@@ -281,7 +281,7 @@ const app = Vue.createApp({
         onRing(msg) {
             // Message for the receiver to begin WebRTC connection.
             const secret = msg.openSecret;
-            console.log("RING: connection from %s with secret %s", msg.username, secret);
+            // console.log("RING: connection from %s with secret %s", msg.username, secret);
             this.ChatServer(`${msg.username} has opened your camera.`);
 
             this.startWebRTC(msg.username, false);
@@ -347,7 +347,7 @@ const app = Vue.createApp({
 
         // Dial the WebSocket connection.
         dial() {
-            console.log("Dialing WebSocket...");
+            // console.log("Dialing WebSocket...");
             const proto = location.protocol === 'https:' ? 'wss' : 'ws';
             const conn = new WebSocket(`${proto}://${location.host}/ws`);
 
@@ -377,7 +377,6 @@ const app = Vue.createApp({
             });
 
             conn.addEventListener("message", ev => {
-                console.log(ev);
                 if (typeof ev.data !== "string") {
                     console.error("unexpected message type", typeof ev.data);
                     return;
@@ -393,11 +392,9 @@ const app = Vue.createApp({
 
                 switch (msg.action) {
                     case "who":
-                        console.log("Got the Who List: %s", msg);
                         this.onWho(msg);
                         break;
                     case "me":
-                        console.log("Got a self-update: %s", msg);
                         this.onMe(msg);
                         break;
                     case "message":
@@ -434,7 +431,6 @@ const app = Vue.createApp({
                         });
                         break;
                     case "ping":
-                        console.debug("Received ping from server");
                         break;
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
@@ -464,11 +460,7 @@ const app = Vue.createApp({
             // 'onicecandidate' notifies us whenever an ICE agent needs to deliver a
             // message to the other peer through the signaling server.
             pc.onicecandidate = event => {
-                console.error("WebRTC OnICECandidate called!", event);
-                // this.ChatClient("On ICE Candidate called!");
                 if (event.candidate) {
-                    // this.ChatClient(`Send ICE candidate: ${JSON.stringify(event.candidate)}`);
-                    console.log("Sending candidate to websockets:", event.candidate);
                     this.ws.conn.send(JSON.stringify({
                         action: "candidate",
                         username: username,
@@ -479,18 +471,13 @@ const app = Vue.createApp({
 
             // If the user is offerer let the 'negotiationneeded' event create the offer.
             if (isOfferer) {
-                // this.ChatClient("We are the offerer - set up onNegotiationNeeded");
                 pc.onnegotiationneeded = () => {
-                    console.error("WebRTC OnNegotiationNeeded called!");
-                    // this.ChatClient("Negotiation Needed, creating WebRTC offer.");
                     pc.createOffer().then(this.localDescCreated(pc, username)).catch(this.ChatClient);
                 };
             }
 
             // When a remote stream arrives.
             pc.ontrack = event => {
-                // this.ChatServer("ON TRACK CALLED!!!");
-                console.error("WebRTC OnTrack called!", event);
                 const stream = event.streams[0];
 
                 // Do we already have it?
@@ -502,9 +489,7 @@ const app = Vue.createApp({
 
                 window.requestAnimationFrame(() => {
                     let $ref = document.getElementById(`videofeed-${username}`);
-                    console.log("Video elem:", $ref);
                     $ref.srcObject = stream;
-                    // this.$refs[`videofeed-${username}`].srcObject = stream;
                 });
 
                 // Inform them they are being watched.
@@ -520,7 +505,6 @@ const app = Vue.createApp({
                 // this.ChatClient(`Sharing our video stream to ${username}.`);
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
-                    console.error("Add stream track to WebRTC", stream, track);
                     pc.addTrack(track, stream)
                 });
             }
@@ -554,16 +538,12 @@ const app = Vue.createApp({
 
         // Handle inbound WebRTC signaling messages proxied by the websocket.
         onCandidate(msg) {
-            console.error("onCandidate() called:", msg);
             if (this.WebRTC.pc[msg.username] == undefined) {
-                console.error("DID NOT FIND RTCPeerConnection for username:", msg.username);
                 return;
             }
             let pc = this.WebRTC.pc[msg.username];
 
             // Add the new ICE candidate.
-            console.log("Add ICE candidate: %s", msg.candidate);
-            // this.ChatClient(`Received an ICE candidate from ${msg.username}: ${JSON.stringify(msg.candidate)}`);
             pc.addIceCandidate(
                 new RTCIceCandidate(
                     msg.candidate,
@@ -573,34 +553,17 @@ const app = Vue.createApp({
             );
         },
         onSDP(msg) {
-            console.error("onSDP() called:", msg);
             if (this.WebRTC.pc[msg.username] == undefined) {
-                console.error("DID NOT FIND RTCPeerConnection for username:", msg.username);
                 return;
             }
             let pc = this.WebRTC.pc[msg.username];
             let message = msg.description;
 
             // Add the new ICE candidate.
-            console.log("Set description:", message);
             // this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);
             pc.setRemoteDescription(new RTCSessionDescription(message), () => {
                 // When receiving an offer let's answer it.
                 if (pc.remoteDescription.type === 'offer') {
-                    console.error("Webcam:", this.webcam);
-
-                    // Add our local video tracks to the connection.
-                    // if (this.webcam.active) {
-                    //     this.ChatClient(`Sharing our video stream to ${msg.username}.`);
-                    //     let stream = this.webcam.stream;
-                    //     stream.getTracks().forEach(track => {
-                    //         console.error("Add stream track to WebRTC", stream, track);
-                    //         pc.addTrack(track, stream)
-                    //     });
-                    // }
-
-                    // this.ChatClient(`setRemoteDescription callback. Offer recieved - sending answer. Cam active? ${this.webcam.active}`);
-                    console.warn("Creating answer now");
                     pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
                 }
             }, console.error);
@@ -834,7 +797,6 @@ const app = Vue.createApp({
         muteMe() {
             this.webcam.muted = !this.webcam.muted;
             this.webcam.stream.getAudioTracks().forEach(track => {
-                console.error("Set audio track enabled=%s", !this.webcam.muted, track);
                 track.enabled = !this.webcam.muted;
             });
         },
@@ -843,11 +805,9 @@ const app = Vue.createApp({
         },
         muteVideo(username) {
             this.WebRTC.muted[username] = !this.isMuted(username);
-            console.error("muteVideo(%s) is not muted=%s", username, this.WebRTC.muted[username]);
 
             // Find the <video> tag to mute it.
             let $ref = document.getElementById(`videofeed-${username}`);
-            console.log("Video elem:", $ref);
             if ($ref) {
                 $ref.muted = this.WebRTC.muted[username];
             }
@@ -980,8 +940,6 @@ const app = Vue.createApp({
                 return;
             }
 
-            console.error("AudioContext:", this.config.sounds.audioContext);
-
             // Create <audio> elements for all the sounds.
             for (let effect of this.config.sounds.available) {
                 if (!effect.filename) continue; // 'Quiet' has no audio
@@ -994,8 +952,6 @@ const app = Vue.createApp({
                 let track = this.config.sounds.audioContext.createMediaElementSource(elem);
                 track.connect(this.config.sounds.audioContext.destination);
                 this.config.sounds.audioTracks[effect.name] = elem;
-
-                console.warn(effect.name, this.config.sounds.audioTracks[effect.name]);
             }
 
             // Apply the user's saved preferences if any.
@@ -1008,14 +964,10 @@ const app = Vue.createApp({
 
         playSound(event) {
             let filename = this.config.sounds.settings[event];
-            console.error("Play sound:", event, filename, JSON.stringify(this.config.sounds));
             // Do we have an audio track?
-            console.log(this.config.sounds.audioTracks[filename]);
             if (this.config.sounds.audioTracks[filename] != undefined) {
                 let track = this.config.sounds.audioTracks[filename];
-                console.log("Track:", track);
                 track.play();
-                console.log("Playing %s", filename);
             }
         },
 
