@@ -252,7 +252,7 @@ const app = Vue.createApp({
                 this.whoMap[row.username] = row;
                 if (this.WebRTC.streams[row.username] != undefined &&
                     row.videoActive !== true) {
-                    this.closeVideo(row.username);
+                    this.closeVideo(row.username, "offerer");
                 }
             }
 
@@ -448,7 +448,21 @@ const app = Vue.createApp({
         startWebRTC(username, isOfferer) {
             // this.ChatClient(`Begin WebRTC with ${username}.`);
             let pc = new RTCPeerConnection(configuration);
-            this.WebRTC.pc[username] = pc;
+
+            // Store uni-directional PeerConnections:
+            // - If we are reading video from the other (offerer)
+            // - If we are sending video to the other (answerer)
+            if (this.WebRTC.pc[username] == undefined) {
+                this.WebRTC.pc[username] = {};
+            }
+            if (isOfferer) {
+                this.WebRTC.pc[username].offerer = pc;
+            } else {
+                this.WebRTC.pc[username].answerer = pc;
+            }
+
+            // Keep a pointer to the current channel being established (for candidate/SDP).
+            this.WebRTC.pc[username].connecting = pc;
 
             // Create a data channel so we have something to connect over even if
             // the local user is not broadcasting their own camera.
@@ -538,10 +552,10 @@ const app = Vue.createApp({
 
         // Handle inbound WebRTC signaling messages proxied by the websocket.
         onCandidate(msg) {
-            if (this.WebRTC.pc[msg.username] == undefined) {
+            if (this.WebRTC.pc[msg.username] == undefined || !this.WebRTC.pc[msg.username].connecting) {
                 return;
             }
-            let pc = this.WebRTC.pc[msg.username];
+            let pc = this.WebRTC.pc[msg.username].connecting;
 
             // Add the new ICE candidate.
             pc.addIceCandidate(
@@ -553,10 +567,10 @@ const app = Vue.createApp({
             );
         },
         onSDP(msg) {
-            if (this.WebRTC.pc[msg.username] == undefined) {
+            if (this.WebRTC.pc[msg.username] == undefined || !this.WebRTC.pc[msg.username].connecting) {
                 return;
             }
-            let pc = this.WebRTC.pc[msg.username];
+            let pc = this.WebRTC.pc[msg.username].connecting;
             let message = msg.description;
 
             // Add the new ICE candidate.
@@ -743,9 +757,8 @@ const app = Vue.createApp({
             }
 
             // Camera is already open? Then disconnect the connection.
-            if (this.WebRTC.pc[user.username] != undefined) {
-                // TODO: this breaks the connection both ways :(
-                this.closeVideo(user.username);
+            if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.pc[user.username].offerer != undefined) {
+                this.closeVideo(user.username, "offerer");
                 return;
             }
 
@@ -754,12 +767,37 @@ const app = Vue.createApp({
             // Responsive CSS -> go to chat panel to see the camera
             this.openChatPanel();
         },
-        closeVideo(username) {
+        closeVideo(username, name) {
+            if (name === "offerer") {
+                // We are closing another user's video stream.
+                delete (this.WebRTC.streams[username]);
+                if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].offerer != undefined) {
+                    this.WebRTC.pc[username].offerer.close();
+                    delete (this.WebRTC.pc[username]);
+                }
+
+                // Inform backend we have closed it.
+                this.sendWatch(username, false);
+                return;
+            } else if (name === "answerer") {
+                // We have turned off our camera, kick off viewers.
+                if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].answerer != undefined) {
+                    this.WebRTC.pc[username].answerer.close();
+                    delete (this.WebRTC.pc[username]);
+                }
+                return;
+            }
+
             // A user has logged off the server. Clean up any WebRTC connections.
             delete (this.WebRTC.streams[username]);
             delete (this.webcam.watching[username]);
             if (this.WebRTC.pc[username] != undefined) {
-                this.WebRTC.pc[username].close();
+                if (this.WebRTC.pc[username].offerer) {
+                    this.WebRTC.pc[username].offerer.close();
+                }
+                if (this.WebRTC.pc[username].answerer) {
+                    this.WebRTC.pc[username].answerer.close();
+                }
                 delete (this.WebRTC.pc[username]);
             }
 
@@ -786,7 +824,7 @@ const app = Vue.createApp({
 
             // Close all WebRTC sessions.
             for (username of Object.keys(this.WebRTC.pc)) {
-                this.closeVideo(username);
+                this.closeVideo(username, "answerer");
             }
 
             // Tell backend our camera state.
