@@ -108,10 +108,11 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 
 	// Message to be echoed to the channel.
 	var message = Message{
-		Action:   ActionMessage,
-		Channel:  msg.Channel,
-		Username: sub.Username,
-		Message:  markdown,
+		Action:    ActionMessage,
+		Channel:   msg.Channel,
+		Username:  sub.Username,
+		Message:   markdown,
+		Timestamp: time.Now(),
 	}
 
 	// Is this a DM?
@@ -119,7 +120,9 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		// Echo the message only to both parties.
 		s.SendTo(sub.Username, message)
 		message.Channel = "@" + sub.Username
-		s.SendTo(msg.Channel, message)
+		if err := s.SendTo(msg.Channel, message); err != nil {
+			sub.ChatServer("Your message could not be delivered: %s", err)
+		}
 		return
 	}
 

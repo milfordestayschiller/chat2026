@@ -19,6 +19,7 @@ type Config struct {
 	}
 
 	Title      string
+	Branding   string
 	WebsiteURL string
 
 	PublicChannels []Channel

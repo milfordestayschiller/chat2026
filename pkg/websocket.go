@@ -239,23 +239,26 @@ func (s *Server) Broadcast(msg Message) {
 			continue
 		}
 
-		sub.SendJSON(Message{
-			Action:   msg.Action,
-			Channel:  msg.Channel,
-			Username: msg.Username,
-			Message:  msg.Message,
-		})
+		sub.SendJSON(msg)
 	}
 }
 
 // SendTo sends a message to a given username.
-func (s *Server) SendTo(username string, msg Message) {
+func (s *Server) SendTo(username string, msg Message) error {
 	log.Debug("SendTo(%s): %+v", username, msg)
 	username = strings.TrimPrefix(username, "@")
 	s.subscribersMu.RLock()
 	defer s.subscribersMu.RUnlock()
+
+	// If no timestamp, add it.
+	if msg.Timestamp.IsZero() {
+		msg.Timestamp = time.Now()
+	}
+
+	var found bool
 	for _, sub := range s.IterSubscribers(true) {
 		if sub.Username == username {
+			found = true
 			sub.SendJSON(Message{
 				Action:   msg.Action,
 				Channel:  msg.Channel,
@@ -264,6 +267,11 @@ func (s *Server) SendTo(username string, msg Message) {
 			})
 		}
 	}
+
+	if !found {
+		return fmt.Errorf("%s is not online", username)
+	}
+	return nil
 }
 
 // SendWhoList broadcasts the connected members to everybody in the room.
@@ -292,8 +300,9 @@ func (s *Server) SendWhoList() {
 
 	for _, sub := range subscribers {
 		sub.SendJSON(Message{
-			Action:  ActionWhoList,
-			WhoList: users,
+			Action:    ActionWhoList,
+			WhoList:   users,
+			Timestamp: time.Now(),
 		})
 	}
 }

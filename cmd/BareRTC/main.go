@@ -33,5 +33,7 @@ func main() {
 
 	app := barertc.NewServer()
 	app.Setup()
+
+	log.Info("Listening at %s", address)
 	panic(app.ListenAndServe(address))
 }

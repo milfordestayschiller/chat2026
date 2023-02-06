@@ -18,6 +18,13 @@ const app = Vue.createApp({
             config: {
                 channels: PublicChannels,
                 website: WebsiteURL,
+                sounds: {
+                    available: SoundEffects,
+                    settings: DefaultSounds,
+                    ready: false,
+                    audioContext: null,
+                    audioTracks: {},
+                }
             },
 
             // User JWT settings if available.
@@ -96,9 +103,15 @@ const app = Vue.createApp({
             loginModal: {
                 visible: false,
             },
+
+            settingsModal: {
+                visible: false,
+            },
         }
     },
     mounted() {
+        this.setupSounds();
+
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
 
@@ -280,10 +293,20 @@ const app = Vue.createApp({
 
         // Handle messages sent in chat.
         onMessage(msg) {
+            // Play sound effects if this is not the active channel.
+            if (msg.channel.indexOf("@") === 0) {
+                if (msg.channel !== this.channel) {
+                    this.playSound("DM");
+                }
+            } else if (msg.channel !== this.channel) {
+                this.playSound("Chat");
+            }
+
             this.pushHistory({
                 channel: msg.channel,
                 username: msg.username,
                 message: msg.message,
+                at: msg.at,
             });
         },
 
@@ -293,6 +316,9 @@ const app = Vue.createApp({
             if (msg.message.indexOf("has exited the room!") > -1) {
                 // Clean up data about this user.
                 this.onUserExited(msg);
+                this.playSound("Leave");
+            } else {
+                this.playSound("Enter");
             }
 
             // Push it to the history of all public channels.
@@ -302,6 +328,19 @@ const app = Vue.createApp({
                     action: msg.action,
                     username: msg.username,
                     message: msg.message,
+                    at: msg.at,
+                });
+            }
+
+            // Push also to any DM channels for this user.
+            let channel = "@" + msg.username;
+            if (this.channels[channel] != undefined) {
+                this.pushHistory({
+                    channel: channel,
+                    action: msg.action,
+                    username: msg.username,
+                    message: msg.message,
+                    at: msg.at,
                 });
             }
         },
@@ -320,8 +359,8 @@ const app = Vue.createApp({
                 this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
 
                 if (ev.code !== 1001) {
-                    this.ChatClient("Reconnecting in 1s");
-                    setTimeout(this.dial, 1000);
+                    this.ChatClient("Reconnecting in 5s");
+                    setTimeout(this.dial, 5000);
                 }
             });
 
@@ -345,6 +384,13 @@ const app = Vue.createApp({
                 }
 
                 let msg = JSON.parse(ev.data);
+                try {
+                    // Cast timestamp to date.
+                    msg.at = new Date(msg.at);
+                } catch(e) {
+                    console.error("Parsing timestamp '%s' on msg: %s", msg.at, e);
+                }
+
                 switch (msg.action) {
                     case "who":
                         console.log("Got the Who List: %s", msg);
@@ -384,7 +430,12 @@ const app = Vue.createApp({
                             username: msg.username || 'Internal Server Error',
                             message: msg.message,
                             isChatServer: true,
+                            at: new Date(),
                         });
+                        break;
+                    case "ping":
+                        console.debug("Received ping from server");
+                        break;
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
                 }
@@ -573,6 +624,14 @@ const app = Vue.createApp({
         /**
          * Front-end web app concerns.
          */
+
+        // Settings modal.
+        showSettings() {
+            this.settingsModal.visible = true;
+        },
+        hideSettings() {
+            this.settingsModal.visible = false;
+        },
 
         // Set active chat room.
         setChannel(channel) {
@@ -803,7 +862,7 @@ const app = Vue.createApp({
                 };
             }
         },
-        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient }) {
+        pushHistory({ channel, username, message, action = "message", at, isChatServer, isChatClient }) {
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
@@ -818,6 +877,7 @@ const app = Vue.createApp({
                 action: action,
                 username: username,
                 message: message,
+                at: at || new Date(),
                 isChatServer,
                 isChatClient,
             });
@@ -893,6 +953,77 @@ const app = Vue.createApp({
                 message: message,
                 isChatClient: true,
             });
+        },
+
+        // Format a datetime nicely for chat timestamp.
+        prettyDate(date) {
+            let hours = date.getHours(),
+                minutes = String(date.getMinutes()).padStart(2, '0'),
+                seconds = String(date.getSeconds()).padStart(2, '0'),
+                ampm = hours >= 11 ? "pm" : "am";
+
+            return `${(hours%12)+1}:${minutes}:${seconds} ${ampm}`;
+        },
+
+        /**
+         * Sound effect concerns.
+         */
+
+        setupSounds() {
+            if (AudioContext) {
+                this.config.sounds.audioContext = new AudioContext();
+            } else {
+                this.config.sounds.audioContext = window.AudioContext || window.webkitAudioContext;
+            }
+            if (!this.config.sounds.audioContext) {
+                console.error("Couldn't set up AudioContext! No sound effects will be supported.");
+                return;
+            }
+
+            console.error("AudioContext:", this.config.sounds.audioContext);
+
+            // Create <audio> elements for all the sounds.
+            for (let effect of this.config.sounds.available) {
+                if (!effect.filename) continue; // 'Quiet' has no audio
+
+                let elem = document.createElement("audio");
+                elem.autoplay = false;
+                elem.src = `/static/sfx/${effect.filename}`;
+                document.body.appendChild(elem);
+
+                let track = this.config.sounds.audioContext.createMediaElementSource(elem);
+                track.connect(this.config.sounds.audioContext.destination);
+                this.config.sounds.audioTracks[effect.name] = elem;
+
+                console.warn(effect.name, this.config.sounds.audioTracks[effect.name]);
+            }
+
+            // Apply the user's saved preferences if any.
+            for (let setting of Object.keys(this.config.sounds.settings)) {
+                if (localStorage[`sound:${setting}`] != undefined) {
+                    this.config.sounds.settings[setting] = localStorage[`sound:${setting}`];
+                }
+            }
+        },
+
+        playSound(event) {
+            let filename = this.config.sounds.settings[event];
+            console.error("Play sound:", event, filename, JSON.stringify(this.config.sounds));
+            // Do we have an audio track?
+            console.log(this.config.sounds.audioTracks[filename]);
+            if (this.config.sounds.audioTracks[filename] != undefined) {
+                let track = this.config.sounds.audioTracks[filename];
+                console.log("Track:", track);
+                track.play();
+                console.log("Playing %s", filename);
+            }
+        },
+
+        setSoundPref(event) {
+            this.playSound(event);
+
+            // Store the user's setting in localStorage.
+            localStorage[`sound:${event}`] = this.config.sounds.settings[event];
         },
     }
 });

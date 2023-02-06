@@ -1,10 +1,13 @@
 package barertc
 
+import "time"
+
 type Message struct {
-	Action   string `json:"action,omitempty"`
-	Channel  string `json:"channel,omitempty"`
-	Username string `json:"username,omitempty"`
-	Message  string `json:"message,omitempty"`
+	Action    string    `json:"action,omitempty"`
+	Channel   string    `json:"channel,omitempty"`
+	Username  string    `json:"username,omitempty"`
+	Message   string    `json:"message,omitempty"`
+	Timestamp time.Time `json:"at,omitempty"`
 
 	// JWT token for `login` actions.
 	JWTToken string `json:"jwt,omitempty"`

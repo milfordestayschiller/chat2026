@@ -8,10 +8,11 @@
     <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css">
     <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
     <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
-    <title>BareRTC</title>
+    <title>{{.Config.Title}}</title>
 </head>
 <body>
 <div id="BareRTC-App">
+
     <!-- Sign In modal -->
     <div class="modal" :class="{'is-active': loginModal.visible}">
         <div class="modal-background"></div>
@@ -45,13 +46,122 @@
         </div>
     </div>
 
+    <!-- Settings modal -->
+    <div class="modal" :class="{'is-active': settingsModal.visible}">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="card">
+                <header class="card-header has-background-info">
+                    <p class="card-header-title has-text-light">Chat Settings</p>
+                </header>
+                <div class="card-content">
+
+                    <h3 class="subtitle">Sounds</h3>
+
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">DM chat</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
+                                            <option v-for="s in config.sounds.available"
+                                                v-bind:key="s.name"
+                                                :value="s.name">
+                                                [[s.name]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">Public chat</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
+                                            <option v-for="s in config.sounds.available"
+                                                v-bind:key="s.name"
+                                                :value="s.name">
+                                                [[s.name]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">Room enter</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
+                                            <option v-for="s in config.sounds.available"
+                                                v-bind:key="s.name"
+                                                :value="s.name">
+                                                [[s.name]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">Room leave</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
+                                            <option v-for="s in config.sounds.available"
+                                                v-bind:key="s.name"
+                                                :value="s.name">
+                                                [[s.name]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <footer class="card-footer">
+                    <div class="card-footer-item">
+                        <button type="button" class="button is-primary"
+                            @click="hideSettings()">
+                            Close
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-container">
 
         <!-- Top header panel -->
         <header class="chat-header">
             <div class="columns is-mobile">
                 <div class="column is-narrow">
-                    <strong class="is-6">{{AsHTML .Config.Title}}</strong>
+                    <strong class="is-6">{{AsHTML .Config.Branding}}</strong>
                 </div>
                 <div class="column">
                     <!-- Stop/Start video buttons -->
@@ -98,6 +208,12 @@
                 </div>
                 <div class="column is-narrow">
                     <a href="/about" target="_blank" class="button is-small is-link">About</a>
+                    <button type="button"
+                        class="button is-small is-grey"
+                        @click="showSettings()"
+                        title="Chat Settings">
+                        <i class="fa fa-gear"></i>
+                    </button>
                 </div>
             </div>
         </header>
@@ -285,7 +401,7 @@
                             </div>
                             <div class="media-content">
                                 <div class="columns is-mobile">
-                                    <div class="column">
+                                    <div class="column is-narrow">
                                         <label class="label"
                                             :class="{'has-text-success is-dark': msg.isChatServer,
                                                     'has-text-warning is-dark': msg.isAdmin,
@@ -293,10 +409,13 @@
                                             [[msg.username]]
                                         </label>
                                     </div>
-                                    <div class="column is-narrow"
-                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username)">
+                                    <div class="column is-narrow">
+                                        <small class="has-text-grey" :title="msg.at">[[prettyDate(msg.at)]]</small>
+                                    </div>
+                                    <div class="column"
+                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username || isDM)">
                                         <button type="button"
-                                            class="button is-dark is-outlined is-small"
+                                            class="button is-grey is-outlined is-small px-2"
                                             @click="openDMs({username: msg.username})">
                                             <i class="fa fa-message"></i>
                                         </button>
@@ -420,6 +539,7 @@ const UserJWTClaims = {{.JWTClaims.ToJSON}};
 </script>
 
 <script src="/static/js/vue-3.2.45.js"></script>
+<script src="/static/js/sounds.js?{{.CacheHash}}"></script>
 <script src="/static/js/BareRTC.js?{{.CacheHash}}"></script>
 
 </body>
