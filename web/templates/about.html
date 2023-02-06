@@ -41,11 +41,48 @@
                 </li>
             </ul>
 
-            <hr>
+            <h1>Help &amp; Support</h1>
+
+            <h2>Browser Support</h2>
 
             <p>
-            This page will be fleshed out later with help and tips for using this
-            chat room.
+            BareRTC should work on most modern web browsers. It has been tested in
+            Firefox and Chromium on desktop Linux and on Android. It utilizes open
+            web standards including
+            <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API" target="_blank">WebSockets</a>
+            (for most of the text chat features) and <a href="https://webrtc.org/" target="_blank">WebRTC</a>
+            (for webcam and microphone sharing).
+            </p>
+
+            <h2>Webcam Streaming</h2>
+
+            <p>
+            The WebRTC technology used by this chat room allows for direct, <strong>peer to peer</strong>
+            connections between you and the other chat members to stream video and audio directly to one
+            another, without needing a server in the middle to relay all that data. In many cases, WebRTC
+            should "just work" but you may run into trouble broadcasting if your local network is heavily
+            firewalled (for example on a corporate or school network).
+            </p>
+
+            <p>
+            In many WebRTC video apps (such as Zoom, Jitsi, Google Hangouts, etc.), when one or both parties
+            are on such difficult networks, a server in the middle is used to transfer the video data between
+            them. BareRTC does not have any such server, as the bandwidth costs to carry your video could get
+            expensive! If your video sharing is not working, it's unfortunate but you should still be able to
+            have text chat conversations as normal.
+            </p>
+
+            <h2>Styling Your Messages</h2>
+
+            <p>
+            BareRTC supports Markdown syntax for your chat messages. You can make text <strong>bold</strong>
+            by putting asterisks around part of it, <strong>**like this**</strong> or make text italic with
+            <em>*single asterisks*</em>.
+            </p>
+
+            <p>
+            Hyperlinks you paste that begin with https:// will be clickable as-is, or you can create a custom
+            label for it by typing e.g. <code>[click my link](https://www.wikipedia.org/)</code>.
             </p>
         </div>
     </div>

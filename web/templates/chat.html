@@ -160,10 +160,10 @@
         <!-- Top header panel -->
         <header class="chat-header">
             <div class="columns is-mobile">
-                <div class="column is-narrow">
+                <div class="column is-narrow pr-1">
                     <strong class="is-6">{{AsHTML .Config.Branding}}</strong>
                 </div>
-                <div class="column">
+                <div class="column px-1">
                     <!-- Stop/Start video buttons -->
                     <button type="button"
                         v-if="webcam.active"
@@ -184,14 +184,14 @@
                     <!-- Mute/Unmute my mic buttons (if streaming)-->
                     <button type="button"
                         v-if="webcam.active && !webcam.muted"
-                        class="button is-small is-danger is-outlined ml-2"
+                        class="button is-small is-danger is-outlined ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone mr-2"></i>
                         Mute
                     </button>
                     <button type="button"
                         v-if="webcam.active && webcam.muted"
-                        class="button is-small is-danger ml-2"
+                        class="button is-small is-danger ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone mr-2"></i>
                         Unmute
@@ -200,16 +200,18 @@
                     <!-- Watchers button -->
                     <button type="button"
                         v-if="webcam.active"
-                        class="button is-small is-info is-outlined ml-2"
+                        class="button is-small is-info is-outlined ml-1 px-1"
                         @click="showViewers()">
                         <i class="fa fa-eye mr-2"></i>
                         [[Object.keys(webcam.watching).length]]
                     </button>
                 </div>
-                <div class="column is-narrow">
-                    <a href="/about" target="_blank" class="button is-small is-link">About</a>
+                <div class="column is-narrow pl-1">
+                    <a href="/about" target="_blank" class="button is-small is-link px-2">
+                        <i class="fa fa-info-circle"></i>
+                    </a>
                     <button type="button"
-                        class="button is-small is-grey"
+                        class="button is-small is-light ml-1 px-2"
                         @click="showSettings()"
                         title="Chat Settings">
                         <i class="fa fa-gear"></i>
