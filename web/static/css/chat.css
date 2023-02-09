@@ -125,6 +125,11 @@ body {
     grid-row: 3;
     /* background-color: magenta; */
     overflow-y: scroll;
+
+    /* Work around Safari bug: the chat history would just lengthen the full
+       web page every time cuz it doesn't do grids well, so add a max height
+       of 90% viewport height to mitigate it a bit. */
+    max-height: 90vh;
 }
 
 /*******************
