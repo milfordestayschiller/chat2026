@@ -969,11 +969,14 @@ const app = Vue.createApp({
          */
 
         setupSounds() {
-            if (AudioContext) {
-                this.config.sounds.audioContext = new AudioContext();
-            } else {
-                this.config.sounds.audioContext = window.AudioContext || window.webkitAudioContext;
-            }
+            try {
+                if (AudioContext) {
+                    this.config.sounds.audioContext = new AudioContext();
+                } else {
+                    this.config.sounds.audioContext = window.AudioContext || window.webkitAudioContext;
+                }
+            } catch {}
+
             if (!this.config.sounds.audioContext) {
                 console.error("Couldn't set up AudioContext! No sound effects will be supported.");
                 return;
