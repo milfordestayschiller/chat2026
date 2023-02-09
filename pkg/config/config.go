@@ -10,8 +10,14 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// Version of the config format - when new fields are added, it will attempt
+// to write the settings.toml to disk so new defaults populate.
+var currentVersion = 1
+
 // Config for your BareRTC app.
 type Config struct {
+	Version int // will re-save your settings.toml on migrations
+
 	JWT struct {
 		Enabled   bool
 		Strict    bool
@@ -21,6 +27,8 @@ type Config struct {
 	Title      string
 	Branding   string
 	WebsiteURL string
+
+	UseXForwardedFor bool
 
 	PublicChannels []Channel
 }
@@ -88,6 +96,16 @@ func LoadSettings() error {
 	}
 
 	_, err = toml.Decode(string(data), &Current)
+
+	// Have we added new config fields? Save the settings.toml.
+	if Current.Version < currentVersion {
+		log.Warn("New options are available for your settings.toml file. Your settings will be re-saved now.")
+		Current.Version = currentVersion
+		if err := WriteSettings(); err != nil {
+			log.Error("Couldn't write your settings.toml file: %s", err)
+		}
+	}
+
 	return err
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/util"
 	"nhooyr.io/websocket"
 )
 
@@ -35,14 +36,18 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 		for {
 			msgType, data, err := sub.conn.Read(sub.ctx)
 			if err != nil {
-				log.Error("ReadLoop error(%s): %+v", sub.Username, err)
+				log.Error("ReadLoop error(%d=%s): %+v", sub.ID, sub.Username, err)
 				s.DeleteSubscriber(sub)
-				s.Broadcast(Message{
-					Action:   ActionPresence,
-					Username: sub.Username,
-					Message:  "has exited the room!",
-				})
-				s.SendWhoList()
+
+				// Notify if this user was auth'd
+				if sub.authenticated {
+					s.Broadcast(Message{
+						Action:   ActionPresence,
+						Username: sub.Username,
+						Message:  "has exited the room!",
+					})
+					s.SendWhoList()
+				}
 				return
 			}
 
@@ -53,9 +58,9 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 
 			// Read the user's posted message.
 			var msg Message
-			log.Debug("Read(%s): %s", sub.Username, data)
+			log.Debug("Read(%d=%s): %s", sub.ID, sub.Username, data)
 			if err := json.Unmarshal(data, &msg); err != nil {
-				log.Error("Message error: %s", err)
+				log.Error("Read(%d=%s) Message error: %s", sub.ID, sub.Username, err)
 				continue
 			}
 
@@ -90,7 +95,7 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("SendJSON(%s): %s", sub.Username, data)
+	log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
 	return sub.conn.Write(sub.ctx, websocket.MessageText, data)
 }
 
@@ -115,15 +120,18 @@ func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
 // WebSocket handles the /ws websocket connection.
 func (s *Server) WebSocket() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := util.IPAddress(r)
+		log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
+		log.Debug("Headers: %+v", r.Header)
 		c, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Websocket error: %s", err)
+			fmt.Fprintf(w, "Could not accept websocket connection: %s", err)
 			return
 		}
 		defer c.Close(websocket.StatusInternalError, "the sky is falling")
 
-		log.Debug("WebSocket: %s has connected", r.RemoteAddr)
+		log.Debug("WebSocket: %s has connected", ip)
 
 		// CloseRead starts a goroutine that will read from the connection
 		// until it is closed.
@@ -141,7 +149,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		}
 
 		s.AddSubscriber(sub)
-		// defer s.DeleteSubscriber(sub)
+		defer s.DeleteSubscriber(sub)
 
 		go sub.ReadLoop(s)
 		pinger := time.NewTicker(PingInterval)
@@ -174,7 +182,7 @@ func (s *Server) AddSubscriber(sub *Subscriber) {
 	// Assign a unique ID.
 	SubscriberID++
 	sub.ID = SubscriberID
-	log.Debug("AddSubscriber: %s", sub.ID)
+	log.Debug("AddSubscriber: ID #%d", sub.ID)
 
 	s.subscribersMu.Lock()
 	s.subscribers[sub] = struct{}{}
@@ -210,13 +218,10 @@ func (s *Server) DeleteSubscriber(sub *Subscriber) {
 // IterSubscribers loops over the subscriber list with a read lock. If the
 // caller already holds a lock, pass the optional `true` parameter for isLocked.
 func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
-	log.Debug("IterSubscribers START..")
-
 	var result = []*Subscriber{}
 
 	// Has the caller already taken the read lock or do we get it?
 	if locked := len(isLocked) > 0 && isLocked[0]; !locked {
-		log.Debug("Taking the lock")
 		s.subscribersMu.RLock()
 		defer s.subscribersMu.RUnlock()
 	}
@@ -225,7 +230,6 @@ func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
 		result = append(result, sub)
 	}
 
-	log.Debug("IterSubscribers STOP..")
 	return result
 }
 

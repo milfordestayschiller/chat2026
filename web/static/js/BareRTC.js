@@ -347,7 +347,8 @@ const app = Vue.createApp({
 
         // Dial the WebSocket connection.
         dial() {
-            // console.log("Dialing WebSocket...");
+            this.ChatClient("Establishing connection to server...");
+
             const proto = location.protocol === 'https:' ? 'wss' : 'ws';
             const conn = new WebSocket(`${proto}://${location.host}/ws`);
 

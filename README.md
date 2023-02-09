@@ -31,6 +31,7 @@ On first run it will create the default settings.toml file for you which you may
 Title = "BareRTC"
 Branding = "BareRTC"
 WebsiteURL = "https://www.example.com"
+UseXForwardedFor = true
 
 [JWT]
   Enabled = false
@@ -57,6 +58,7 @@ A description of the config directives includes:
     * **WebsiteURL** is the base URL of your actual website which is used in a couple of places:
         * The About page will link to your website.
         * If using [JWT authentication](#authentication), avatar and profile URLs may be relative (beginning with a "/") and will append to your website URL to safe space on the JWT token size!
+    * **UseXForwardedFor**: set it to true and (for logging) the user's remote IP will use the X-Real-IP header or the first address in X-Forwarded-For. Set this if you run the app behind a proxy like nginx if you want IPs not to be all localhost.
 * **JWT**: settings for JWT [Authentication](#authentication).
     * Enabled (bool): activate the JWT token authentication feature.
     * Strict (bool): if true, **only** valid signed JWT tokens may log in. If false, users with no/invalid token can enter their own username without authentication.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
@@ -71,7 +72,12 @@ func IndexPage() http.HandlerFunc {
 		}
 		// END load the template
 
-		log.Info("Index route hit")
+		log.Info("GET / [%s] %s", r.RemoteAddr, strings.Join([]string{
+			r.Header.Get("X-Forwarded-For"),
+			r.Header.Get("X-Real-IP"),
+			r.Header.Get("User-Agent"),
+			util.IPAddress(r),
+		}, " "))
 		tmpl.ExecuteTemplate(w, "index", values)
 	})
 }

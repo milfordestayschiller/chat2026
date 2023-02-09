@@ -42,7 +42,14 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 		sub.JWTClaims = claims
 	}
 
-	log.Info("JWT claims: %+v", claims)
+	if claims.Subject != "" {
+		log.Debug("JWT claims: %+v", claims)
+	}
+
+	// Somehow no username?
+	if msg.Username == "" {
+		msg.Username = "anonymous"
+	}
 
 	// Ensure the username is unique, or rename it.
 	var duplicate bool
