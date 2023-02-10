@@ -155,6 +155,26 @@ body {
     margin: 5px;
 }
 
+.video-feeds.x1 > .feed {
+    width: 252px;
+    height: 168px;
+}
+
+.video-feeds.x2 > .feed {
+    width: 336px;
+    height: 224px;
+}
+
+.video-feeds.x3 > .feed {
+    width: 504px;
+    height: 336px;
+}
+
+.video-feeds.x4 > .feed {
+    width: 672px;
+    height: 448px;
+}
+
 .video-feeds > .feed > video {
     width: 100%;
     height: 100%;

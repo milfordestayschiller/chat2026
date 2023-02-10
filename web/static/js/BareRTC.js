@@ -12,7 +12,9 @@ const app = Vue.createApp({
     delimiters: ['[[', ']]'],
     data() {
         return {
-            busy: false,
+            // busy: false, // TODO: not used
+            windowFocused: true,  // browser tab is active
+            windowFocusedAt: new Date(),
 
             // Website configuration provided by chat.html template.
             config: {
@@ -37,6 +39,7 @@ const app = Vue.createApp({
             channel: "lobby",
             username: "", //"test",
             message: "",
+            typingNotifDebounce: null,
 
             // WebSocket connection.
             ws: {
@@ -58,6 +61,17 @@ const app = Vue.createApp({
 
                 // Who all is watching me? map of users.
                 watching: {},
+
+                // Scaling setting for the videos drawer, so the user can
+                // embiggen the webcam sizes so a suitable size.
+                videoScale: "",
+                videoScaleOptions: [
+                    [ "", "Default size" ],
+                    [ "x1", "50% larger videos" ],
+                    [ "x2", "2x larger videos" ],
+                    [ "x3", "3x larger videos" ],
+                    [ "x4", "4x larger videos (not recommended)" ],
+                ],
             },
 
             // WebRTC sessions with other users.
@@ -87,7 +101,7 @@ const app = Vue.createApp({
             historyScrollbox: null,
             DMs: {},
 
-            // Responsive CSS for mobile.
+            // Responsive CSS controls for mobile.
             responsive: {
                 leftDrawerOpen: false,
                 rightDrawerOpen: false,
@@ -122,10 +136,22 @@ const app = Vue.createApp({
             $right: document.querySelector(".right-column"),
         };
 
+        // Reset CSS overrides for responsive display on any window size change. In effect,
+        // making the chat panel the current screen again on phone rotation.
         window.addEventListener("resize", () => {
-            // Reset CSS overrides for responsive display on any window size change.
             this.resetResponsiveCSS();
         });
+
+        // Listen for window focus/unfocus events. Being on a different browser tab, for
+        // sound effect alert purposes, counts as not being "in" that chat channel when
+        // a message comes in.
+        window.addEventListener("focus", () => {
+            this.windowFocused = true;
+            this.windowFocusedAt = new Date();
+        });
+        window.addEventListener("blur", () => {
+            this.windowFocused = false;
+        })
 
         for (let channel of this.config.channels) {
             this.initHistory(channel.ID);
@@ -222,6 +248,10 @@ const app = Vue.createApp({
             this.message = "";
         },
 
+        sendTypingNotification() {
+            // TODO
+        },
+
         // Sync the current user state (such as video broadcasting status) to
         // the backend, which will reload everybody's Who List.
         sendMe() {
@@ -293,12 +323,12 @@ const app = Vue.createApp({
 
         // Handle messages sent in chat.
         onMessage(msg) {
-            // Play sound effects if this is not the active channel.
+            // Play sound effects if this is not the active channel or the window is not focused.
             if (msg.channel.indexOf("@") === 0) {
-                if (msg.channel !== this.channel) {
+                if (msg.channel !== this.channel || !this.windowFocused) {
                     this.playSound("DM");
                 }
-            } else if (msg.channel !== this.channel) {
+            } else if (msg.channel !== this.channel || !this.windowFocused) {
                 this.playSound("Chat");
             }
 
@@ -306,7 +336,6 @@ const app = Vue.createApp({
                 channel: msg.channel,
                 username: msg.username,
                 message: msg.message,
-                at: msg.at,
             });
         },
 
@@ -328,7 +357,6 @@ const app = Vue.createApp({
                     action: msg.action,
                     username: msg.username,
                     message: msg.message,
-                    at: msg.at,
                 });
             }
 
@@ -340,7 +368,6 @@ const app = Vue.createApp({
                     action: msg.action,
                     username: msg.username,
                     message: msg.message,
-                    at: msg.at,
                 });
             }
         },
@@ -428,7 +455,6 @@ const app = Vue.createApp({
                             username: msg.username || 'Internal Server Error',
                             message: msg.message,
                             isChatServer: true,
-                            at: new Date(),
                         });
                         break;
                     case "ping":
@@ -861,7 +887,7 @@ const app = Vue.createApp({
                 };
             }
         },
-        pushHistory({ channel, username, message, action = "message", at, isChatServer, isChatClient }) {
+        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient }) {
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
@@ -876,7 +902,7 @@ const app = Vue.createApp({
                 action: action,
                 username: username,
                 message: message,
-                at: at || new Date(),
+                at: new Date(),
                 isChatServer,
                 isChatClient,
             });
@@ -961,7 +987,8 @@ const app = Vue.createApp({
                 seconds = String(date.getSeconds()).padStart(2, '0'),
                 ampm = hours >= 11 ? "pm" : "am";
 
-            return `${(hours%12)+1}:${minutes}:${seconds} ${ampm}`;
+            let hour = hours%12 || 12;
+            return `${(hour)}:${minutes}:${seconds} ${ampm}`;
         },
 
         /**

@@ -12,7 +12,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 1
+var currentVersion = 2
 
 // Config for your BareRTC app.
 type Config struct {
@@ -27,6 +27,7 @@ type Config struct {
 	Title      string
 	Branding   string
 	WebsiteURL string
+	CORSHosts  []string
 
 	UseXForwardedFor bool
 
@@ -59,6 +60,9 @@ func DefaultConfig() Config {
 		Title:      "BareRTC",
 		Branding:   "BareRTC",
 		WebsiteURL: "https://www.example.com",
+		CORSHosts: []string{
+			"https://www.example.com",
+		},
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",

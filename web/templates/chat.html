@@ -56,6 +56,27 @@
                 </header>
                 <div class="card-content">
 
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">Video size</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="webcam.videoScale">
+                                            <option v-for="s in webcam.videoScaleOptions"
+                                                v-bind:key="s[0]"
+                                                :value="s[0]">
+                                                [[ s[1] ]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <h3 class="subtitle">Sounds</h3>
 
                     <div class="field is-horizontal">
@@ -328,7 +349,7 @@
                         </div>
                     </div>
                 </header>
-                <div class="video-feeds" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
+                <div class="video-feeds" :class="webcam.videoScale" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
                     <!-- Video Feeds-->
 
                     <!-- My video -->
@@ -448,11 +469,9 @@
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
                                     v-model="message"
-                                    placeholder="Message">
+                                    placeholder="Message"
+                                    @keydown="sendTypingNotification()">
                             </form>
-                        </div>
-                        <div class="column is-narrow">
-
                         </div>
                     </div>
 
