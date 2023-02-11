@@ -21,6 +21,7 @@ type Subscriber struct {
 	ID            int // ID assigned by server
 	Username      string
 	VideoActive   bool
+	VideoNSFW     bool
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
 	conn          *websocket.Conn
@@ -160,10 +161,9 @@ func (s *Server) WebSocket() http.HandlerFunc {
 				if err != nil {
 					return
 				}
-			case timestamp := <-pinger.C:
+			case <-pinger.C:
 				sub.SendJSON(Message{
-					Action:  ActionPing,
-					Message: timestamp.Format(time.RFC3339),
+					Action: ActionPing,
 				})
 			case <-ctx.Done():
 				pinger.Stop()
@@ -254,11 +254,6 @@ func (s *Server) SendTo(username string, msg Message) error {
 	s.subscribersMu.RLock()
 	defer s.subscribersMu.RUnlock()
 
-	// If no timestamp, add it.
-	if msg.Timestamp.IsZero() {
-		msg.Timestamp = time.Now()
-	}
-
 	var found bool
 	for _, sub := range s.IterSubscribers(true) {
 		if sub.Username == username {
@@ -293,6 +288,7 @@ func (s *Server) SendWhoList() {
 		who := WhoList{
 			Username:    sub.Username,
 			VideoActive: sub.VideoActive,
+			NSFW:        sub.VideoNSFW,
 		}
 		if sub.JWTClaims != nil {
 			who.Operator = sub.JWTClaims.IsAdmin
@@ -304,9 +300,8 @@ func (s *Server) SendWhoList() {
 
 	for _, sub := range subscribers {
 		sub.SendJSON(Message{
-			Action:    ActionWhoList,
-			WhoList:   users,
-			Timestamp: time.Now(),
+			Action:  ActionWhoList,
+			WhoList: users,
 		})
 	}
 }

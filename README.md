@@ -32,6 +32,8 @@ Title = "BareRTC"
 Branding = "BareRTC"
 WebsiteURL = "https://www.example.com"
 UseXForwardedFor = true
+CORSHosts = ["https://www.example.com"]
+PermitNSFW = true
 
 [JWT]
   Enabled = false
@@ -59,6 +61,8 @@ A description of the config directives includes:
         * The About page will link to your website.
         * If using [JWT authentication](#authentication), avatar and profile URLs may be relative (beginning with a "/") and will append to your website URL to safe space on the JWT token size!
     * **UseXForwardedFor**: set it to true and (for logging) the user's remote IP will use the X-Real-IP header or the first address in X-Forwarded-For. Set this if you run the app behind a proxy like nginx if you want IPs not to be all localhost.
+    * **CORSHosts**: your website's domain names that will be allowed to access [JSON APIs](#JSON APIs), like `/api/statistics`.
+    * **PermitNSFW**: for user webcam streams, expressly permit "NSFW" content if the user opts in to mark their feed as such. Setting this will enable pop-up modals regarding NSFW video and give broadcasters an opt-in button, which will warn other users before they click in to watch.
 * **JWT**: settings for JWT [Authentication](#authentication).
     * Enabled (bool): activate the JWT token authentication feature.
     * Strict (bool): if true, **only** valid signed JWT tokens may log in. If false, users with no/invalid token can enter their own username without authentication.
@@ -174,6 +178,30 @@ It is not recommended to run in this mode as admin controls to moderate the serv
 This app is not designed to run without JWT authentication for users enabled. In the app's default state, users can pick their own username when they connect and the server will adjust their name to resolve duplicates. Direct message threads are based on the username so if a user logs off, somebody else could log in with the same username and "resume" direct message threads that others were involved in.
 
 Note that they would not get past history of those DMs as this server only pushes _new_ messages to users after they connect.
+
+# Moderator Commands
+
+If you authenticate an Op user via JWT they can enter IRC-style chat commands to moderate the server. Current commands include:
+
+* `/kick <username>` to disconnect a user's chat session.
+* `/nsfw <username>` to tag a user's video feed as NSFW (if your settings.toml has PermitNSFW enabled).
+
+# JSON APIs
+
+For better integration with your website, the chat server exposes some data via JSON APIs ready for cross-origin ajax requests. In your settings.toml set the `CORSHosts` to your list of website domains, such as "https://www.example.com", "http://localhost:8080" or so on.
+
+Current API endpoints include:
+
+* `GET /api/statistics`
+
+Returns basic info about the count and usernames of connected chatters:
+
+```json
+{
+    "UserCount": 1,
+    "Usernames": ["admin"]
+}
+```
 
 # Deploying This App
 

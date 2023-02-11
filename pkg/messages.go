@@ -1,13 +1,10 @@
 package barertc
 
-import "time"
-
 type Message struct {
-	Action    string    `json:"action,omitempty"`
-	Channel   string    `json:"channel,omitempty"`
-	Username  string    `json:"username,omitempty"`
-	Message   string    `json:"message,omitempty"`
-	Timestamp time.Time `json:"at,omitempty"`
+	Action   string `json:"action,omitempty"`
+	Channel  string `json:"channel,omitempty"`
+	Username string `json:"username,omitempty"`
+	Message  string `json:"message,omitempty"`
 
 	// JWT token for `login` actions.
 	JWTToken string `json:"jwt,omitempty"`
@@ -17,6 +14,7 @@ type Message struct {
 
 	// Sent on `me` actions along with Username
 	VideoActive bool `json:"videoActive,omitempty"` // user tells us their cam status
+	NSFW        bool `json:"nsfw,omitempty"`        // user tags their video NSFW
 
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`
@@ -40,9 +38,10 @@ const (
 
 	// Actions sent by server only
 	ActionPing     = "ping"
-	ActionWhoList  = "who"      // server pushes the Who List
-	ActionPresence = "presence" // a user joined or left the room
-	ActionError    = "error"    // ChatServer errors
+	ActionWhoList  = "who"        // server pushes the Who List
+	ActionPresence = "presence"   // a user joined or left the room
+	ActionError    = "error"      // ChatServer errors
+	ActionKick     = "disconnect" // client should disconnect (e.g. have been kicked).
 
 	// WebRTC signaling messages.
 	ActionCandidate = "candidate"
@@ -52,10 +51,11 @@ const (
 // WhoList is a member entry in the chat room.
 type WhoList struct {
 	Username    string `json:"username"`
-	VideoActive bool   `json:"videoActive"`
+	VideoActive bool   `json:"videoActive,omitempty"`
+	NSFW        bool   `json:"nsfw,omitempty"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`
-	Avatar     string `json:"avatar"`
-	ProfileURL string `json:"profileURL"`
+	Avatar     string `json:"avatar,omitempty"`
+	ProfileURL string `json:"profileURL,omitempty"`
 }

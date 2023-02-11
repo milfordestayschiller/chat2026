@@ -148,7 +148,7 @@ body {
 
 .video-feeds > .feed {
     position: relative;
-    flex: 0 0 144px;
+    flex: 0 0 168px;
     width: 168px;
     height: 112px;
     background-color: black;
@@ -156,21 +156,25 @@ body {
 }
 
 .video-feeds.x1 > .feed {
+    flex: 0 0 252px;
     width: 252px;
     height: 168px;
 }
 
 .video-feeds.x2 > .feed {
+    flex: 0 0 336px;
     width: 336px;
     height: 224px;
 }
 
 .video-feeds.x3 > .feed {
+    flex: 0 0 504px;
     width: 504px;
     height: 336px;
 }
 
 .video-feeds.x4 > .feed {
+    flex: 0 0 672px;
     width: 672px;
     height: 448px;
 }

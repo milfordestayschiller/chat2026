@@ -176,6 +176,89 @@
         </div>
     </div>
 
+    <!-- NSFW Modal: before user activates their webcam -->
+    <div class="modal" :class="{'is-active': nsfwModalCast.visible}">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="card">
+                <header class="card-header has-background-info">
+                    <p class="card-header-title has-text-light">Broadcast my webcam</p>
+                </header>
+                <div class="card-content">
+                    <p class="block">
+                    You can turn on your webcam and enable others in the room to connect to yours.
+                    The controls to stop, <i class="fa fa-microphone-slash"></i> mute audio, and
+                    <i class="fa fa-eye"></i> see who is watching will be at the top of the page.
+                    </p>
+
+                    <p class="block">
+                    If your camera will be featuring "<abbr title="Not Safe For Work">NSFW</abbr>" or sexual content, please mark it as such by
+                    clicking on the <i class="fa fa-fire has-text-danger"></i> button or checking the box below to start with it enabled.
+                    </p>
+
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                v-model="webcam.nsfw">
+                            Check this box if your webcam will <em>definitely</em> be NSFW. 😈
+                        </label>
+                    </div>
+
+                    <div class="field">
+                        <div class="control has-text-centered">
+                            <button type="button"
+                                class="button is-link mr-4"
+                                @click="startVideo(true); nsfwModalCast.visible=false">Start webcam</button>
+                            <button type="button"
+                                class="button"
+                                @click="nsfwModalCast.visible=false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NSFW Modal: before user views a NSFW camera the first time -->
+    <div class="modal" :class="{'is-active': nsfwModalView.visible}">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="card">
+                <header class="card-header has-background-info">
+                    <p class="card-header-title has-text-light">This camera may contain NSFW content</p>
+                </header>
+                <div class="card-content">
+                    <p class="block">
+                    This camera has been marked as "<abbr title="Not Safe For Work">NSFW</abbr>" and may
+                    contain displays of sexuality. If you do not want to see this, look for cameras with
+                    a <span class="button is-small is-info is-outlined px-1"><i class="fa fa-video"></i></span>
+                    blue icon rather than the <span class="button is-small is-danger is-outlined px-1"><i class="fa fa-video"></i></span>
+                    red ones.
+                    </p>
+
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                v-model="nsfwModalView.dontShowAgain">
+                            Don't show this message again
+                        </label>
+                    </div>
+
+                    <div class="field">
+                        <div class="control has-text-centered">
+                            <button type="button"
+                                class="button is-link mr-4"
+                                @click="openVideo(nsfwModalView.user, true); nsfwModalView.visible=false">Open webcam</button>
+                            <button type="button"
+                                class="button"
+                                @click="nsfwModalView.visible=false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-container">
 
         <!-- Top header panel -->
@@ -188,18 +271,18 @@
                     <!-- Stop/Start video buttons -->
                     <button type="button"
                         v-if="webcam.active"
-                        class="button is-small is-danger"
+                        class="button is-small is-danger px-1"
                         @click="stopVideo()">
-                        <i class="fa fa-camera mr-2"></i>
+                        <i class="fa fa-stop mr-2"></i>
                         Stop
                     </button>
                     <button type="button"
                         v-else
-                        class="button is-small is-success"
+                        class="button is-small is-success px-1"
                         @click="startVideo()"
                         :disabled="webcam.busy">
-                        <i class="fa fa-camera mr-2"></i>
-                        Start
+                        <i class="fa fa-video mr-2"></i>
+                        Share webcam
                     </button>
 
                     <!-- Mute/Unmute my mic buttons (if streaming)-->
@@ -225,6 +308,17 @@
                         @click="showViewers()">
                         <i class="fa fa-eye mr-2"></i>
                         [[Object.keys(webcam.watching).length]]
+                    </button>
+
+                    <!-- NSFW toggle button -->
+                    <button type="button"
+                        v-if="webcam.active && config.permitNSFW"
+                        class="button is-small px-1 ml-1"
+                        :class="{'is-outlined is-dark': !webcam.nsfw,
+                                 'is-danger': webcam.nsfw}"
+                        @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
+                        title="Toggle the NSFW setting for your camera broadcast">
+                        <i class="fa fa-fire"></i>
                     </button>
                 </div>
                 <div class="column is-narrow pl-1">
@@ -354,8 +448,8 @@
 
                     <!-- My video -->
                     <video class="feed"
-                        v-show="webcam.active"
                         id="localVideo"
+                        v-show="webcam.active"
                         autoplay muted>
                     </video>
 
@@ -536,6 +630,10 @@
                                     <!-- Video button -->
                                     <button type="button" class="button is-small px-2 py-1"
                                         :disabled="!u.videoActive"
+                                        :class="{
+                                            'is-danger is-outlined': u.videoActive && u.nsfw,
+                                            'is-info is-outlined': u.videoActive && !u.nsfw,
+                                        }"
                                         title="Open video stream"
                                         @click="openVideo(u)">
                                         <i class="fa fa-video"></i>
@@ -555,6 +653,7 @@
 <script type="text/javascript">
 const PublicChannels = {{.Config.GetChannels}};
 const WebsiteURL = "{{.Config.WebsiteURL}}";
+const PermitNSFW = {{AsJS .Config.PermitNSFW}};
 const UserJWTToken = {{.JWTTokenString}};
 const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
 const UserJWTClaims = {{.JWTClaims.ToJSON}};

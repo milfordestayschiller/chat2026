@@ -65,6 +65,9 @@ func IndexPage() http.HandlerFunc {
 			"AsHTML": func(v string) template.HTML {
 				return template.HTML(v)
 			},
+			"AsJS": func(v interface{}) template.JS {
+				return template.JS(fmt.Sprintf("%v", v))
+			},
 		})
 		tmpl, err := tmpl.ParseFiles("web/templates/chat.html")
 		if err != nil {

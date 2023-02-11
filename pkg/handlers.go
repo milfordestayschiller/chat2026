@@ -107,6 +107,11 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		return
 	}
 
+	// Process commands.
+	if handled := s.ProcessCommand(sub, msg); handled {
+		return
+	}
+
 	// Translate their message as Markdown syntax.
 	markdown := RenderMarkdown(msg.Message)
 	if markdown == "" {
@@ -115,11 +120,10 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 
 	// Message to be echoed to the channel.
 	var message = Message{
-		Action:    ActionMessage,
-		Channel:   msg.Channel,
-		Username:  sub.Username,
-		Message:   markdown,
-		Timestamp: time.Now(),
+		Action:   ActionMessage,
+		Channel:  msg.Channel,
+		Username: sub.Username,
+		Message:  markdown,
 	}
 
 	// Is this a DM?
@@ -144,6 +148,7 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 	}
 
 	sub.VideoActive = msg.VideoActive
+	sub.VideoNSFW = msg.NSFW
 
 	// Sync the WhoList to everybody.
 	s.SendWhoList()

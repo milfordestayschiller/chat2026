@@ -13,6 +13,7 @@ const app = Vue.createApp({
     data() {
         return {
             // busy: false, // TODO: not used
+            disconnect: false,    // don't try to reconnect (e.g. kicked)
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
 
@@ -20,6 +21,7 @@ const app = Vue.createApp({
             config: {
                 channels: PublicChannels,
                 website: WebsiteURL,
+                permitNSFW: PermitNSFW,
                 sounds: {
                     available: SoundEffects,
                     settings: DefaultSounds,
@@ -58,6 +60,7 @@ const app = Vue.createApp({
                 elem: null,   // <video id="localVideo"> element
                 stream: null, // MediaStream object
                 muted: false, // our outgoing mic is muted, not by default
+                nsfw: false,  // user has flagged their camera to be NSFW
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -120,6 +123,16 @@ const app = Vue.createApp({
 
             settingsModal: {
                 visible: false,
+            },
+
+            nsfwModalCast: {
+                visible: false,
+            },
+
+            nsfwModalView: {
+                visible: false,
+                dontShowAgain: false,
+                user: null, // staged User we wanted to open
             },
         }
     },
@@ -258,6 +271,7 @@ const app = Vue.createApp({
             this.ws.conn.send(JSON.stringify({
                 action: "me",
                 videoActive: this.webcam.active,
+                nsfw: this.webcam.nsfw,
             }));
         },
         onMe(msg) {
@@ -266,6 +280,11 @@ const app = Vue.createApp({
             if (this.username != msg.username) {
                 this.ChatServer(`Your username has been changed to ${msg.username}.`);
                 this.username = msg.username;
+            }
+
+            // The server can set our webcam NSFW flag.
+            if (this.webcam.nsfw != msg.nsfw) {
+                this.webcam.nsfw = msg.nsfw;
             }
 
             // this.ChatClient(`User sync from backend: ${JSON.stringify(msg)}`);
@@ -386,9 +405,11 @@ const app = Vue.createApp({
                 this.ws.connected = false;
                 this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
 
-                if (ev.code !== 1001) {
-                    this.ChatClient("Reconnecting in 5s");
-                    setTimeout(this.dial, 5000);
+                if (!this.disconnect) {
+                    if (ev.code !== 1001) {
+                        this.ChatClient("Reconnecting in 5s");
+                        setTimeout(this.dial, 5000);
+                    }
                 }
             });
 
@@ -456,6 +477,9 @@ const app = Vue.createApp({
                             message: msg.message,
                             isChatServer: true,
                         });
+                        break;
+                    case "disconnect":
+                        this.disconnect = true;
                         break;
                     case "ping":
                         break;
@@ -755,10 +779,16 @@ const app = Vue.createApp({
         },
 
         // Start broadcasting my webcam.
-        startVideo() {
+        startVideo(force) {
             if (this.webcam.busy) return;
-            this.webcam.busy = true;
 
+            // If we are running in PermitNSFW mode, show the user the modal.
+            if (this.config.permitNSFW && !force) {
+                this.nsfwModalCast.visible = true;
+                return;
+            }
+
+            this.webcam.busy = true;
             navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: true,
@@ -777,10 +807,22 @@ const app = Vue.createApp({
         },
 
         // Begin connecting to someone else's webcam.
-        openVideo(user) {
+        openVideo(user, force) {
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
                 return;
+            }
+
+            // Is the target user NSFW? Go thru the modal.
+            let dontShowAgain = localStorage["skip-nsfw-modal"] == "true";
+            if (user.nsfw && !dontShowAgain && !force) {
+                this.nsfwModalView.user = user;
+                this.nsfwModalView.visible = true;
+                return;
+            }
+            if (this.nsfwModalView.dontShowAgain) {
+                // user doesn't want to see the modal again.
+                localStorage["skip-nsfw-modal"] = "true";
             }
 
             // Camera is already open? Then disconnect the connection.
