@@ -669,6 +669,9 @@ const app = Vue.createApp({
 
             // Responsive CSS: switch back to chat panel upon selecting a channel.
             this.openChatPanel();
+
+            // Edit hyperlinks to open in a new window.
+            this.makeLinksExternal();
         },
         hasUnread(channel) {
             if (this.channels[channel] == undefined) {
@@ -957,6 +960,9 @@ const app = Vue.createApp({
                     this.channels[channel].unread++;
                 }
             }
+
+            // Edit hyperlinks to open in a new window.
+            this.makeLinksExternal();
         },
 
         scrollHistory() {
@@ -1087,6 +1093,19 @@ const app = Vue.createApp({
 
             // Store the user's setting in localStorage.
             localStorage[`sound:${event}`] = this.config.sounds.settings[event];
+        },
+
+        makeLinksExternal() {
+            window.requestAnimationFrame(() => {
+                let $history = document.querySelector("#chatHistory");
+                // Make all <a> links appearing in chat into external links.
+                ($history.querySelectorAll("a") || []).forEach(node => {
+                    let href = node.attributes.href,
+                        target = node.attributes.target;
+                    if (href == undefined || target != undefined) return;
+                    node.target = "_blank";
+                });
+            })
         },
     }
 });
