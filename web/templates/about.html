@@ -13,7 +13,7 @@
 <body>
 
     <div class="container is-fullhd">
-        <div class="content mt-5">
+        <div class="content my-5">
             <h1>About BareRTC</h1>
 
             <p>
@@ -41,20 +41,189 @@
                 </li>
             </ul>
 
+            <hr>
+
             <h1>Help &amp; Support</h1>
 
-            <h2>Browser Support</h2>
+            <ul>
+                <li><a href="#tour">Tour of the user interface</a></li>
+                <li><a href="#browsers">Supported browsers</a></li>
+                <li><a href="#webcam">Webcam sharing</a></li>
+                <li><a href="#markdown">Styling your messages</a></li>
+                <li><a href="#privacy">Privacy</a></li>
+            </ul>
+
+            <h1 id="tour">Tour of the user interface</h1>
+
+            <div class="has-text-centered">
+                <img src="/static/img/screenshot.png" alt="Screenshot of the user interface on desktop">
+                <br><em>Pictured: Screenshot of the user interface on tablet or desktop-sized screens.</em><br><br>
+                <img src="/static/img/mobile.png" alt="Screenshot of the user interface on mobile">
+                <br><em>Pictured: Screenshot of the mobile interface</em>
+            </div>
 
             <p>
-            BareRTC should work on most modern web browsers. It has been tested in
-            Firefox and Chromium on desktop Linux and on Android. It utilizes open
-            web standards including
-            <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API" target="_blank">WebSockets</a>
-            (for most of the text chat features) and <a href="https://webrtc.org/" target="_blank">WebRTC</a>
-            (for webcam and microphone sharing).
+                Above are screenshots of how the chat room looks on desktop and mobile displays, respectively.
+                For a description of some of the features pointed out above:
             </p>
 
-            <h2>Webcam Streaming</h2>
+            <ul>
+                <li>
+                    <strong>Your camera controls:</strong> Clicking on the
+                    <button type="button" class="button is-small is-success px-1">
+                        <i class="fa fa-video mr-2"></i>
+                        Share webcam
+                    </button>
+                    button will enable your webcam and your video may be watched by other people
+                    in the chat room. While broadcasting, you can Stop your webcam, Mute your
+                    microphone, and see who is currently watching you by clicking on the
+                    <button type="button" class="button is-small is-info is-outlined ml-1 px-1">
+                        <i class="fa fa-eye mr-2"></i>
+                        0
+                    </button>
+                    button, which will show the number of watchers inside the button itself.
+                </li>
+                <li>
+                    The <strong>Who List</strong> shows all of the people who are currently connected
+                    to the chat room. The Who List is global to the entire chat - it is the same list
+                    of people no matter which Channel you are currently looking at. In the Who List
+                    you may also find buttons to open a Direct Message (DM) or tune in to somebody's
+                    webcam if they are currently broadcasting.
+                    <ul>
+                        <li>
+                            <button type="button" class="button is-small px-2 py-1">
+                                <i class="fa fa-user"></i>
+                            </button>
+                            This button will open their profile page, if they have one.
+                        </li>
+                        <li>
+                            <button type="button" class="button is-small px-2 py-1">
+                                <i class="fa fa-message"></i>
+                            </button>
+                            This button will open a Direct Message (DM) chat with this person.
+                        </li>
+                        <li>
+                            <button type="button" class="button is-small px-2 py-1 is-info is-outlined">
+                                <i class="fa fa-video"></i>
+                            </button>
+                            This button will open the user's webcam, if they are broadcasting.
+                            A <strong class="has-text-info">blue</strong> button means they're live,
+                            a <strong class="has-text-danger">red</strong> means their video feed is
+                            marked <abbr title="Not Safe For Work">NSFW</abbr> or explicit. A greyed
+                            out button means they are <em>not</em> currently broadcasting their video.
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    The <strong>Channels &amp; DMs</strong> panel lists the available public chat channels
+                    you may participate in as well as any currently open DMs for private one-on-one chats
+                    with other people. Some channels may have red notifications beside them to indicate
+                    unread messages have appeared.
+                </li>
+                <li>
+                    The <strong>Message entry box</strong> at the bottom of the screen is how you type a
+                    message and send it to the currently selected Channel or DM conversation.
+                </li>
+                <li>
+                    In the upper right, the <i class="fa fa-gear"></i> <strong>Settings</strong> button
+                    will show some chat settings. Some interesting features in there include:
+                    <ul>
+                        <li>
+                            <strong>Video scaling:</strong> you can make the webcam videos larger on
+                            your screen to see your chat partners in better detail.
+                        </li>
+                        <li>
+                            <strong>Sound effects:</strong> by default it plays a sound when you receive
+                            a new Direct Message but you can also turn on sound effects for public chat
+                            messages and when people join or exit the room. If the chat room is currently
+                            empty, you could set a sound effect when somebody joins so you know there may
+                            be someone to chat with then!
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p>
+                On <strong>mobile web browsers</strong> that don't have large enough screens to show everything
+                at once, the Chat Room screen is shown by default and buttons appear in the corners to get to
+                the two side panels (to change channels or manage your DMs, and to see Who Is Online and tune
+                in to their webcams, respectively).
+            </p>
+
+            <h1 id="browsers">Supported browsers</h1>
+
+            <p>
+                Currently, BareRTC works best on <i class="fab fa-chrome"></i> Chromium browsers (including Google
+                Chrome, Microsoft Edge, Opera, Brave, and other Chromium derivatives) as well as
+                <i class="fab fa-firefox"></i> Mozilla Firefox.
+            </p>
+
+            <p>
+                It works in these browsers on desktop operating systems (including <i class="fab fa-windows"></i> Windows,
+                <i class="fab fa-apple"></i> Mac OS and <i class="fab fa-linux"></i> GNU/Linux) as well as on
+                <i class="fab fa-android"></i> Android devices.
+            </p>
+
+            <p>
+                Unfortunately, the chat <strong class="has-text-danger">does not work</strong> on Apple's mobile
+                devices such as the iPad and iPhone -- but research on this is underway and hopefully iOS devices
+                will be supported soon!
+            </p>
+
+            <p>
+                Feature support matrix of browsers currently tested:
+            </p>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Device Type</th>
+                        <th>Web Browsers</th>
+                        <th>Chat works?</th>
+                        <th>Video works?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><i class="fa fa-computer"></i> All Desktops</td>
+                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
+                        <td>✔️</td>
+                        <td>✔️</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fa fa-computer"></i> All Desktops</td>
+                        <td><i class="fab fa-chrome"></i> Chromium (Chrome, Edge)</td>
+                        <td>✔️</td>
+                        <td>✔️</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-apple"></i> Mac OS Desktop</td>
+                        <td><i class="fab fa-chrome"></i> Safari</td>
+                        <td>✔️</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-android"></i> Android</td>
+                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
+                        <td>✔️</td>
+                        <td>✔️</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-android"></i> Android</td>
+                        <td><i class="fab fa-chrome"></i> Chromium (Vanadium)</td>
+                        <td>✔️</td>
+                        <td>✔️</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-apple"></i> iPhone &amp; iPad</td>
+                        <td><i class="fa fa-globe"></i> All browsers</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h1 id="webcam">Webcam sharing</h1>
 
             <p>
             The WebRTC technology used by this chat room allows for direct, <strong>peer to peer</strong>
@@ -72,7 +241,16 @@
             have text chat conversations as normal.
             </p>
 
-            <h2>Styling Your Messages</h2>
+            <p>
+            <strong>Notice:</strong> because of the peer-to-peer nature of the webcam feature, it is possible
+            that your chat partner may discover your <a href="https://en.wikipedia.org/wiki/IP_address" target="_blank">IP address</a>
+            if they check their local computer's connections. This is true of all WebRTC-based video chat systems.
+            Also, it is possible that your chat partner may "screen record" your video -- also true of all video
+            sharing systems. Please inform a moderator if you know somebody is violating your privacy in this
+            way so that they may be banned from the chat room.
+            </p>
+
+            <h1 id="markdown">Styling Your Messages</h1>
 
             <p>
             BareRTC supports Markdown syntax for your chat messages. You can make text <strong>bold</strong>
@@ -84,6 +262,49 @@
             Hyperlinks you paste that begin with https:// will be clickable as-is, or you can create a custom
             label for it by typing e.g. <code>[click my link](https://www.wikipedia.org/)</code>.
             </p>
+
+            <p>
+            To learn more about Markdown, please check out the <a href="https://www.markdownguide.org" target="_blank">Markdown Guide</a>
+            website.
+            </p>
+
+            <h1 id="privacy">Privacy</h1>
+
+            <p>
+            Some of the privacy considerations with this chat room include:
+            </p>
+
+            <ul>
+                <li>
+                    The server does not maintain long-term state of chat history. Messages are pushed out as
+                    soon as they come in.
+                </li>
+                <li>
+                    However, the server does keep temporary <strong>log files</strong> to help the server admin
+                    troubleshoot issues and check on the health of the server. These logs may include chat
+                    messages sent to public channels. Private chat (DMs) are <em>not</em> logged by default.
+                    If the server is running in debug mode (which provides a ton of telemetry to diagnose issues),
+                    the contents of DMs may be logged since debug mode will record the low-level chat protocol
+                    messages sent between the server and clients.
+                </li>
+                <li>
+                    Chat moderators <strong>DO NOT</strong> get to see the contents of your Direct Message
+                    conversations - that feature is not programmed in to this chat room. The server logs which
+                    might capture your conversations are usually not actively monitored. Consider taking your especially
+                    sensitive conversations to a different platform if you are very concerned about it.
+                </li>
+                <li>
+                    Webcam sharing is <strong>peer-to-peer</strong> so it is possible that your chat partner
+                    could identify your IP address by checking their computer's open connections. But this is
+                    true of basically all WebRTC webcam services and is part of how WebRTC works.
+                </li>
+                <li>
+                    As with all video sharing services, it is always possible that your chat partner may screen
+                    record their computer and thus record a copy of your video. This is a risk inherent with all
+                    video sharing platforms - you can't control what software the other party may be running,
+                    so choose your risk tolerance accordingly.
+                </li>
+            </ul>
         </div>
     </div>
 
