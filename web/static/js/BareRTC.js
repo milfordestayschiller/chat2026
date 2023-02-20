@@ -17,6 +17,10 @@ const app = Vue.createApp({
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
 
+            // Disconnect spamming: don't retry too many times.
+            disconnectLimit: 8,
+            disconnectCount: 0,
+
             // Website configuration provided by chat.html template.
             config: {
                 channels: PublicChannels,
@@ -404,6 +408,12 @@ const app = Vue.createApp({
 
                 this.ws.connected = false;
                 this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
+
+                this.disconnectCount++;
+                if (this.disconnectCount > this.disconnectLimit) {
+                    this.ChatClient(`It seems there's a problem connecting to the server. Please try some other time. Note that iPhones and iPads currently have issues connecting to the chat room in general.`);
+                    return;
+                }
 
                 if (!this.disconnect) {
                     if (ev.code !== 1001) {
