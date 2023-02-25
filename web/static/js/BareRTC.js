@@ -545,7 +545,7 @@ const app = Vue.createApp({
                     this.ws.conn.send(JSON.stringify({
                         action: "candidate",
                         username: username,
-                        candidate: event.candidate,
+                        candidate: JSON.stringify(event.candidate),
                     }));
                 }
             };
@@ -609,7 +609,7 @@ const app = Vue.createApp({
                         this.ws.conn.send(JSON.stringify({
                             action: "sdp",
                             username: username,
-                            description: pc.localDescription,
+                            description: JSON.stringify(pc.localDescription),
                         }));
                     },
                     console.error,
@@ -624,10 +624,16 @@ const app = Vue.createApp({
             }
             let pc = this.WebRTC.pc[msg.username].connecting;
 
+            // XX: WebRTC candidate/SDP messages JSON stringify their inner payload so that the
+            // Go back-end server won't re-order their json keys (Safari on Mac OS is very sensitive
+            // to the keys being re-ordered during the handshake, in ways that NO OTHER BROWSER cares
+            // about at all). Re-parse the JSON stringified object here.
+            let candidate = JSON.parse(msg.candidate);
+
             // Add the new ICE candidate.
             pc.addIceCandidate(
                 new RTCIceCandidate(
-                    msg.candidate,
+                    candidate,
                     () => { },
                     console.error,
                 )
@@ -638,7 +644,12 @@ const app = Vue.createApp({
                 return;
             }
             let pc = this.WebRTC.pc[msg.username].connecting;
-            let message = msg.description;
+
+            // XX: WebRTC candidate/SDP messages JSON stringify their inner payload so that the
+            // Go back-end server won't re-order their json keys (Safari on Mac OS is very sensitive
+            // to the keys being re-ordered during the handshake, in ways that NO OTHER BROWSER cares
+            // about at all). Re-parse the JSON stringified object here.
+            let message = JSON.parse(msg.description);
 
             // Add the new ICE candidate.
             // this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);

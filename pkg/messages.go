@@ -20,8 +20,8 @@ type Message struct {
 	OpenSecret string `json:"openSecret,omitempty"`
 
 	// Parameters sent on WebRTC signaling messages.
-	Candidate   map[string]interface{} `json:"candidate,omitempty"`   // candidate
-	Description map[string]interface{} `json:"description,omitempty"` // sdp
+	Candidate   string `json:"candidate,omitempty"`   // candidate
+	Description string `json:"description,omitempty"` // sdp
 }
 
 const (
