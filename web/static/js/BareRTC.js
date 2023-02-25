@@ -44,6 +44,7 @@ const app = Vue.createApp({
 
             channel: "lobby",
             username: "", //"test",
+            autoLogin: false,  // e.g. from JWT auth
             message: "",
             typingNotifDebounce: null,
 
@@ -180,16 +181,21 @@ const app = Vue.createApp({
         // TODO: JWT validation on the WebSocket as well.
         if (this.jwt.valid && this.jwt.claims.sub) {
             this.username = this.jwt.claims.sub;
+            this.autoLogin = true;
         }
 
         // Scrub JWT token from query string parameters.
         history.pushState(null, "", location.href.split("?")[0]);
 
+        // XX: always show login dialog to test if this helps iOS devices.
+        this.loginModal.visible = true;
+        /*
         if (!this.username) {
             this.loginModal.visible = true;
         } else {
             this.signIn();
         }
+        */
     },
     computed: {
         chatHistory() {
