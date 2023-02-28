@@ -132,6 +132,12 @@ body {
     max-height: 90vh;
 }
 
+/* Ensure the chat history isn't squished too far by the Videos panel if
+   the user has a lot open/has made their size very big */
+#chatHistory {
+    min-height: 150px;
+}
+
 /*******************
  * Video Feeds CSS *
  *******************/
@@ -140,9 +146,9 @@ body {
     background-color: #222;
     width: 100%;
     max-width: 100%;
-    overflow-x: scroll;
 
     display: flex;
+    flex-wrap: wrap;
     align-items: left;
 }
 
@@ -152,7 +158,7 @@ body {
     width: 168px;
     height: 112px;
     background-color: black;
-    margin: 5px;
+    margin: 3px;
 }
 
 .video-feeds.x1 > .feed {

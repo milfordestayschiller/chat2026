@@ -8,6 +8,18 @@ BareRTC is a simple WebRTC-based chat room application. It is especially designe
 
 It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
 
+* [Features](#features)
+* [Configuration](#configuration)
+* [Authentication](#authentication)
+    * [JWT Strict Mode](#jwt-strict-mode)
+    * [Running Without Authentication](#running-without-authentication)
+    * [Known Bugs Running Without Authentication](#known-bugs-running-without-authentication)
+* [Moderator Commands](#moderator-commands)
+* [JSON APIs](#json-apis)
+* [Tour of the Codebase](#tour-of-the-codebase)
+* [Deploying This App](#deploying-this-app)
+* [License](#license)
+
 # Features
 
 * Specify multiple Public Channels that all users have access to.
@@ -202,6 +214,43 @@ Returns basic info about the count and usernames of connected chatters:
     "Usernames": ["admin"]
 }
 ```
+
+# Tour of the Codebase
+
+This app uses WebSockets and WebRTC at the very simplest levels, without using a framework like `Socket.io`. Here is a tour of the codebase with the more interesting modules listed first.
+
+## Backend files
+
+* `cmd/BareRTC/main.go`: the entry point for the Go back-end application (parses command-line flags and starts the web server)
+* `pkg/` contains the Go source code for the server side (the application).
+    * `config/` handles the settings.toml config file for the app.
+    * `jwt/` handles the JWT authentication logic
+    * `log/` is an internal logger library - not very interesting
+    * `util/` houses some miscellaneous utility functions, such as generating random strings or getting the user's IP address (w/ X-Forwarded-For support, etc.)
+* `pkg/server.go` sets up the Go HTTP server and all the endpoint routes (e.g.: the /about page, static files, the WebSockets endpoint)
+* `pkg/websocket.go` handles the WebSockets endpoint which drives 99% of the chat app (all the login, text chat, who list portions - not webcams). Some related files to this include:
+    * `pkg/messages.go` is where I define the JSON message schema for the WebSockets protocol. Client and server messages marshal into the Message struct.
+    * `pkg/handlers.go` is where I write "high level" chat event handlers (OnLogin, OnMessage, etc.) - the WebSocket read loop parses their message and then nicely calls my event handler based on action.
+    * `pkg/commands.go` handles commands like /kick from moderators.
+* `pkg/api.go` handles the JSON API endpoints from the web server.
+* `pkg/pages.go` handles the index (w/ jwt parsing) and about pages.
+
+## Frontend files
+
+The `web/` folder holds front-end files and templates used by the Go app.
+
+* `web/templates` holds Go html/template sources that are rendered server-side.
+    * `chat.html` is the template for the main chat page (index route, `/`).
+    * `about.html` is the template for the `/about` page.
+* `web/static` holds the static files (scripts, stylesheets, images) for the site.
+    * `js/BareRTC.js` does the whole front-end Vue.js app for BareRTC. The portions of the code that handle the WebSockets and WebRTC features are marked off with comment banners so you can scroll until you find them.
+    * `js/sounds.js` handles the sound effects for the chat room.
+    * `css/chat.css` has custom CSS for the chat room UI (mainly a lot of CSS Grid stuff for the full-screen layout).
+
+Other front-end files are all vendored libraries or frameworks used by this app:
+
+* [Bulma](https://bulma.io) CSS framework
+* [Font Awesome](https://fontawesome.com) for icons.
 
 # Deploying This App
 
