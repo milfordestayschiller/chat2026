@@ -463,11 +463,12 @@
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <video class="feed"
-                        id="localVideo"
-                        v-show="webcam.active"
-                        autoplay muted>
-                    </video>
+                    <div class="feed" v-show="webcam.active">
+                        <video class="feed"
+                            id="localVideo"
+                            autoplay muted>
+                        </video>
+                    </div>
 
                     <!-- Others' videos -->
                     <div class="feed" v-for="(stream, username) in WebRTC.streams" v-bind:key="username">
@@ -509,7 +510,17 @@
                     <div class="feed">
                         hi
                     </div>
+                    <div class="feed">
+                        hi
+                    </div>
+                    <div class="feed">
+                        hi
+                    </div>
+                    <div class="feed">
+                        hi
+                    </div>
                     -->
+
                 </div>
                 <div class="card-content" id="chatHistory">
 

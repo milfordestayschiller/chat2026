@@ -33,7 +33,11 @@ It is very much in the style of the old-school Flash based webcam chat rooms of 
 
 Some important features still lacking:
 
-* Operator controls (kick/ban users)
+* Operator commands
+    * [x] /kick users
+    * [x] /nsfw to mark someone's camera
+    * [ ] /ban users
+    * [ ] /op users (give temporary mod control)
 
 # Configuration
 

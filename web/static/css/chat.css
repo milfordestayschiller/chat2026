@@ -147,18 +147,21 @@ body {
     width: 100%;
     max-width: 100%;
 
-    display: flex;
+    /* display: flex;
     flex-wrap: wrap;
-    align-items: left;
+    align-items: left; */
 }
 
 .video-feeds > .feed {
     position: relative;
-    flex: 0 0 168px;
+    /* flex: 0 0 168px; */
+    float: left;
     width: 168px;
     height: 112px;
     background-color: black;
     margin: 3px;
+    overflow: hidden;
+    resize: both;
 }
 
 .video-feeds.x1 > .feed {
@@ -193,7 +196,7 @@ body {
 .video-feeds > .feed > .controls {
     position: absolute;
     background: rgba(0, 0, 0, 0.75);
-    right: 4px;
+    left: 4px;
     bottom: 4px;
 }
 

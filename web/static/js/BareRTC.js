@@ -188,14 +188,20 @@ const app = Vue.createApp({
         history.pushState(null, "", location.href.split("?")[0]);
 
         // XX: always show login dialog to test if this helps iOS devices.
-        this.loginModal.visible = true;
-        /*
+        // this.loginModal.visible = true;
         if (!this.username) {
             this.loginModal.visible = true;
         } else {
             this.signIn();
         }
-        */
+    },
+    watch: {
+        "webcam.videoScale": () => {
+            document.querySelectorAll(".video-feeds > .feed").forEach(node => {
+                node.style.width = null;
+                node.style.height = null;
+            });
+        },
     },
     computed: {
         chatHistory() {
