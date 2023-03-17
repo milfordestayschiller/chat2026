@@ -989,7 +989,7 @@ const app = Vue.createApp({
             // Mark unread notifiers if this is not our channel.
             if (this.channel !== channel) {
                 // Don't notify about presence broadcasts.
-                if (action !== "presence") {
+                if (action !== "presence" && !isChatServer) {
                     this.channels[channel].unread++;
                 }
             }
