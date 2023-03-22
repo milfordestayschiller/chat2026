@@ -1,5 +1,12 @@
 package barertc
 
+/*
+Message is the basic carrier of WebSocket chat protocol actions.
+
+Every message (client or server) has an Action and the rest of the
+fields may vary depending on the action. Many messages target (or carry)
+a Username, chat Channel and carry an arbitrary Message.
+*/
 type Message struct {
 	Action   string `json:"action,omitempty"`
 	Channel  string `json:"channel,omitempty"`
@@ -19,7 +26,11 @@ type Message struct {
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`
 
-	// Parameters sent on WebRTC signaling messages.
+	// Send on `file` actions, passing e.g. image data.
+	Bytes []byte `json:"bytes,omitempty"`
+
+	// WebRTC negotiation messages: proxy their signaling messages
+	// between the two users to negotiate peer connection.
 	Candidate   string `json:"candidate,omitempty"`   // candidate
 	Description string `json:"description,omitempty"` // sdp
 }
@@ -35,6 +46,7 @@ const (
 	ActionRing    = "ring"    // receiver of a WebRTC open request
 	ActionWatch   = "watch"   // user has received video and is watching you
 	ActionUnwatch = "unwatch" // user has closed your video
+	ActionFile    = "file"    // image sharing in chat
 
 	// Actions sent by server only
 	ActionPing     = "ping"

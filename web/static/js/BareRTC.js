@@ -7,6 +7,17 @@ const configuration = {
     }]
 };
 
+const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
+
+
+function setModalImage(url) {
+    let $modalImg = document.querySelector("#modalImage"),
+        $modal = document.querySelector("#photo-modal");
+    $modalImg.src = url;
+    $modal.classList.add("is-active");
+    return false;
+}
+
 
 const app = Vue.createApp({
     delimiters: ['[[', ']]'],
@@ -1070,6 +1081,52 @@ const app = Vue.createApp({
 
             let hour = hours%12 || 12;
             return `${(hour)}:${minutes}:${seconds} ${ampm}`;
+        },
+
+        /**
+         * Image sharing in chat
+         */
+
+        // The image upload button handler.
+        uploadFile() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = e => {
+                let file = e.target.files[0];
+                if (file.size > FileUploadMaxSize) {
+                    this.ChatClient(`Please share an image smaller than ${FileUploadMaxSize / 1024 / 1024} MB in size!`);
+                    return;
+                }
+
+                this.ChatClient(`<em>Uploading file to chat: ${file.name} - ${file.size} bytes, ${file.type} format.</em>`);
+
+                // Get image file data.
+                let reader = new FileReader();
+                let rawData = new ArrayBuffer();
+                reader.onload = e => {
+                    rawData = e.target.result;
+
+                    let fileByteArray = [],
+                        u8array = new Uint8Array(rawData);
+                    for (let i = 0; i < u8array.length; i++) {
+                        fileByteArray.push(u8array[i]);
+                    }
+
+                    let msg = JSON.stringify({
+                        action: "file",
+                        channel: this.channel,
+                        message: file.name,
+                        bytes: fileByteArray, //btoa(fileByteArray),
+                    });
+
+                    // Send it to the chat server.
+                    this.ws.conn.send(msg);
+                };
+
+                reader.readAsArrayBuffer(file);
+            };
+            input.click();
         },
 
         /**

@@ -12,7 +12,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 3
+var currentVersion = 2
 
 // Config for your BareRTC app.
 type Config struct {
@@ -32,6 +32,10 @@ type Config struct {
 	PermitNSFW bool
 
 	UseXForwardedFor bool
+
+	WebSocketReadLimit int64
+	MaxImageWidth      int
+	PreviewImageWidth  int
 
 	PublicChannels []Channel
 }
@@ -65,6 +69,9 @@ func DefaultConfig() Config {
 		CORSHosts: []string{
 			"https://www.example.com",
 		},
+		WebSocketReadLimit: 1024 * 1024 * 40, // 40 MB.
+		MaxImageWidth:      1280,
+		PreviewImageWidth:  360,
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",
@@ -104,7 +111,7 @@ func LoadSettings() error {
 	_, err = toml.Decode(string(data), &Current)
 
 	// Have we added new config fields? Save the settings.toml.
-	if Current.Version < currentVersion {
+	if Current.Version != currentVersion {
 		log.Warn("New options are available for your settings.toml file. Your settings will be re-saved now.")
 		Current.Version = currentVersion
 		if err := WriteSettings(); err != nil {

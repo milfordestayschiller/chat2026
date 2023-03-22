@@ -275,6 +275,17 @@
         </div>
     </div>
 
+    <!-- Photo Detail Modal -->
+    <div class="modal" id="photo-modal">
+        <div class="modal-background" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></div>
+        <div class="modal-content photo-modal">
+            <div class="image is-fullwidth">
+                <img id="modalImage">
+            </div>
+        </div>
+        <button class="modal-close is-large" aria-label="close"></button>
+    </div>
+
     <div class="chat-container">
 
         <!-- Top header panel -->
@@ -588,18 +599,25 @@
             </div>
         </div>
 
+        <!-- Chat Footer Frame -->
         <div class="chat-footer">
             <div class="card">
                 <div class="card-content p-2">
 
                     <div class="columns">
-                        <div class="column">
+                        <div class="column pr-1">
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
                                     v-model="message"
                                     placeholder="Message"
                                     @keydown="sendTypingNotification()">
                             </form>
+                        </div>
+                        <div class="column pl-1 is-narrow">
+                            <button type="button" class="button"
+                                @click="uploadFile()">
+                                <i class="fa fa-upload"></i>
+                            </button>
                         </div>
                     </div>
 

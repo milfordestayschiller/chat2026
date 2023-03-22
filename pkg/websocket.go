@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/util"
@@ -59,10 +60,13 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 
 			// Read the user's posted message.
 			var msg Message
-			log.Debug("Read(%d=%s): %s", sub.ID, sub.Username, data)
 			if err := json.Unmarshal(data, &msg); err != nil {
 				log.Error("Read(%d=%s) Message error: %s", sub.ID, sub.Username, err)
 				continue
+			}
+
+			if msg.Action != ActionFile {
+				log.Debug("Read(%d=%s): %s", sub.ID, sub.Username, data)
 			}
 
 			// What action are they performing?
@@ -71,6 +75,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnLogin(sub, msg)
 			case ActionMessage:
 				s.OnMessage(sub, msg)
+			case ActionFile:
+				s.OnFile(sub, msg)
 			case ActionMe:
 				s.OnMe(sub, msg)
 			case ActionOpen:
@@ -96,7 +102,7 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
+	// log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
 	return sub.conn.Write(sub.ctx, websocket.MessageText, data)
 }
 
@@ -118,7 +124,7 @@ func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
 	})
 }
 
-// WebSocket handles the /ws websocket connection.
+// WebSocket handles the /ws websocket connection endpoint.
 func (s *Server) WebSocket() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := util.IPAddress(r)
@@ -133,6 +139,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		defer c.Close(websocket.StatusInternalError, "the sky is falling")
 
 		log.Debug("WebSocket: %s has connected", ip)
+		c.SetReadLimit(config.Current.WebSocketReadLimit)
 
 		// CloseRead starts a goroutine that will read from the connection
 		// until it is closed.
@@ -235,7 +242,10 @@ func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
 
 // Broadcast a message to the chat room.
 func (s *Server) Broadcast(msg Message) {
-	log.Debug("Broadcast: %+v", msg)
+	if len(msg.Message) < 1024 {
+		log.Debug("Broadcast: %+v", msg)
+	}
+
 	s.subscribersMu.RLock()
 	defer s.subscribersMu.RUnlock()
 	for _, sub := range s.IterSubscribers(true) {

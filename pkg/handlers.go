@@ -1,7 +1,9 @@
 package barertc
 
 import (
+	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -124,6 +126,64 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		Channel:  msg.Channel,
 		Username: sub.Username,
 		Message:  markdown,
+	}
+
+	// Is this a DM?
+	if strings.HasPrefix(msg.Channel, "@") {
+		// Echo the message only to both parties.
+		s.SendTo(sub.Username, message)
+		message.Channel = "@" + sub.Username
+		if err := s.SendTo(msg.Channel, message); err != nil {
+			sub.ChatServer("Your message could not be delivered: %s", err)
+		}
+		return
+	}
+
+	// Broadcast a chat message to the room.
+	s.Broadcast(message)
+}
+
+// OnFile handles a picture shared in chat with a channel.
+func (s *Server) OnFile(sub *Subscriber, msg Message) {
+	if sub.Username == "" {
+		sub.ChatServer("You must log in first.")
+		return
+	}
+
+	// Detect image type and convert it into an <img src="data:"> tag.
+	var (
+		filename = msg.Message
+		ext      = filepath.Ext(filename)
+		filetype string
+	)
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg":
+		filetype = "image/jpeg"
+	case ".gif":
+		filetype = "image/gif"
+	case ".png":
+		filetype = "image/png"
+	default:
+		sub.ChatServer("Unsupported image type, should be a jpeg, GIF or png.")
+		return
+	}
+
+	// Process the image: scale it down, strip metadata, etc.
+	img, pvWidth, pvHeight := ProcessImage(filetype, msg.Bytes)
+	var dataURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
+
+	// Message to be echoed to the channel.
+	var message = Message{
+		Action:   ActionMessage,
+		Channel:  msg.Channel,
+		Username: sub.Username,
+
+		// Their image embedded via a data: URI - no server storage needed!
+		Message: fmt.Sprintf(
+			`<img src="%s" width="%d" height="%d" onclick="setModalImage(this.src)" style="cursor: pointer">`,
+			dataURL,
+			pvWidth, pvHeight,
+		),
 	}
 
 	// Is this a DM?
