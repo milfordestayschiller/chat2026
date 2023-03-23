@@ -37,7 +37,10 @@ type Message struct {
 
 const (
 	// Actions sent by the client side only
-	ActionLogin = "login" // post the username to backend
+	ActionLogin  = "login" // post the username to backend
+	ActionBoot   = "boot"  // boot a user off your video feed
+	ActionMute   = "mute"  // mute a user's chat messages
+	ActionUnmute = "unmute"
 
 	// Actions sent by server or client
 	ActionMessage = "message" // post a message to the room

@@ -67,7 +67,9 @@ const app = Vue.createApp({
 
             // Who List for the room.
             whoList: [],
+            whoTab: 'online',
             whoMap: {}, // map username to wholist entry
+            muted: {},  // muted usernames for client side state
 
             // My video feed.
             webcam: {
@@ -339,10 +341,46 @@ const app = Vue.createApp({
             }
         },
 
+        // Mute or unmute a user.
+        muteUser(username) {
+            let mute = this.muted[username] == undefined;
+            if (mute) {
+                this.muted[username] = true;
+            } else {
+                delete this.muted[username];
+            }
+
+            this.sendMute(username, mute);
+            if (mute) {
+                this.ChatClient(
+                    `You have muted <strong>${username}</strong> and will no longer see their chat messages, `+
+                    `and they will not see whether your webcam is active. You may unmute them via the Who Is Online list.`);
+            } else {
+                this.ChatClient(
+                    `You have unmuted <strong>${username}</strong> and can see their chat messages from now on.`,
+                );
+            }
+        },
+        sendMute(username, mute) {
+            this.ws.conn.send(JSON.stringify({
+                action: mute ? "mute" : "unmute",
+                username: username,
+            }));
+        },
+        isMutedUser(username) {
+            return this.muted[username] != undefined;
+        },
+
         // Send a video request to access a user's camera.
         sendOpen(username) {
             this.ws.conn.send(JSON.stringify({
                 action: "open",
+                username: username,
+            }));
+        },
+        sendBoot(username) {
+            this.ws.conn.send(JSON.stringify({
+                action: "boot",
                 username: username,
             }));
         },
@@ -428,6 +466,7 @@ const app = Vue.createApp({
             conn.addEventListener("close", ev => {
                 // Lost connection to server - scrub who list.
                 this.onWho({whoList: []});
+                this.muted = {};
 
                 this.ws.connected = false;
                 this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
@@ -930,6 +969,39 @@ const app = Vue.createApp({
             } else {
                 this.ChatClient("Your current webcam viewers are:<br><br>" + users.join(", "));
             }
+
+            // Also focus the Watching list.
+            this.whoTab = 'watching';
+
+            // TODO: if mobile, show the panel - this width matches
+            // the media query in chat.css
+            if (screen.width < 1024) {
+                this.openWhoPanel();
+            }
+        },
+
+        // Boot someone off yourn video.
+        bootUser(username) {
+            if (!window.confirm(
+                `Kick ${username} off your camera? This will also prevent them `+
+                `from seeing that your camera is active for the remainder of your `+
+                `chat session.`)) {
+                return;
+            }
+
+            this.sendBoot(username);
+
+            // Close the WebRTC peer connection.
+            if (this.WebRTC.pc[username] != undefined) {
+                this.closeVideo(username, "answerer");
+            }
+
+            this.ChatClient(
+                `You have booted ${username} off your camera. They will no longer be able `+
+                `to connect to your camera, or even see that your camera is active at all -- `+
+                `to them it appears as though you had turned yours off.<br><br>This will be `+
+                `in place for the remainder of your current chat session.`
+            );
         },
 
         // Stop broadcasting.
@@ -937,6 +1009,7 @@ const app = Vue.createApp({
             this.webcam.elem.srcObject = null;
             this.webcam.stream = null;
             this.webcam.active = false;
+            this.whoTab = "online";
 
             // Close all WebRTC sessions.
             for (username of Object.keys(this.WebRTC.pc)) {

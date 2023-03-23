@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
@@ -30,6 +31,10 @@ type Subscriber struct {
 	cancel        context.CancelFunc
 	messages      chan []byte
 	closeSlow     func()
+
+	muteMu sync.RWMutex
+	booted map[string]struct{} // usernames booted off your camera
+	muted  map[string]struct{} // usernames you muted
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -81,6 +86,10 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnMe(sub, msg)
 			case ActionOpen:
 				s.OnOpen(sub, msg)
+			case ActionBoot:
+				s.OnBoot(sub, msg)
+			case ActionMute, ActionUnmute:
+				s.OnMute(sub, msg, msg.Action == ActionMute)
 			case ActionCandidate:
 				s.OnCandidate(sub, msg)
 			case ActionSDP:
@@ -102,7 +111,7 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	// log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
+	log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
 	return sub.conn.Write(sub.ctx, websocket.MessageText, data)
 }
 
@@ -154,6 +163,8 @@ func (s *Server) WebSocket() http.HandlerFunc {
 			closeSlow: func() {
 				c.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
 			},
+			booted: make(map[string]struct{}),
+			muted:  make(map[string]struct{}),
 		}
 
 		s.AddSubscriber(sub)
@@ -253,6 +264,12 @@ func (s *Server) Broadcast(msg Message) {
 			continue
 		}
 
+		// Don't deliver it if the receiver has muted us.
+		if sub.Mutes(msg.Username) {
+			log.Debug("Do not broadcast message to %s: they have muted or booted %s", sub.Username, msg.Username)
+			continue
+		}
+
 		sub.SendJSON(msg)
 	}
 }
@@ -286,34 +303,59 @@ func (s *Server) SendTo(username string, msg Message) error {
 // SendWhoList broadcasts the connected members to everybody in the room.
 func (s *Server) SendWhoList() {
 	var (
-		users       = []WhoList{}
 		subscribers = s.IterSubscribers()
 	)
 
+	// Build the WhoList for each subscriber.
+	// TODO: it's the only way to fake videoActive for booted user views.
 	for _, sub := range subscribers {
 		if !sub.authenticated {
 			continue
 		}
 
-		who := WhoList{
-			Username:    sub.Username,
-			VideoActive: sub.VideoActive,
-			NSFW:        sub.VideoNSFW,
-		}
-		if sub.JWTClaims != nil {
-			who.Operator = sub.JWTClaims.IsAdmin
-			who.Avatar = sub.JWTClaims.Avatar
-			who.ProfileURL = sub.JWTClaims.ProfileURL
-		}
-		users = append(users, who)
-	}
+		var users = []WhoList{}
+		for _, user := range subscribers {
+			who := WhoList{
+				Username:    user.Username,
+				VideoActive: user.VideoActive,
+				NSFW:        user.VideoNSFW,
+			}
 
-	for _, sub := range subscribers {
+			// If this person had booted us, force their camera to "off"
+			if user.Boots(sub.Username) || user.Mutes(sub.Username) {
+				who.VideoActive = false
+				who.NSFW = false
+			}
+
+			if sub.JWTClaims != nil {
+				who.Operator = user.JWTClaims.IsAdmin
+				who.Avatar = user.JWTClaims.Avatar
+				who.ProfileURL = user.JWTClaims.ProfileURL
+			}
+			users = append(users, who)
+		}
+
 		sub.SendJSON(Message{
 			Action:  ActionWhoList,
 			WhoList: users,
 		})
 	}
+}
+
+// Boots checks whether the subscriber has blocked username from their camera.
+func (s *Subscriber) Boots(username string) bool {
+	s.muteMu.RLock()
+	defer s.muteMu.RUnlock()
+	_, ok := s.booted[username]
+	return ok
+}
+
+// Mutes checks whether the subscriber has muted username.
+func (s *Subscriber) Mutes(username string) bool {
+	s.muteMu.RLock()
+	defer s.muteMu.RUnlock()
+	_, ok := s.muted[username]
+	return ok
 }
 
 func writeTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {

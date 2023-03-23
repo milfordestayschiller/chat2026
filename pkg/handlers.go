@@ -133,6 +133,20 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		// Echo the message only to both parties.
 		s.SendTo(sub.Username, message)
 		message.Channel = "@" + sub.Username
+
+		// Don't deliver it if the receiver has muted us.
+		rcpt, err := s.GetSubscriber(strings.TrimPrefix(msg.Channel, "@"))
+		if err == nil && rcpt.Mutes(sub.Username) {
+			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
+			return
+		}
+
+		// If the sender already mutes the recipient, reply back with the error.
+		if sub.Mutes(rcpt.Username) {
+			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
+			return
+		}
+
 		if err := s.SendTo(msg.Channel, message); err != nil {
 			sub.ChatServer("Your message could not be delivered: %s", err)
 		}
@@ -191,6 +205,20 @@ func (s *Server) OnFile(sub *Subscriber, msg Message) {
 		// Echo the message only to both parties.
 		s.SendTo(sub.Username, message)
 		message.Channel = "@" + sub.Username
+
+		// Don't deliver it if the receiver has muted us.
+		rcpt, err := s.GetSubscriber(strings.TrimPrefix(msg.Channel, "@"))
+		if err == nil && rcpt.Mutes(sub.Username) {
+			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
+			return
+		}
+
+		// If the sender already mutes the recipient, reply back with the error.
+		if sub.Mutes(rcpt.Username) {
+			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
+			return
+		}
+
 		if err := s.SendTo(msg.Channel, message); err != nil {
 			sub.ChatServer("Your message could not be delivered: %s", err)
 		}
@@ -240,6 +268,35 @@ func (s *Server) OnOpen(sub *Subscriber, msg Message) {
 		Username:   other.Username,
 		OpenSecret: secret,
 	})
+}
+
+// OnBoot is a user kicking you off their video stream.
+func (s *Server) OnBoot(sub *Subscriber, msg Message) {
+	log.Info("%s boots %s off their camera", sub.Username, msg.Username)
+
+	sub.muteMu.Lock()
+	sub.booted[msg.Username] = struct{}{}
+	sub.muteMu.Unlock()
+
+	s.SendWhoList()
+}
+
+// OnMute is a user kicking setting the mute flag for another user.
+func (s *Server) OnMute(sub *Subscriber, msg Message, mute bool) {
+	log.Info("%s mutes or unmutes %s: %v", sub.Username, msg.Username, mute)
+
+	sub.muteMu.Lock()
+
+	if mute {
+		sub.muted[msg.Username] = struct{}{}
+	} else {
+		delete(sub.muted, msg.Username)
+	}
+
+	sub.muteMu.Unlock()
+
+	// Send the Who List in case our cam will show as disabled to the muted party.
+	s.SendWhoList()
 }
 
 // OnCandidate handles WebRTC candidate signaling.

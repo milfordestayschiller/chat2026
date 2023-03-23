@@ -574,12 +574,27 @@
                                     <div class="column is-narrow">
                                         <small class="has-text-grey" :title="msg.at">[[prettyDate(msg.at)]]</small>
                                     </div>
-                                    <div class="column"
+                                    <div class="column is-narrow"
                                         v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username || isDM)">
+                                        <!-- DMs button -->
                                         <button type="button"
                                             class="button is-grey is-outlined is-small px-2"
                                             @click="openDMs({username: msg.username})">
-                                            <i class="fa fa-message"></i>
+                                            <i class="fa fa-message mr-1"></i>
+                                            DM
+                                        </button>
+                                    </div>
+                                    <div class="column is-narrow"
+                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username)">
+                                        <!-- Mute button -->
+                                        <button type="button"
+                                            class="button is-grey is-outlined is-small px-2"
+                                            @click="muteUser(msg.username)"
+                                            title="Mute user">
+                                            <i class="fa fa-comment-slash mr-1"
+                                                :class="{'has-text-success': isMutedUser(msg.username),
+                                                         'has-text-danger': !isMutedUser(msg.username)}"></i>
+                                            [[isMutedUser(msg.username) ? 'Unmute' : 'Mute']]
                                         </button>
                                     </div>
                                 </div>
@@ -642,7 +657,26 @@
                 </header>
                 <div class="card-content p-2">
 
-                    <ul class="menu-list">
+                    <div class="tabs has-text-small">
+                        <ul>
+                            <li :class="{'is-active': whoTab==='online'}">
+                                <a class="is-size-7"
+                                    @click.prevent="whoTab='online'">
+                                    Online ([[ whoList.length ]])
+                                </a>
+                            </li>
+                            <li v-if="webcam.active" :class="{'is-active': whoTab==='watching'}">
+                                <a class="is-size-7"
+                                    @click.prevent="whoTab='watching'">
+                                    <i class="fa fa-eye mr-2"></i>
+                                    Watching ([[ Object.keys(webcam.watching).length ]])
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Who Is Online -->
+                    <ul class="menu-list" v-if="whoTab==='online'">
                         <li v-for="(u, i) in whoList" v-bind:key="i">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
@@ -670,8 +704,16 @@
                                         <i class="fa fa-user"></i>
                                     </button>
 
-                                    <!-- DM button -->
-                                    <button type="button"
+                                    <!-- Unmute User button (if muted) -->
+                                    <button type="button" v-if="isMutedUser(u.username)"
+                                        class="button is-small px-2 py-1"
+                                        @click="muteUser(u.username)"
+                                        title="This user is muted. Click to unmute them.">
+                                        <i class="fa fa-comment-slash has-text-danger"></i>
+                                    </button>
+
+                                    <!-- DM button (if not muted) -->
+                                    <button type="button" v-else
                                         class="button is-small px-2 py-1"
                                         @click="openDMs(u)"
                                         title="Start direct message thread"
@@ -689,6 +731,30 @@
                                         title="Open video stream"
                                         @click="openVideo(u)">
                                         <i class="fa fa-video"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- Watching My Webcam -->
+                    <ul class="menu-list" v-if="whoTab==='watching'">
+                        <li v-for="username in Object.keys(webcam.watching)" v-bind:key="username">
+                            <div class="columns is-mobile">
+                                <!-- Avatar URL if available -->
+                                <div class="column is-narrow pr-0">
+                                    <i class="fa fa-eye"></i>
+                                </div>
+                                <div class="column pr-0">
+                                    [[ username ]]
+                                </div>
+                                <div class="column is-narrow pl-0">
+                                    <!-- Boot from cam button -->
+                                    <button type="button"
+                                        class="button is-small px-2 py-1"
+                                        @click="bootUser(username)"
+                                        title="Kick this person off your cam">
+                                        <i class="fa fa-user-xmark has-text-danger"></i>
                                     </button>
                                 </div>
                             </div>
