@@ -64,6 +64,15 @@ body {
     grid-column: 2;
     grid-row: 2;
     overflow: hidden;
+    position: relative;
+}
+
+/* Auto-scroll checkbox in the corner */
+.chat-column >.autoscroll-field {
+    position: absolute;
+    z-index: 39; /* just below modal shadow */
+    right: 6px;
+    bottom: 4px;
 }
 
 /* Footer row: message entry box */

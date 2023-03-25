@@ -120,6 +120,7 @@ const app = Vue.createApp({
                 // }
             },
             historyScrollbox: null,
+            autoscroll: true, // scroll to bottom on new messages
             DMs: {},
 
             // Responsive CSS controls for mobile.
@@ -1083,6 +1084,8 @@ const app = Vue.createApp({
         },
 
         scrollHistory() {
+            if (!this.autoscroll) return;
+
             window.requestAnimationFrame(() => {
                 this.historyScrollbox.scroll({
                     top: this.historyScrollbox.scrollHeight,

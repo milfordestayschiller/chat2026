@@ -425,6 +425,15 @@
 
         <!-- Middle Column: Chat Room/History -->
         <div class="chat-column">
+            <div class="autoscroll-field tag">
+                <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
+                    <input type="checkbox"
+                        v-model="autoscroll"
+                        :value="true">
+                    Auto-scroll
+                </label>
+            </div>
+
             <div class="card grid-card">
                 <header class="card-header has-background-link">
                     <div class="columns is-mobile card-header-title has-text-light">
