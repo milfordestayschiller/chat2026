@@ -120,6 +120,9 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		return
 	}
 
+	// Detect and expand media such as YouTube videos.
+	markdown = s.ExpandMedia(markdown)
+
 	// Message to be echoed to the channel.
 	var message = Message{
 		Action:   ActionMessage,

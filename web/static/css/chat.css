@@ -238,3 +238,8 @@ body {
     font-size: small;
     padding: 2px 4px;
 }
+
+/* YouTube embeds */
+.youtube-embed {
+    max-width: 100%;
+}
