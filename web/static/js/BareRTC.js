@@ -37,6 +37,13 @@ const app = Vue.createApp({
                 channels: PublicChannels,
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
+                fontSizeClasses: [
+                    [ "", "Default size" ],
+                    [ "x1", "50% larger chat room text" ],
+                    [ "x2", "2x larger chat room text" ],
+                    [ "x3", "3x larger chat room text" ],
+                    [ "x4", "4x larger chat room text" ],
+                ],
                 sounds: {
                     available: SoundEffects,
                     settings: DefaultSounds,
@@ -121,6 +128,7 @@ const app = Vue.createApp({
             },
             historyScrollbox: null,
             autoscroll: true, // scroll to bottom on new messages
+            fontSizeClass: "", // font size magnification
             DMs: {},
 
             // Responsive CSS controls for mobile.
@@ -157,6 +165,7 @@ const app = Vue.createApp({
     },
     mounted() {
         this.setupSounds();
+        this.setupConfig(); // localSettings persisted settings
 
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
@@ -216,6 +225,10 @@ const app = Vue.createApp({
                 node.style.height = null;
             });
         },
+        fontSizeClass() {
+            // Store the setting persistently.
+            localStorage.fontSizeClass = this.fontSizeClass;
+        },
     },
     computed: {
         chatHistory() {
@@ -262,6 +275,13 @@ const app = Vue.createApp({
         },
     },
     methods: {
+        // Load user prefs from localStorage, called on startup
+        setupConfig() {
+            if (localStorage.fontSizeClass != undefined) {
+                this.fontSizeClass = localStorage.fontSizeClass;
+            }
+        },
+
         signIn() {
             this.loginModal.visible = false;
             this.dial();

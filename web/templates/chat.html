@@ -93,6 +93,27 @@
                         </div>
                     </div>
 
+                    <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                            <label class="label">Text size</label>
+                        </div>
+                        <div class="field-body">
+                            <div class="field">
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select v-model="fontSizeClass">
+                                            <option v-for="s in config.fontSizeClasses"
+                                                v-bind:key="s[0]"
+                                                :value="s[0]">
+                                                [[ s[1] ]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <h3 class="subtitle">Sounds</h3>
 
                     <div class="field is-horizontal">
@@ -542,7 +563,7 @@
                     -->
 
                 </div>
-                <div class="card-content" id="chatHistory">
+                <div class="card-content" id="chatHistory" :class="fontSizeClass">
 
                     <!-- No history? -->
                     <div v-if="chatHistory.length === 0">

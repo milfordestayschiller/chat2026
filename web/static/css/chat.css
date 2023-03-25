@@ -147,6 +147,20 @@ body {
     min-height: 150px;
 }
 
+/* User configurable font size increases */
+#chatHistory.x1 {
+    font-size: large;
+}
+#chatHistory.x2 {
+    font-size: x-large;
+}
+#chatHistory.x3 {
+    font-size: xx-large;
+}
+#chatHistory.x4 {
+    font-size: 64pt;
+}
+
 /*******************
  * Video Feeds CSS *
  *******************/
