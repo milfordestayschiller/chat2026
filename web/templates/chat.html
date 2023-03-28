@@ -687,6 +687,21 @@
                 </header>
                 <div class="card-content p-2">
 
+                    <div class="columns is-mobile mb-0">
+                        <div class="column is-narrow">
+                            Status:
+                        </div>
+                        <div class="column">
+                            <div class="select is-small is-fullwidth">
+                                <select v-model="status">
+                                    <option value="online">☀️ Active</option>
+                                    <option value="away">🕒 Away</option>
+                                    <option value="idle" v-show="status==='idle'">🕒 Idle</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="tabs has-text-small">
                         <ul>
                             <li :class="{'is-active': whoTab==='online'}">
@@ -710,12 +725,17 @@
                         <li v-for="(u, i) in whoList" v-bind:key="i">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
-                                <div class="column is-narrow pr-0">
+                                <div class="column is-narrow pr-0" style="position: relative">
                                     <img v-if="u.avatar" :src="avatarURL(u)"
                                         width="24" height="24"
                                         :alt="'Avatar image for ' + u.username">
                                     <img v-else src="/static/img/shy.png"
                                         width="24" height="24">
+
+                                    <!-- Away symbol -->
+                                    <div v-if="u.status !== 'online'" class="status-away-icon" :title="'Status: '+u.status">
+                                        <i class="fa fa-clock has-text-light"></i>
+                                    </div>
                                 </div>
                                 <div class="column pr-0"
                                     :class="{'pl-1': u.avatar}">

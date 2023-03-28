@@ -20,8 +20,9 @@ type Message struct {
 	WhoList []WhoList `json:"whoList,omitempty"`
 
 	// Sent on `me` actions along with Username
-	VideoActive bool `json:"videoActive,omitempty"` // user tells us their cam status
-	NSFW        bool `json:"nsfw,omitempty"`        // user tags their video NSFW
+	VideoActive bool   `json:"videoActive,omitempty"` // user tells us their cam status
+	ChatStatus  string `json:"status,omitempty"`      // online vs. away
+	NSFW        bool   `json:"nsfw,omitempty"`        // user tags their video NSFW
 
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`
@@ -68,6 +69,7 @@ type WhoList struct {
 	Username    string `json:"username"`
 	VideoActive bool   `json:"videoActive,omitempty"`
 	NSFW        bool   `json:"nsfw,omitempty"`
+	Status      string `json:"status"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`

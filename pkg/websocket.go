@@ -24,6 +24,7 @@ type Subscriber struct {
 	Username      string
 	VideoActive   bool
 	VideoNSFW     bool
+	ChatStatus    string
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
 	conn          *websocket.Conn
@@ -163,8 +164,9 @@ func (s *Server) WebSocket() http.HandlerFunc {
 			closeSlow: func() {
 				c.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
 			},
-			booted: make(map[string]struct{}),
-			muted:  make(map[string]struct{}),
+			booted:     make(map[string]struct{}),
+			muted:      make(map[string]struct{}),
+			ChatStatus: "online",
 		}
 
 		s.AddSubscriber(sub)
@@ -317,6 +319,7 @@ func (s *Server) SendWhoList() {
 		for _, user := range subscribers {
 			who := WhoList{
 				Username:    user.Username,
+				Status:      user.ChatStatus,
 				VideoActive: user.VideoActive,
 				NSFW:        user.VideoNSFW,
 			}

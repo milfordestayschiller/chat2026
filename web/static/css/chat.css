@@ -243,3 +243,10 @@ body {
 .youtube-embed {
     max-width: 100%;
 }
+
+/* The Away icon that overlays profile pics */
+.status-away-icon {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+}

@@ -240,6 +240,7 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 
 	sub.VideoActive = msg.VideoActive
 	sub.VideoNSFW = msg.NSFW
+	sub.ChatStatus = msg.ChatStatus
 
 	// Sync the WhoList to everybody.
 	s.SendWhoList()

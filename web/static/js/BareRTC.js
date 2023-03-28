@@ -65,6 +65,11 @@ const app = Vue.createApp({
             autoLogin: false,  // e.g. from JWT auth
             message: "",
             typingNotifDebounce: null,
+            status: "online", // away/idle status
+
+            // Idle detection variables
+            idleTimeout: null,
+            idleThreshold: 60, // number of seconds you must be idle
 
             // WebSocket connection.
             ws: {
@@ -166,6 +171,7 @@ const app = Vue.createApp({
     mounted() {
         this.setupSounds();
         this.setupConfig(); // localSettings persisted settings
+        this.setupIdleDetection();
 
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
@@ -229,6 +235,10 @@ const app = Vue.createApp({
             // Store the setting persistently.
             localStorage.fontSizeClass = this.fontSizeClass;
         },
+        status() {
+            // Send presence updates to the server.
+            this.sendMe();
+        }
     },
     computed: {
         chatHistory() {
@@ -321,6 +331,7 @@ const app = Vue.createApp({
             this.ws.conn.send(JSON.stringify({
                 action: "me",
                 videoActive: this.webcam.active,
+                status: this.status,
                 nsfw: this.webcam.nsfw,
             }));
         },
@@ -1281,6 +1292,7 @@ const app = Vue.createApp({
             localStorage[`sound:${event}`] = this.config.sounds.settings[event];
         },
 
+        // Make all links in chat open in new windows
         makeLinksExternal() {
             window.requestAnimationFrame(() => {
                 let $history = document.querySelector("#chatHistory");
@@ -1293,6 +1305,34 @@ const app = Vue.createApp({
                 });
             })
         },
+
+        /*
+         * Idle Detection methods
+         */
+
+        setupIdleDetection() {
+            window.addEventListener("keypress", this.deidle);
+            window.addEventListener("mousemove", this.deidle);
+        },
+
+        // Common "de-idle" event handler
+        deidle(e) {
+            if (this.status === "idle") {
+                this.status = "online";
+            }
+
+            if (this.idleTimeout !== null) {
+                clearTimeout(this.idleTimeout);
+            }
+
+            this.idleTimeout = setTimeout(this.goIdle, 1000 * this.idleThreshold);
+        },
+        goIdle() {
+            // only if we aren't already set on away
+            if (this.status === "online") {
+                this.status = "idle";
+            }
+        }
     }
 });
 
