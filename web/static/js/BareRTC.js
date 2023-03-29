@@ -356,6 +356,10 @@ const app = Vue.createApp({
             this.whoList = msg.whoList;
             this.whoMap = {};
 
+            if (this.whoList == undefined) {
+                this.whoList = [];
+            }
+
             // If we had a camera open with any of these and they have gone
             // off camera, close our side of the connection.
             for (let row of this.whoList) {
