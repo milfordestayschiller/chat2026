@@ -145,7 +145,7 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 		}
 
 		// If the sender already mutes the recipient, reply back with the error.
-		if sub.Mutes(rcpt.Username) {
+		if err == nil && sub.Mutes(rcpt.Username) {
 			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
 			return
 		}

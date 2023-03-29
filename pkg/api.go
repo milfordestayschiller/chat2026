@@ -36,7 +36,7 @@ func (s *Server) Statistics() http.HandlerFunc {
 		// Count all users + collect unique usernames.
 		var unique = map[string]struct{}{}
 		for _, sub := range s.IterSubscribers() {
-			if sub.authenticated {
+			if sub.authenticated && sub.ChatStatus != "hidden" {
 				result.UserCount++
 				if _, ok := unique[sub.Username]; ok {
 					continue

@@ -47,8 +47,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				log.Error("ReadLoop error(%d=%s): %+v", sub.ID, sub.Username, err)
 				s.DeleteSubscriber(sub)
 
-				// Notify if this user was auth'd
-				if sub.authenticated {
+				// Notify if this user was auth'd and not hidden
+				if sub.authenticated && sub.ChatStatus != "hidden" {
 					s.Broadcast(Message{
 						Action:   ActionPresence,
 						Username: sub.Username,
@@ -317,6 +317,10 @@ func (s *Server) SendWhoList() {
 
 		var users = []WhoList{}
 		for _, user := range subscribers {
+			if user.ChatStatus == "hidden" {
+				continue
+			}
+
 			who := WhoList{
 				Username:    user.Username,
 				Status:      user.ChatStatus,
@@ -330,7 +334,7 @@ func (s *Server) SendWhoList() {
 				who.NSFW = false
 			}
 
-			if sub.JWTClaims != nil {
+			if user.JWTClaims != nil {
 				who.Operator = user.JWTClaims.IsAdmin
 				who.Avatar = user.JWTClaims.Avatar
 				who.ProfileURL = user.JWTClaims.ProfileURL
