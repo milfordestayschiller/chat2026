@@ -238,6 +238,28 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 		log.Debug("User %s turns on their video feed", sub.Username)
 	}
 
+	// Hidden status: for operators only, + fake a join/exit chat message.
+	if sub.JWTClaims != nil && sub.JWTClaims.IsAdmin {
+		if sub.ChatStatus != "hidden" && msg.ChatStatus == "hidden" {
+			// Going hidden - fake leave message
+			s.Broadcast(Message{
+				Action:   ActionPresence,
+				Username: sub.Username,
+				Message:  "has exited the room!",
+			})
+		} else if sub.ChatStatus == "hidden" && msg.ChatStatus != "hidden" {
+			// Leaving hidden - fake join message
+			s.Broadcast(Message{
+				Action:   ActionPresence,
+				Username: sub.Username,
+				Message:  "has joined the room!",
+			})
+		}
+	} else if msg.ChatStatus == "hidden" {
+		// normal users can not set this status
+		msg.ChatStatus = "away"
+	}
+
 	sub.VideoActive = msg.VideoActive
 	sub.VideoNSFW = msg.NSFW
 	sub.ChatStatus = msg.ChatStatus

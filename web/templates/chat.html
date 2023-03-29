@@ -697,7 +697,7 @@
                                     <option value="online">☀️ Active</option>
                                     <option value="away">🕒 Away</option>
                                     <option value="idle" v-show="status==='idle'">🕒 Idle</option>
-                                    <option value="hidden" v-show="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
+                                    <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
                                 </select>
                             </div>
                         </div>
