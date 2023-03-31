@@ -29,7 +29,7 @@ const app = Vue.createApp({
             windowFocusedAt: new Date(),
 
             // Disconnect spamming: don't retry too many times.
-            disconnectLimit: 8,
+            disconnectLimit: 3,
             disconnectCount: 0,
 
             // Website configuration provided by chat.html template.
