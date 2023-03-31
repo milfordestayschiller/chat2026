@@ -140,7 +140,9 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		ip := util.IPAddress(r)
 		log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
 		log.Debug("Headers: %+v", r.Header)
-		c, err := websocket.Accept(w, r, nil)
+		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			CompressionMode: websocket.CompressionDisabled,
+		})
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Could not accept websocket connection: %s", err)
