@@ -30,8 +30,7 @@ type Subscriber struct {
 	conn          *websocket.Conn
 	ctx           context.Context
 	cancel        context.CancelFunc
-	messages      chan []byte // WebSocket outgoing queue
-	cooldown      sync.Mutex  // don't spam messages out the WS
+	messages      chan []byte
 	closeSlow     func()
 
 	muteMu sync.RWMutex
@@ -114,12 +113,7 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 		return err
 	}
 	log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
-
-	// Write it to their outgoing channel so we can rate limit in case of Safari browsers
-	// which get overwhelmed with too many messages.
-	sub.messages <- data
-	// return sub.conn.Write(sub.ctx, websocket.MessageText, data)
-	return nil
+	return sub.conn.Write(sub.ctx, websocket.MessageText, data)
 }
 
 // SendMe sends the current user state to the client.
@@ -146,9 +140,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		ip := util.IPAddress(r)
 		log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
 		log.Debug("Headers: %+v", r.Header)
-		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-			CompressionMode: websocket.CompressionDisabled,
-		})
+		c, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Could not accept websocket connection: %s", err)
@@ -185,11 +177,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		for {
 			select {
 			case msg := <-sub.messages:
-				// Don't spam messages too quick.
-				sub.cooldown.Lock()
 				err = writeTimeout(ctx, time.Second*5, c, msg)
-				time.Sleep(100 * time.Second)
-				sub.cooldown.Unlock()
 				if err != nil {
 					return
 				}
