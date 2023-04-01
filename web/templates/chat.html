@@ -228,8 +228,8 @@
                     <i class="fa fa-eye"></i> see who is watching will be at the top of the page.
                     </p>
 
-                    <p class="block">
-                    If your camera will be featuring "<abbr title="Not Safe For Work">NSFW</abbr>" or sexual content, please mark it as such by
+                    <p class="block mb-1">
+                    If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual content, please mark it as such by
                     clicking on the <i class="fa fa-fire has-text-danger"></i> button or checking the box below to start with it enabled.
                     </p>
 
@@ -237,7 +237,28 @@
                         <label class="checkbox">
                             <input type="checkbox"
                                 v-model="webcam.nsfw">
-                            Check this box if your webcam will <em>definitely</em> be NSFW. 😈
+                            Check this box if your webcam will <em>definitely</em> be Explicit. 😈
+                        </label>
+                    </div>
+
+                    <p class="block mb-1">
+                        <label class="label">Mutual webcam options:</label>
+                    </p>
+
+                    <div class="field mb-1">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                v-model="webcam.mutual">
+                            People must be sharing their own camera before they can open mine
+                        </label>
+                    </div>
+
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                :disabled="!webcam.mutual"
+                                v-model="webcam.mutualOpen">
+                            When someone opens my camera, I also open their camera automatically
                         </label>
                     </div>
 
@@ -778,8 +799,12 @@
                                         :class="{
                                             'is-danger is-outlined': u.videoActive && u.nsfw,
                                             'is-info is-outlined': u.videoActive && !u.nsfw,
+                                            'cursor-notallowed': u.videoActive && u.videoMutual && !webcam.active,
                                         }"
-                                        title="Open video stream"
+                                        :title="`Open video stream` +
+                                            (u.videoActive && u.videoMutual ? '; mutual video sharing required' : '') +
+                                            (u.videoActive && u.videoMutualOpen ? '; will auto-open your video' : '')"
+
                                         @click="openVideo(u)">
                                         <i class="fa fa-video"></i>
                                     </button>

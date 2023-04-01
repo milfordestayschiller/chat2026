@@ -91,6 +91,8 @@ const app = Vue.createApp({
                 stream: null, // MediaStream object
                 muted: false, // our outgoing mic is muted, not by default
                 nsfw: false,  // user has flagged their camera to be NSFW
+                mutual: false, // user wants viewers to share their own videos
+                mutualOpen: false, // user wants to open video mutually
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -331,6 +333,8 @@ const app = Vue.createApp({
             this.ws.conn.send(JSON.stringify({
                 action: "me",
                 videoActive: this.webcam.active,
+                videoMutual: this.webcam.mutual,
+                videoMutualOpen: this.webcam.mutualOpen,
                 status: this.status,
                 nsfw: this.webcam.nsfw,
             }));
@@ -682,6 +686,15 @@ const app = Vue.createApp({
                 });
             }
 
+            // If we are the offerer, and this member wants to auto-open our camera
+            // then add our own stream to the connection.
+            if (isOfferer && this.whoMap[username].videoMutualOpen && this.webcam.active) {
+                let stream = this.webcam.stream;
+                stream.getTracks().forEach(track => {
+                    pc.addTrack(track, stream)
+                });
+            }
+
             // If we are the offerer, begin the connection.
             if (isOfferer) {
                 pc.createOffer({
@@ -953,6 +966,14 @@ const app = Vue.createApp({
                 return;
             }
 
+            // If this user requests mutual viewership...
+            if (user.videoMutual && !this.webcam.active) {
+                this.ChatClient(
+                    `<strong>${user.username}</strong> has requested that you should share your own camera too before opening theirs.`
+                );
+                return;
+            }
+
             this.sendOpen(user.username);
 
             // Responsive CSS -> go to chat panel to see the camera
@@ -994,6 +1015,16 @@ const app = Vue.createApp({
 
             // Inform backend we have closed it.
             this.sendWatch(username, false);
+        },
+        unMutualVideo() {
+            // If we had our camera on to watch a video of someone who wants mutual cameras,
+            // and then we turn ours off: we should unfollow the ones with mutual video.
+            for (let row of this.whoList) {
+                let username = row.username;
+                if (row.videoMutual && this.WebRTC.pc[username] != undefined) {
+                    this.closeVideo(username);
+                }
+            }
         },
 
         // Show who watches our video.
@@ -1051,6 +1082,9 @@ const app = Vue.createApp({
             for (username of Object.keys(this.WebRTC.pc)) {
                 this.closeVideo(username, "answerer");
             }
+
+            // Hang up on mutual cameras.
+            this.unMutualVideo();
 
             // Tell backend our camera state.
             this.sendMe();

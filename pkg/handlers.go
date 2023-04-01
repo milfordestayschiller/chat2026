@@ -261,6 +261,8 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 	}
 
 	sub.VideoActive = msg.VideoActive
+	sub.VideoMutual = msg.VideoMutual
+	sub.VideoMutualOpen = msg.VideoMutualOpen
 	sub.VideoNSFW = msg.NSFW
 	sub.ChatStatus = msg.ChatStatus
 

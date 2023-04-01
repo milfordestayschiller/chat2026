@@ -20,9 +20,11 @@ type Message struct {
 	WhoList []WhoList `json:"whoList,omitempty"`
 
 	// Sent on `me` actions along with Username
-	VideoActive bool   `json:"videoActive,omitempty"` // user tells us their cam status
-	ChatStatus  string `json:"status,omitempty"`      // online vs. away
-	NSFW        bool   `json:"nsfw,omitempty"`        // user tags their video NSFW
+	VideoActive     bool   `json:"videoActive,omitempty"` // user tells us their cam status
+	VideoMutual     bool   `json:"videoMutual,omitempty"` // user wants mutual viewers
+	VideoMutualOpen bool   `json:"videoMutualOpen,omitempty"`
+	ChatStatus      string `json:"status,omitempty"` // online vs. away
+	NSFW            bool   `json:"nsfw,omitempty"`   // user tags their video NSFW
 
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`
@@ -66,10 +68,12 @@ const (
 
 // WhoList is a member entry in the chat room.
 type WhoList struct {
-	Username    string `json:"username"`
-	VideoActive bool   `json:"videoActive,omitempty"`
-	NSFW        bool   `json:"nsfw,omitempty"`
-	Status      string `json:"status"`
+	Username        string `json:"username"`
+	VideoActive     bool   `json:"videoActive,omitempty"`
+	VideoMutual     bool   `json:"videoMutual,omitempty"`
+	VideoMutualOpen bool   `json:"videoMutualOpen,omitempty"`
+	NSFW            bool   `json:"nsfw,omitempty"`
+	Status          string `json:"status"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`

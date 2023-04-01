@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,18 +21,20 @@ import (
 // Subscriber represents a connected WebSocket session.
 type Subscriber struct {
 	// User properties
-	ID            int // ID assigned by server
-	Username      string
-	VideoActive   bool
-	VideoNSFW     bool
-	ChatStatus    string
-	JWTClaims     *jwt.Claims
-	authenticated bool // has passed the login step
-	conn          *websocket.Conn
-	ctx           context.Context
-	cancel        context.CancelFunc
-	messages      chan []byte
-	closeSlow     func()
+	ID              int // ID assigned by server
+	Username        string
+	VideoActive     bool
+	VideoMutual     bool
+	VideoMutualOpen bool
+	VideoNSFW       bool
+	ChatStatus      string
+	JWTClaims       *jwt.Claims
+	authenticated   bool // has passed the login step
+	conn            *websocket.Conn
+	ctx             context.Context
+	cancel          context.CancelFunc
+	messages        chan []byte
+	closeSlow       func()
 
 	muteMu sync.RWMutex
 	booted map[string]struct{} // usernames booted off your camera
@@ -308,7 +311,15 @@ func (s *Server) SendTo(username string, msg Message) error {
 func (s *Server) SendWhoList() {
 	var (
 		subscribers = s.IterSubscribers()
+		usernames   = []string{} // distinct and sorted usernames
+		userSub     = map[string]*Subscriber{}
 	)
+
+	for _, sub := range subscribers {
+		usernames = append(usernames, sub.Username)
+		userSub[sub.Username] = sub
+	}
+	sort.Strings(usernames)
 
 	// Build the WhoList for each subscriber.
 	// TODO: it's the only way to fake videoActive for booted user views.
@@ -318,16 +329,19 @@ func (s *Server) SendWhoList() {
 		}
 
 		var users = []WhoList{}
-		for _, user := range subscribers {
+		for _, un := range usernames {
+			user := userSub[un]
 			if user.ChatStatus == "hidden" {
 				continue
 			}
 
 			who := WhoList{
-				Username:    user.Username,
-				Status:      user.ChatStatus,
-				VideoActive: user.VideoActive,
-				NSFW:        user.VideoNSFW,
+				Username:        user.Username,
+				Status:          user.ChatStatus,
+				VideoActive:     user.VideoActive,
+				VideoMutual:     user.VideoMutual,
+				VideoMutualOpen: user.VideoMutualOpen,
+				NSFW:            user.VideoNSFW,
 			}
 
 			// If this person had booted us, force their camera to "off"
