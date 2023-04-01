@@ -256,7 +256,6 @@
                     <div class="field">
                         <label class="checkbox">
                             <input type="checkbox"
-                                :disabled="!webcam.mutual"
                                 v-model="webcam.mutualOpen">
                             When someone opens my camera, I also open their camera automatically
                         </label>
@@ -387,7 +386,7 @@
                                  'is-danger': webcam.nsfw}"
                         @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
                         title="Toggle the NSFW setting for your camera broadcast">
-                        <i class="fa fa-fire"></i>
+                        <i class="fa fa-fire mr-1"></i> Explicit
                     </button>
                 </div>
                 <div class="column is-narrow pl-1">

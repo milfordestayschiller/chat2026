@@ -292,6 +292,14 @@ const app = Vue.createApp({
             if (localStorage.fontSizeClass != undefined) {
                 this.fontSizeClass = localStorage.fontSizeClass;
             }
+
+            // Webcam mutality preferences from last broadcast.
+            if (localStorage.videoMutual === "true") {
+                this.webcam.mutual = true;
+            }
+            if (localStorage.videoMutualOpen === "true") {
+                this.webcam.mutualOpen = true;
+            }
         },
 
         signIn() {
@@ -931,6 +939,10 @@ const app = Vue.createApp({
                 this.webcam.active = true;
                 this.webcam.elem.srcObject = stream;
                 this.webcam.stream = stream;
+
+                // Save our mutuality prefs.
+                localStorage.videoMutual = this.webcam.mutual;
+                localStorage.videoMutualOpen = this.webcam.mutualOpen;
 
                 // Tell backend the camera is ready.
                 this.sendMe();
