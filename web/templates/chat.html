@@ -806,7 +806,8 @@
                                             (u.videoActive && u.videoMutualOpen ? '; will auto-open your video' : '')"
 
                                         @click="openVideo(u)">
-                                        <i class="fa fa-video"></i>
+                                        <i class="fa"
+                                            :class="u.videoActive && u.videoMutual && !webcam.active ? 'fa-video-slash' : 'fa-video'"></i>
                                     </button>
                                 </div>
                             </div>
