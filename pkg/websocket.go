@@ -317,6 +317,9 @@ func (s *Server) SendWhoList() {
 	)
 
 	for _, sub := range subscribers {
+		if !sub.authenticated {
+			continue
+		}
 		usernames = append(usernames, sub.Username)
 		userSub[sub.Username] = sub
 	}
