@@ -125,6 +125,7 @@ func (sub *Subscriber) SendMe() {
 		Action:      ActionMe,
 		Username:    sub.Username,
 		VideoActive: sub.VideoActive,
+		NSFW:        sub.VideoNSFW,
 	})
 }
 
