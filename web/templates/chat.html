@@ -718,6 +718,9 @@
                                             [[nicknameForUsername(msg.username)]]
                                         </label>
                                     </div>
+                                    <div class="column has-text-right pb-0">
+                                        <small class="has-text-grey is-size-7" :title="msg.at">[[prettyDate(msg.at)]]</small>
+                                    </div>
                                 </div>
 
                                 <!-- User @username below it which may link to a profile URL if JWT -->
@@ -778,10 +781,6 @@
                         <div class="content pl-5 py-3 mb-0">
                             <em v-if="msg.action === 'presence'">[[msg.message]]</em>
                             <div v-else v-html="msg.message"></div>
-                        </div>
-
-                        <div class="has-text-right">
-                            <small class="has-text-grey is-size-7" :title="msg.at">[[prettyDate(msg.at)]]</small>
                         </div>
 
                     </div>

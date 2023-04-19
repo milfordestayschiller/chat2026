@@ -1285,11 +1285,10 @@ const app = Vue.createApp({
         prettyDate(date) {
             let hours = date.getHours(),
                 minutes = String(date.getMinutes()).padStart(2, '0'),
-                seconds = String(date.getSeconds()).padStart(2, '0'),
                 ampm = hours >= 11 ? "pm" : "am";
 
             let hour = hours%12 || 12;
-            return `${(hour)}:${minutes}:${seconds} ${ampm}`;
+            return `${(hour)}:${minutes} ${ampm}`;
         },
 
         /**
