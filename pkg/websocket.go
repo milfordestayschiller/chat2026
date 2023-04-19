@@ -259,6 +259,31 @@ func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
 	return result
 }
 
+// UniqueUsername ensures a username will be unique or renames it.
+func (s *Server) UniqueUsername(username string) string {
+	var (
+		subs         = s.IterSubscribers()
+		usernames    = map[string]interface{}{}
+		origUsername = username
+		counter      = 2
+	)
+	for _, sub := range subs {
+		usernames[sub.Username] = nil
+	}
+
+	// Check until unique.
+	for {
+		if _, ok := usernames[username]; ok {
+			username = fmt.Sprintf("%s %d", origUsername, counter)
+			counter++
+		} else {
+			break
+		}
+	}
+
+	return username
+}
+
 // Broadcast a message to the chat room.
 func (s *Server) Broadcast(msg Message) {
 	if len(msg.Message) < 1024 {
@@ -358,6 +383,7 @@ func (s *Server) SendWhoList() {
 				who.Operator = user.JWTClaims.IsAdmin
 				who.Avatar = user.JWTClaims.Avatar
 				who.ProfileURL = user.JWTClaims.ProfileURL
+				who.Nickname = user.JWTClaims.Nick
 			}
 			users = append(users, who)
 		}

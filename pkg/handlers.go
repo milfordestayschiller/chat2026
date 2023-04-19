@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
@@ -54,21 +53,7 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	}
 
 	// Ensure the username is unique, or rename it.
-	var duplicate bool
-	for _, other := range s.IterSubscribers() {
-		if other.ID != sub.ID && other.Username == msg.Username {
-			duplicate = true
-			break
-		}
-	}
-
-	if duplicate {
-		// Give them one that is unique.
-		msg.Username = fmt.Sprintf("%s %d",
-			msg.Username,
-			time.Now().Nanosecond(),
-		)
-	}
+	msg.Username = s.UniqueUsername(msg.Username)
 
 	// Use their username.
 	sub.Username = msg.Username

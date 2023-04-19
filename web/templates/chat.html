@@ -114,8 +114,102 @@
                         </div>
                     </div>
 
-                    <h3 class="subtitle">Sounds</h3>
+                    <!-- Under construction
+                    <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
+                        <div class="column">
+                            <label class="label">Video source</label>
+                            <div class="select is-fullwidth">
+                                <select v-model="webcam.videoDeviceID">
+                                    <option v-for="(d, i) in webcam.videoDevices"
+                                        :value="d.id">
+                                        [[ d.label || `Camera ${i}` ]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <label class="label">Audio source</label>
+                            <div class="select is-fullwidth">
+                                <select v-model="webcam.audioDeviceID">
+                                    <option v-for="(d, i) in webcam.audioDevices"
+                                        :value="d.id">
+                                        [[ d.label || `Microphone ${i}` ]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    -->
+
+                    <h3 class="subtitle mb-2">Sounds</h3>
+
+                    <div class="columns is-mobile">
+                        <div class="column is-2 pr-1">
+                            <label class="label">DM chat</label>
+                        </div>
+                        <div class="column">
+                            <div class="select is-fullwidth">
+                                <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
+                                    <option v-for="s in config.sounds.available"
+                                        v-bind:key="s.name"
+                                        :value="s.name">
+                                        [[s.name]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="column is-2 pr-1">
+                            <label class="label">Public chat</label>
+                        </div>
+                        <div class="column">
+                            <div class="select is-fullwidth">
+                                <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
+                                    <option v-for="s in config.sounds.available"
+                                        v-bind:key="s.name"
+                                        :value="s.name">
+                                        [[s.name]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="columns is-mobile">
+                        <div class="column is-2 pr-1">
+                            <label class="label">Room enter</label>
+                        </div>
+                        <div class="column">
+                            <div class="select is-fullwidth">
+                                <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
+                                    <option v-for="s in config.sounds.available"
+                                        v-bind:key="s.name"
+                                        :value="s.name">
+                                        [[s.name]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="column is-2 pr-1">
+                            <label class="label">Room leave</label>
+                        </div>
+                        <div class="column">
+                            <div class="select is-fullwidth">
+                                <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
+                                    <option v-for="s in config.sounds.available"
+                                        v-bind:key="s.name"
+                                        :value="s.name">
+                                        [[s.name]]
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--
                     <div class="field is-horizontal">
                         <div class="field-label is-normal">
                             <label class="label">DM chat</label>
@@ -199,6 +293,7 @@
                             </div>
                         </div>
                     </div>
+                    -->
 
                 </div>
                 <footer class="card-footer">
@@ -595,12 +690,12 @@
                         </em>
                     </div>
 
-                    <div v-for="(msg, i) in chatHistory" v-bind:key="i" class="mb-2">
+                    <div v-for="(msg, i) in chatHistory" v-bind:key="i" class="box mb-2 px-4 pt-3 pb-1">
                         <div class="media mb-0">
                             <div class="media-left">
                                 <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
                                     :class="{'cursor-default': !profileURLForUsername(msg.username)}">
-                                    <figure class="image is-24x24">
+                                    <figure class="image is-48x48">
                                         <img v-if="msg.isChatServer"
                                             src="/static/img/server.png">
                                         <img v-else-if="msg.isChatClient"
@@ -612,50 +707,81 @@
                                 </a>
                             </div>
                             <div class="media-content">
-                                <div class="columns is-mobile">
-                                    <div class="column is-narrow">
+                                <div class="columns is-mobile pb-0">
+                                    <div class="column is-narrow pb-0">
                                         <label class="label"
                                             :class="{'has-text-success is-dark': msg.isChatServer,
                                                     'has-text-warning is-dark': msg.isAdmin,
                                                     'has-text-danger': msg.isChatClient}">
-                                            [[msg.username]]
+
+                                            <!-- User nickname/display name -->
+                                            [[nicknameForUsername(msg.username)]]
                                         </label>
                                     </div>
-                                    <div class="column is-narrow">
-                                        <small class="has-text-grey" :title="msg.at">[[prettyDate(msg.at)]]</small>
+                                </div>
+
+                                <!-- User @username below it which may link to a profile URL if JWT -->
+                                <div class="columns is-mobile pt-0" v-if="(msg.isChatClient || msg.isChatServer)">
+                                    <div class="column is-narrow pt-0">
+                                        <small v-if="!(msg.isChatClient || msg.isChatServer)">
+                                            <a v-if="profileURLForUsername(msg.username)"
+                                                :href="profileURLForUsername(msg.username)"
+                                                target="_blank"
+                                                class="has-text-grey">
+                                                @[[msg.username]]
+                                            </a>
+                                            <span v-else class="has-text-grey">@[[msg.username]]</span>
+                                        </small>
+                                        <small v-else class="has-text-grey">internal</small>
                                     </div>
-                                    <div class="column is-narrow pr-0"
-                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username || isDM)">
+                                </div>
+                                <div v-else class="columns is-mobile pt-0">
+                                    <div class="column is-narrow pt-0">
+                                        <small v-if="!(msg.isChatClient || msg.isChatServer)">
+                                            <a v-if="profileURLForUsername(msg.username)"
+                                                :href="profileURLForUsername(msg.username)"
+                                                target="_blank"
+                                                class="has-text-grey">
+                                                @[[msg.username]]
+                                            </a>
+                                            <span v-else class="has-text-grey">@[[msg.username]]</span>
+                                        </small>
+                                        <small v-else class="has-text-grey">internal</small>
+                                    </div>
+
+                                    <div class="column is-narrow px-1 pt-0"
+                                        v-if="!(msg.username === username || isDM)">
                                         <!-- DMs button -->
                                         <button type="button"
                                             class="button is-grey is-outlined is-small px-2"
                                             @click="openDMs({username: msg.username})">
-                                            <i class="fa fa-message mr-1"></i>
-                                            DM
+                                            <i class="fa fa-message"></i>
                                         </button>
                                     </div>
-                                    <div class="column is-narrow"
-                                        v-if="!(msg.isChatServer || msg.isChatClient || msg.username === username)">
+                                    <div class="column is-narrow pl-1 pt-0"
+                                        v-if="!(msg.username === username)">
                                         <!-- Mute button -->
                                         <button type="button"
                                             class="button is-grey is-outlined is-small px-2"
                                             @click="muteUser(msg.username)"
                                             title="Mute user">
-                                            <i class="fa fa-comment-slash mr-1"
+                                            <i class="fa fa-comment-slash"
                                                 :class="{'has-text-success': isMutedUser(msg.username),
-                                                         'has-text-danger': !isMutedUser(msg.username)}"></i>
-                                            [[isMutedUser(msg.username) ? 'Unmute' : 'Mute']]
+                                                        'has-text-danger': !isMutedUser(msg.username)}"></i>
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div v-if="msg.action === 'presence'">
-                            <em>[[msg.message]]</em>
+                        <!-- Message box -->
+                        <div class="content pl-5 py-3 mb-0">
+                            <em v-if="msg.action === 'presence'">[[msg.message]]</em>
+                            <div v-else v-html="msg.message"></div>
                         </div>
-                        <div v-else class="content">
-                            <div v-html="msg.message"></div>
+
+                        <div class="has-text-right">
+                            <small class="has-text-grey is-size-7" :title="msg.at">[[prettyDate(msg.at)]]</small>
                         </div>
 
                     </div>

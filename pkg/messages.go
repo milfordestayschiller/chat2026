@@ -69,6 +69,7 @@ const (
 // WhoList is a member entry in the chat room.
 type WhoList struct {
 	Username        string `json:"username"`
+	Nickname        string `json:"nickname,omitempty"`
 	VideoActive     bool   `json:"videoActive,omitempty"`
 	VideoMutual     bool   `json:"videoMutual,omitempty"`
 	VideoMutualOpen bool   `json:"videoMutualOpen,omitempty"`

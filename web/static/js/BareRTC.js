@@ -107,6 +107,12 @@ const app = Vue.createApp({
                     [ "x3", "3x larger videos" ],
                     [ "x4", "4x larger videos (not recommended)" ],
                 ],
+
+                // Available cameras and microphones for the Settings modal.
+                videoDevices: [],
+                videoDeviceID: null,
+                audioDevices: [],
+                audioDeviceID: null,
             },
 
             // WebRTC sessions with other users.
@@ -865,6 +871,17 @@ const app = Vue.createApp({
             }
             return null;
         },
+        nicknameForUsername(username) {
+            if (!username) return;
+            username = username.replace(/^@/, "");
+            if (this.whoMap[username] != undefined && this.whoMap[username].profileURL) {
+                let nick = this.whoMap[username].nickname;
+                if (nick) {
+                    return nick;
+                }
+            }
+            return username;
+        },
         leaveDM() {
             // Validate we're in a DM currently.
             if (this.channel.indexOf("@") !== 0) return;
@@ -946,10 +963,45 @@ const app = Vue.createApp({
 
                 // Tell backend the camera is ready.
                 this.sendMe();
+
+                // Record the selected device IDs.
+                this.webcam.videoDeviceID = stream.getVideoTracks()[0].getSettings().deviceId;
+                this.webcam.audioDeviceID = stream.getAudioTracks()[0].getSettings().deviceId;
+                console.log("device IDs:", this.webcam.videoDeviceID, this.webcam.audioDeviceID);
+
+                // Collect video and audio devices to let the user change them in their settings.
+                this.getDevices();
             }).catch(err => {
                 this.ChatClient(`Webcam error: ${err}`);
             }).finally(() => {
                 this.webcam.busy = false;
+            })
+        },
+        getDevices() {
+            // Collect video and audio devices.
+            if (!navigator.mediaDevices?.enumerateDevices) {
+                console.log("enumerateDevices() not supported.");
+                return;
+            }
+
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                this.webcam.videoDevices = [];
+                this.webcam.audioDevices = [];
+                devices.forEach(device => {
+                    if (device.kind === 'videoinput') {
+                        this.webcam.videoDevices.push({
+                            id: device.deviceId,
+                            label: device.label,
+                        });
+                    } else if (device.kind === 'audioinput') {
+                        this.webcam.audioDevices.push({
+                            id: device.deviceId,
+                            label: device.label,
+                        });
+                    }
+                })
+            }).catch(err => {
+                this.ChatClient(`Error listing your cameras and microphones: ${err.name}: ${err.message}`);
             })
         },
 

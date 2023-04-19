@@ -15,6 +15,7 @@ type Claims struct {
 	IsAdmin    bool   `json:"op"`
 	Avatar     string `json:"img"`
 	ProfileURL string `json:"url"`
+	Nick       string `json:"nick"`
 
 	// Standard claims. Notes:
 	// subject = username
