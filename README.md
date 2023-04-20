@@ -25,7 +25,11 @@ It is very much in the style of the old-school Flash based webcam chat rooms of 
 * Specify multiple Public Channels that all users have access to.
 * Users can open direct message (one-on-one) conversations with each other.
 * No long-term server side state: messages are pushed out as they come in.
+* Users may share pictures and GIFs from their computer, which are pushed out as `data:` URLs (images scaled and metadata stripped by server) directly to connected chatters with no storage required.
 * Users may broadcast their webcam which shows a camera icon by their name in the Who List. Users may click on those icons to open multiple camera feeds of other users they are interested in.
+    * Mutual webcam options: users may opt that anyone who views their cam must also be sharing their own camera first.
+    * Users may mark their own cameras as explicit/NSFW which marks the icon in red so other users can get a warning before clicking in (if NSFW is enabled in the settings.toml)
+    * Users may boot people off their camera, and to the booted person it appears the same as if the broadcaster had turned their camera off completely - the chat server lies about the camera status so the booted user can't easily tell they'd been booted.
 * Mobile friendly: works best on iPads and above but adapts to smaller screens well.
 * WebRTC means peer-to-peer video streaming so cheap on hosting costs!
 * Simple integration with your existing userbase via signed JWT tokens.
@@ -44,12 +48,16 @@ Some important features still lacking:
 On first run it will create the default settings.toml file for you which you may then customize to your liking:
 
 ```toml
+Version = 2
 Title = "BareRTC"
 Branding = "BareRTC"
 WebsiteURL = "https://www.example.com"
-UseXForwardedFor = true
 CORSHosts = ["https://www.example.com"]
 PermitNSFW = true
+UseXForwardedFor = true
+WebSocketReadLimit = 41943040
+MaxImageWidth = 1280
+PreviewImageWidth = 360
 
 [JWT]
   Enabled = false
@@ -79,6 +87,9 @@ A description of the config directives includes:
     * **UseXForwardedFor**: set it to true and (for logging) the user's remote IP will use the X-Real-IP header or the first address in X-Forwarded-For. Set this if you run the app behind a proxy like nginx if you want IPs not to be all localhost.
     * **CORSHosts**: your website's domain names that will be allowed to access [JSON APIs](#JSON APIs), like `/api/statistics`.
     * **PermitNSFW**: for user webcam streams, expressly permit "NSFW" content if the user opts in to mark their feed as such. Setting this will enable pop-up modals regarding NSFW video and give broadcasters an opt-in button, which will warn other users before they click in to watch.
+    * **WebSocketReadLimit**: sets a size limit for WebSocket messages - it essentially also caps the max upload size for shared images (add a buffer as images will be base64 encoded on upload).
+    * **MaxImageWidth**: for pictures shared in chat the server will resize them down to no larger than this width for the full size view.
+    * **PreviewImageWidth**: to not flood the chat, the image in chat is this wide and users can click it to see the MaxImageWidth in a lightbox modal.
 * **JWT**: settings for JWT [Authentication](#authentication).
     * Enabled (bool): activate the JWT token authentication feature.
     * Strict (bool): if true, **only** valid signed JWT tokens may log in. If false, users with no/invalid token can enter their own username without authentication.

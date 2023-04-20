@@ -188,8 +188,19 @@ func (s *Server) WebSocket() http.HandlerFunc {
 					return
 				}
 			case <-pinger.C:
+				// Send a ping, and a refreshed JWT token if the user sent one.
+				var token string
+				if sub.JWTClaims != nil {
+					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
+						log.Error("ReSign JWT token for %s: %s", sub.Username, err)
+					} else {
+						token = jwt
+					}
+				}
+
 				sub.SendJSON(Message{
-					Action: ActionPing,
+					Action:   ActionPing,
+					JWTToken: token,
 				})
 			case <-ctx.Done():
 				pinger.Stop()

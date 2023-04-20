@@ -608,6 +608,15 @@ const app = Vue.createApp({
                         this.disconnect = true;
                         break;
                     case "ping":
+                        // New JWT token?
+                        if (msg.jwt) {
+                            this.jwt.token = msg.jwt;
+                        }
+
+                        // Reset disconnect retry counter: if we were on long enough to get
+                        // a ping, we're well connected and can reconnect no matter how many
+                        // times the chat server is rebooted.
+                        this.disconnectCount = 0;
                         break;
                     default:
                         console.error("Unexpected action: %s", JSON.stringify(msg));
