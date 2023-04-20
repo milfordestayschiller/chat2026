@@ -64,11 +64,11 @@ body {
     grid-column: 2;
     grid-row: 2;
     overflow: hidden;
-    position: relative;
+    /* position: relative; */
 }
 
 /* Auto-scroll checkbox in the corner */
-.chat-column >.autoscroll-field {
+.autoscroll-field {
     position: absolute;
     z-index: 39; /* just below modal shadow */
     right: 6px;
@@ -175,7 +175,7 @@ body {
     align-items: left; */
 }
 
-.video-feeds > .feed {
+.feed {
     position: relative;
     /* flex: 0 0 168px; */
     float: left;
@@ -185,6 +185,17 @@ body {
     margin: 3px;
     overflow: hidden;
     resize: both;
+}
+
+/* A popped-out video feed window */
+div.feed.popped-out {
+    position: absolute;
+    border: 1px solid #FFF;
+    cursor: move;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    resize: none;
 }
 
 .video-feeds.x1 > .feed {
@@ -211,25 +222,24 @@ body {
     height: 448px;
 }
 
-.video-feeds > .feed > video {
+.feed > video {
     width: 100%;
     height: 100%;
 }
 
-.video-feeds > .feed > .controls {
+.feed > .controls {
     position: absolute;
-    background: rgba(0, 0, 0, 0.75);
     left: 4px;
     bottom: 4px;
 }
 
-.video-feeds > .feed > .close {
+.feed > .close {
     position: absolute;
     right: 4px;
     top: 0;
 }
 
-.video-feeds > .feed > .caption {
+.feed > .caption {
     position: absolute;
     background: rgba(0, 0, 0, 0.75);
     color: #fff;

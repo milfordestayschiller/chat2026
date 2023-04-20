@@ -18,6 +18,9 @@ function setModalImage(url) {
     return false;
 }
 
+// Popped-out video drag functions.
+
+
 
 const app = Vue.createApp({
     delimiters: ['[[', ']]'],
@@ -120,6 +123,7 @@ const app = Vue.createApp({
                 // Streams per username.
                 streams: {},
                 muted: {}, // muted bool per username
+                poppedOut: {}, // popped-out video per username
 
                 // RTCPeerConnections per username.
                 pc: {},
@@ -1181,6 +1185,111 @@ const app = Vue.createApp({
             if ($ref) {
                 $ref.muted = this.WebRTC.muted[username];
             }
+        },
+
+        // Pop out a user's video.
+        popoutVideo(username) {
+            this.WebRTC.poppedOut[username] = !this.WebRTC.poppedOut[username];
+
+            // If not popped out, reset CSS positioning.
+            window.requestAnimationFrame(this.makeDraggableVideos);
+        },
+
+        // Outside of Vue, attach draggable video scripts to DOM.
+        makeDraggableVideos() {
+            let $panel = document.querySelector("#video-feeds");
+
+            interact('.popped-in').unset();
+
+            // Give popped out videos to the root of the DOM so they can
+            // be dragged anywhere on the page.
+            window.requestAnimationFrame(() => {
+                document.querySelectorAll('.popped-out').forEach(node => {
+                    // $panel.removeChild(node);
+                    document.body.appendChild(node);
+                });
+
+                document.querySelectorAll('.popped-in').forEach(node => {
+                    // document.body.removeChild(node);
+                    $panel.appendChild(node);
+                    node.style.top = null;
+                    node.style.left = null;
+                    node.setAttribute('data-x', 0);
+                    node.setAttribute('data-y', 0);
+                });
+            });
+
+            interact('.popped-out').draggable({
+                // enable inertial throwing
+                inertia: true,
+                // keep the element within the area of it's parent
+                modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'parent',
+                    endOnly: true
+                })
+                ],
+
+                listeners: {
+                // call this function on every dragmove event
+                move(event) {
+                    let target = event.target;
+                    let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+                    let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
+
+                    target.style.top = `${y}px`;
+                    target.style.left = `${x}px`;
+
+                    target.setAttribute('data-x', x);
+                    target.setAttribute('data-y', y);
+                },
+
+                // call this function on every dragend event
+                end (event) {
+                    console.log(
+                    'moved a distance of ' +
+                    (Math.sqrt(Math.pow(event.pageX - event.x0, 2) +
+                                Math.pow(event.pageY - event.y0, 2) | 0))
+                        .toFixed(2) + 'px')
+                }
+                }
+            }).resizable({
+                edges: { left: true, right: true, bottom: true, right: true },
+                listeners: {
+                    move (event) {
+                      var target = event.target
+                      var x = (parseFloat(target.getAttribute('data-x')) || 0)
+                      var y = (parseFloat(target.getAttribute('data-y')) || 0)
+
+                      // update the element's style
+                      target.style.width = event.rect.width + 'px'
+                      target.style.height = event.rect.height + 'px'
+
+                      // translate when resizing from top or left edges
+                      x += event.deltaRect.left
+                      y += event.deltaRect.top
+
+                      target.style.top = `${y}px`;
+                      target.style.left = `${x}px`;
+
+                      target.setAttribute('data-x', x)
+                      target.setAttribute('data-y', y)
+                    }
+                  },
+                  modifiers: [
+                    // keep the edges inside the parent
+                    interact.modifiers.restrictEdges({
+                      outer: 'parent'
+                    }),
+
+                    // minimum size
+                    interact.modifiers.restrictSize({
+                      min: { width: 100, height: 50 }
+                    })
+                  ],
+
+                  inertia: true
+            })
         },
 
         initHistory(channel) {

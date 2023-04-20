@@ -451,7 +451,7 @@
                     <!-- Mute/Unmute my mic buttons (if streaming)-->
                     <button type="button"
                         v-if="webcam.active && !webcam.muted"
-                        class="button is-small is-danger is-outlined ml-1 px-1"
+                        class="button is-small is-success ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone mr-2"></i>
                         Mute
@@ -460,7 +460,7 @@
                         v-if="webcam.active && webcam.muted"
                         class="button is-small is-danger ml-1 px-1"
                         @click="muteMe()">
-                        <i class="fa fa-microphone mr-2"></i>
+                        <i class="fa fa-microphone-slash mr-2"></i>
                         Unmute
                     </button>
 
@@ -561,14 +561,6 @@
 
         <!-- Middle Column: Chat Room/History -->
         <div class="chat-column">
-            <div class="autoscroll-field tag">
-                <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
-                    <input type="checkbox"
-                        v-model="autoscroll"
-                        :value="true">
-                    Auto-scroll
-                </label>
-            </div>
 
             <div class="card grid-card">
                 <header class="card-header has-background-link">
@@ -615,19 +607,52 @@
                         </div>
                     </div>
                 </header>
-                <div class="video-feeds" :class="webcam.videoScale" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
+                <div id="video-feeds" class="video-feeds" :class="webcam.videoScale" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <div class="feed" v-show="webcam.active">
+                    <div class="feed" v-show="webcam.active"
+                        :class="{'popped-out': WebRTC.poppedOut[username],
+                                 'popped-in': !WebRTC.poppedOut[username]}">
                         <video class="feed"
                             id="localVideo"
                             autoplay muted>
                         </video>
+
+                        <div class="caption">
+                            [[username]]
+                        </div>
+
+                        <div class="controls">
+                            <!-- MY Mute button -->
+                            <button type="button"
+                                v-if="webcam.active && !webcam.muted"
+                                class="button is-small is-success is-outlined ml-1 px-2"
+                                @click="muteMe()">
+                                <i class="fa fa-microphone"></i>
+                            </button>
+                            <button type="button"
+                                v-if="webcam.active && webcam.muted"
+                                class="button is-small is-danger ml-1 px-2"
+                                @click="muteMe()">
+                                <i class="fa fa-microphone-slash"></i>
+                            </button>
+
+                            <!-- Pop-out MY video -->
+                            <button type="button"
+                                class="button is-small is-light is-outlined p-2 ml-2"
+                                title="Pop out"
+                                @click="popoutVideo(username)">
+                                <i class="fa fa-up-right-from-square"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Others' videos -->
-                    <div class="feed" v-for="(stream, username) in WebRTC.streams" v-bind:key="username">
+                    <div class="feed" v-for="(stream, username) in WebRTC.streams"
+                        v-bind:key="username"
+                        :class="{'popped-out': WebRTC.poppedOut[username],
+                                 'popped-in': !WebRTC.poppedOut[username]}">
                         <video class="feed"
                             :id="'videofeed-'+username"
                             autoplay>
@@ -644,19 +669,28 @@
                             </a>
                         </div>
                         <div class="controls">
+                            <!-- Mute button -->
                             <button type="button"
                                 v-if="isMuted(username)"
-                                class="button is-small is-danger is-outlined p-1"
+                                class="button is-small is-danger p-2"
                                 title="Unmute this video"
                                 @click="muteVideo(username)">
                                 <i class="fa fa-volume-xmark"></i>
                             </button>
                             <button type="button"
                                 v-else
-                                class="button is-small is-danger is-outlined p-1"
+                                class="button is-small is-success is-outlined p-2"
                                 title="Mute this video"
                                 @click="muteVideo(username)">
                                 <i class="fa fa-volume-high"></i>
+                            </button>
+
+                            <!-- Pop-out -->
+                            <button type="button"
+                                class="button is-small is-light is-outlined p-2 ml-2"
+                                title="Pop out"
+                                @click="popoutVideo(username)">
+                                <i class="fa fa-up-right-from-square"></i>
                             </button>
                         </div>
                     </div>
@@ -679,6 +713,15 @@
 
                 </div>
                 <div class="card-content" id="chatHistory" :class="fontSizeClass">
+
+                    <div class="autoscroll-field tag">
+                        <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
+                            <input type="checkbox"
+                                v-model="autoscroll"
+                                :value="true">
+                            Auto-scroll
+                        </label>
+                    </div>
 
                     <!-- No history? -->
                     <div v-if="chatHistory.length === 0">
@@ -806,7 +849,7 @@
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button"
                                 @click="uploadFile()">
-                                <i class="fa fa-upload"></i>
+                                <i class="fa fa-image"></i>
                             </button>
                         </div>
                     </div>
@@ -979,6 +1022,7 @@ const UserJWTClaims = {{.JWTClaims.ToJSON}};
 </script>
 
 <script src="/static/js/vue-3.2.45.js"></script>
+<script src="/static/js/interact.min.js"></script>
 <script src="/static/js/sounds.js?{{.CacheHash}}"></script>
 <script src="/static/js/BareRTC.js?{{.CacheHash}}"></script>
 
