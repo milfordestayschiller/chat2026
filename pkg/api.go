@@ -29,6 +29,10 @@ func (s *Server) Statistics() http.HandlerFunc {
 		var result = struct {
 			UserCount int
 			Usernames []string
+			Cameras   struct {
+				Blue int
+				Red  int
+			}
 		}{
 			Usernames: []string{},
 		}
@@ -43,6 +47,15 @@ func (s *Server) Statistics() http.HandlerFunc {
 				}
 				result.Usernames = append(result.Usernames, sub.Username)
 				unique[sub.Username] = struct{}{}
+
+				// Count cameras by color.
+				if sub.VideoActive {
+					if sub.VideoNSFW {
+						result.Cameras.Red++
+					} else {
+						result.Cameras.Blue++
+					}
+				}
 			}
 		}
 
