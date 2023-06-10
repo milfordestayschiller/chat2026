@@ -2,8 +2,10 @@ package barertc
 
 import (
 	"strconv"
-	"strings"
 	"time"
+
+	"git.kirsle.net/apps/barertc/pkg/log"
+	"github.com/mattn/go-shellwords"
 )
 
 // ProcessCommand parses a chat message for "/commands"
@@ -13,8 +15,11 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 	}
 
 	// Line begins with a slash, parse it apart.
-	words := strings.Fields(msg.Message)
-	if len(words) == 0 {
+	words, err := shellwords.Parse(msg.Message)
+	if err != nil {
+		log.Error("ProcessCommands: parsing shell words: %s", err)
+		return false
+	} else if len(words) == 0 {
 		return false
 	}
 
@@ -47,7 +52,8 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 			sub.ChatServer(RenderMarkdown("Moderator commands are:\n\n" +
 				"* `/kick <username>` to kick from chat\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
-				"* `/help` to show this message",
+				"* `/help` to show this message\n\n" +
+				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
 			))
 			return true
 		}
@@ -60,12 +66,17 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 // KickCommand handles the `/kick` operator command.
 func (s *Server) KickCommand(words []string, sub *Subscriber) {
 	if len(words) == 1 {
-		sub.ChatServer("Usage: `/kick username` to remove the user from the chat room.")
+		sub.ChatServer(RenderMarkdown(
+			"Usage: `/kick username` to remove the user from the chat room.\n\nNote: if the username has spaces in it, quote the name (shell style), `/kick \"username 2\"`",
+		))
+		return
 	}
 	username := words[1]
 	other, err := s.GetSubscriber(username)
 	if err != nil {
 		sub.ChatServer("/kick: username not found: %s", username)
+	} else if other.Username == sub.Username {
+		sub.ChatServer("/kick: did you really mean to kick yourself?")
 	} else {
 		other.ChatServer("You have been kicked from the chat room by %s", sub.Username)
 		other.SendJSON(Message{
@@ -79,10 +90,11 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 // BanCommand handles the `/ban` operator command.
 func (s *Server) BanCommand(words []string, sub *Subscriber) {
 	if len(words) == 1 {
-		sub.ChatServer(
+		sub.ChatServer(RenderMarkdown(
 			"Usage: `/ban username` to remove the user from the chat room for 24 hours (default).\n\n" +
 				"Set another duration (in hours, fractions supported) like: `/ban username 0.5` for a 30-minute ban.",
-		)
+		))
+		return
 	}
 
 	// Parse the command.

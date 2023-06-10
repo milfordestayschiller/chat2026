@@ -7,6 +7,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/edwvee/exiffix v0.0.0-20210922235313-0f6cbda5e58f
 	github.com/golang-jwt/jwt/v4 v4.4.3
+	github.com/mattn/go-shellwords v1.0.12
 	github.com/microcosm-cc/bluemonday v1.0.22
 	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629
 	golang.org/x/image v0.6.0

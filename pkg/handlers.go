@@ -27,8 +27,6 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 		// Sanity check the username.
 		if msg.Username != parsed.Subject {
 			log.Error("JWT login had a different username: %s vs %s", parsed.Subject, msg.Username)
-			sub.ChatServer("Your authentication username did not match the expected username. Please go back and launch the chat room again.")
-			return
 		}
 
 		// Strict enforcement?
