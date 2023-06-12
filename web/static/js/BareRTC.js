@@ -181,7 +181,6 @@ const app = Vue.createApp({
         }
     },
     mounted() {
-        this.setupSounds();
         this.setupConfig(); // localSettings persisted settings
         this.setupIdleDetection();
 
@@ -210,7 +209,12 @@ const app = Vue.createApp({
         });
         window.addEventListener("blur", () => {
             this.windowFocused = false;
-        })
+        });
+
+        // Set up sound effects on first page interaction.
+        window.addEventListener("click", () => {
+            this.setupSounds();
+        });
 
         for (let channel of this.config.channels) {
             this.initHistory(channel.ID);
@@ -1460,6 +1464,13 @@ const app = Vue.createApp({
          */
 
         setupSounds() {
+            // Note: setupSounds had to be called on a page gesture (mouse click) before browsers
+            // allow it to set up the AudioContext. If we've successfully set one up before, exit
+            // this function immediately.
+            if (this.config.sounds.audioContext) {
+                return;
+            }
+
             try {
                 if (AudioContext) {
                     this.config.sounds.audioContext = new AudioContext();
