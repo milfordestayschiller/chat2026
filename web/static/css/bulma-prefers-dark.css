@@ -33,6 +33,11 @@
     background-color: rgba(0, 0, 0, 0.86) !important;
   }
 
+  .notification.is-success.is-light {
+    background-color: #232e29 !important;
+    color: #56cf98 !important;
+  }
+
   /* end nonshy custom overrides */
 
   html {

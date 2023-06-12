@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css?{{.CacheHash}}">
     <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
     <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
     <title>{{.Config.Title}}</title>
@@ -733,97 +733,120 @@
                         </em>
                     </div>
 
-                    <div v-for="(msg, i) in chatHistory" v-bind:key="i" class="box mb-2 px-4 pt-3 pb-1">
-                        <div class="media mb-0">
-                            <div class="media-left">
-                                <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
-                                    :class="{'cursor-default': !profileURLForUsername(msg.username)}">
-                                    <figure class="image is-48x48">
-                                        <img v-if="msg.isChatServer"
-                                            src="/static/img/server.png">
-                                        <img v-else-if="msg.isChatClient"
-                                            src="/static/img/client.png">
-                                        <img v-else-if="avatarForUsername(msg.username)"
+                    <div v-for="(msg, i) in chatHistory" v-bind:key="i">
+                        <!-- Enter chat presence messages draw as a short banner -->
+                        <div v-if="msg.action === 'presence'" class="notification is-success is-light py-1 px-3 mb-2">
+
+                            <!-- Tiny avatar next to name and action buttons -->
+                            <div class="columns is-mobile">
+                                <div class="column is-narrow pr-0 pt-4">
+                                    <figure class="image is-16x16">
+                                        <img v-if="avatarForUsername(msg.username)"
                                             :src="avatarForUsername(msg.username)">
                                         <img v-else src="/static/img/shy.png">
                                     </figure>
-                                </a>
-                            </div>
-                            <div class="media-content">
-                                <div class="columns is-mobile pb-0">
-                                    <div class="column is-narrow pb-0">
-                                        <label class="label"
-                                            :class="{'has-text-success is-dark': msg.isChatServer,
-                                                    'has-text-warning is-dark': msg.isAdmin,
-                                                    'has-text-danger': msg.isChatClient}">
-
-                                            <!-- User nickname/display name -->
-                                            [[nicknameForUsername(msg.username)]]
-                                        </label>
-                                    </div>
-                                    <div class="column has-text-right pb-0">
-                                        <small class="has-text-grey is-size-7" :title="msg.at">[[prettyDate(msg.at)]]</small>
-                                    </div>
                                 </div>
-
-                                <!-- User @username below it which may link to a profile URL if JWT -->
-                                <div class="columns is-mobile pt-0" v-if="(msg.isChatClient || msg.isChatServer)">
-                                    <div class="column is-narrow pt-0">
-                                        <small v-if="!(msg.isChatClient || msg.isChatServer)">
-                                            <a v-if="profileURLForUsername(msg.username)"
-                                                :href="profileURLForUsername(msg.username)"
-                                                target="_blank"
-                                                class="has-text-grey">
-                                                @[[msg.username]]
-                                            </a>
-                                            <span v-else class="has-text-grey">@[[msg.username]]</span>
-                                        </small>
-                                        <small v-else class="has-text-grey">internal</small>
-                                    </div>
-                                </div>
-                                <div v-else class="columns is-mobile pt-0">
-                                    <div class="column is-narrow pt-0">
-                                        <small v-if="!(msg.isChatClient || msg.isChatServer)">
-                                            <a v-if="profileURLForUsername(msg.username)"
-                                                :href="profileURLForUsername(msg.username)"
-                                                target="_blank"
-                                                class="has-text-grey">
-                                                @[[msg.username]]
-                                            </a>
-                                            <span v-else class="has-text-grey">@[[msg.username]]</span>
-                                        </small>
-                                        <small v-else class="has-text-grey">internal</small>
-                                    </div>
-
-                                    <div class="column is-narrow px-1 pt-0"
-                                        v-if="!(msg.username === username || isDM)">
-                                        <!-- DMs button -->
-                                        <button type="button"
-                                            class="button is-grey is-outlined is-small px-2"
-                                            @click="openDMs({username: msg.username})">
-                                            <i class="fa fa-message"></i>
-                                        </button>
-                                    </div>
-                                    <div class="column is-narrow pl-1 pt-0"
-                                        v-if="!(msg.username === username)">
-                                        <!-- Mute button -->
-                                        <button type="button"
-                                            class="button is-grey is-outlined is-small px-2"
-                                            @click="muteUser(msg.username)"
-                                            title="Mute user">
-                                            <i class="fa fa-comment-slash"
-                                                :class="{'has-text-success': isMutedUser(msg.username),
-                                                        'has-text-danger': !isMutedUser(msg.username)}"></i>
-                                        </button>
-                                    </div>
+                                <div class="column">
+                                    <strong>[[ msg.username ]]</strong> [[msg.message]]
                                 </div>
                             </div>
+
                         </div>
 
-                        <!-- Message box -->
-                        <div class="content pl-5 py-3 mb-0">
-                            <em v-if="msg.action === 'presence'">[[msg.message]]</em>
-                            <div v-else v-html="msg.message"></div>
+                        <!-- Normal chat message: full size card w/ avatar -->
+                        <div v-else class="box mb-2 px-4 pt-3 pb-1">
+                            <div class="media mb-0">
+                                <div class="media-left">
+                                    <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
+                                        :class="{'cursor-default': !profileURLForUsername(msg.username)}">
+                                        <figure class="image is-48x48">
+                                            <img v-if="msg.isChatServer"
+                                                src="/static/img/server.png">
+                                            <img v-else-if="msg.isChatClient"
+                                                src="/static/img/client.png">
+                                            <img v-else-if="avatarForUsername(msg.username)"
+                                                :src="avatarForUsername(msg.username)">
+                                            <img v-else src="/static/img/shy.png">
+                                        </figure>
+                                    </a>
+                                </div>
+                                <div class="media-content">
+                                    <div class="columns is-mobile pb-0">
+                                        <div class="column is-narrow pb-0">
+                                            <label class="label"
+                                                :class="{'has-text-success is-dark': msg.isChatServer,
+                                                        'has-text-warning is-dark': msg.isAdmin,
+                                                        'has-text-danger': msg.isChatClient}">
+
+                                                <!-- User nickname/display name -->
+                                                [[nicknameForUsername(msg.username)]]
+                                            </label>
+                                        </div>
+                                        <div class="column has-text-right pb-0">
+                                            <small class="has-text-grey is-size-7" :title="msg.at">[[prettyDate(msg.at)]]</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- User @username below it which may link to a profile URL if JWT -->
+                                    <div class="columns is-mobile pt-0" v-if="(msg.isChatClient || msg.isChatServer)">
+                                        <div class="column is-narrow pt-0">
+                                            <small v-if="!(msg.isChatClient || msg.isChatServer)">
+                                                <a v-if="profileURLForUsername(msg.username)"
+                                                    :href="profileURLForUsername(msg.username)"
+                                                    target="_blank"
+                                                    class="has-text-grey">
+                                                    @[[msg.username]]
+                                                </a>
+                                                <span v-else class="has-text-grey">@[[msg.username]]</span>
+                                            </small>
+                                            <small v-else class="has-text-grey">internal</small>
+                                        </div>
+                                    </div>
+                                    <div v-else class="columns is-mobile pt-0">
+                                        <div class="column is-narrow pt-0">
+                                            <small v-if="!(msg.isChatClient || msg.isChatServer)">
+                                                <a v-if="profileURLForUsername(msg.username)"
+                                                    :href="profileURLForUsername(msg.username)"
+                                                    target="_blank"
+                                                    class="has-text-grey">
+                                                    @[[msg.username]]
+                                                </a>
+                                                <span v-else class="has-text-grey">@[[msg.username]]</span>
+                                            </small>
+                                            <small v-else class="has-text-grey">internal</small>
+                                        </div>
+
+                                        <div class="column is-narrow px-1 pt-0"
+                                            v-if="!(msg.username === username || isDM)">
+                                            <!-- DMs button -->
+                                            <button type="button"
+                                                class="button is-grey is-outlined is-small px-2"
+                                                @click="openDMs({username: msg.username})">
+                                                <i class="fa fa-message"></i>
+                                            </button>
+                                        </div>
+                                        <div class="column is-narrow pl-1 pt-0"
+                                            v-if="!(msg.username === username)">
+                                            <!-- Mute button -->
+                                            <button type="button"
+                                                class="button is-grey is-outlined is-small px-2"
+                                                @click="muteUser(msg.username)"
+                                                title="Mute user">
+                                                <i class="fa fa-comment-slash"
+                                                    :class="{'has-text-success': isMutedUser(msg.username),
+                                                            'has-text-danger': !isMutedUser(msg.username)}"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Message box -->
+                            <div class="content pl-5 py-3 mb-0">
+                                <em v-if="msg.action === 'presence'">[[msg.message]]</em>
+                                <div v-else v-html="msg.message"></div>
+                            </div>
+
                         </div>
 
                     </div>

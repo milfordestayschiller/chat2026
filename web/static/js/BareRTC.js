@@ -215,6 +215,9 @@ const app = Vue.createApp({
         window.addEventListener("click", () => {
             this.setupSounds();
         });
+        window.addEventListener("keydown", () => {
+            this.setupSounds();
+        });
 
         for (let channel of this.config.channels) {
             this.initHistory(channel.ID);
@@ -488,25 +491,29 @@ const app = Vue.createApp({
         // User logged in or out.
         onPresence(msg) {
             // TODO: make a dedicated leave event
+            let isLeave = false;
             if (msg.message.indexOf("has exited the room!") > -1) {
                 // Clean up data about this user.
                 this.onUserExited(msg);
                 this.playSound("Leave");
+                isLeave = true;
             } else {
                 this.playSound("Enter");
             }
 
-            // Push it to the history of all public channels.
-            for (let channel of this.config.channels) {
-                this.pushHistory({
-                    channel: channel.ID,
-                    action: msg.action,
-                    username: msg.username,
-                    message: msg.message,
-                });
+            // Push it to the history of all public channels (not leaves).
+            if (!isLeave) {
+                for (let channel of this.config.channels) {
+                    this.pushHistory({
+                        channel: channel.ID,
+                        action: msg.action,
+                        username: msg.username,
+                        message: msg.message,
+                    });
+                }
             }
 
-            // Push also to any DM channels for this user.
+            // Push also to any DM channels for this user (leave events do push to DM thread for visibility).
             let channel = "@" + msg.username;
             if (this.channels[channel] != undefined) {
                 this.pushHistory({
@@ -896,6 +903,9 @@ const app = Vue.createApp({
                 if (nick) {
                     return nick;
                 }
+            } else if (this.whoMap[username] == undefined && username !== 'ChatServer' && username !== 'ChatClient') {
+                // User is not even logged in! Add this note to their name
+                username += " (offline)";
             }
             return username;
         },
@@ -1468,6 +1478,9 @@ const app = Vue.createApp({
             // allow it to set up the AudioContext. If we've successfully set one up before, exit
             // this function immediately.
             if (this.config.sounds.audioContext) {
+                if (this.config.sounds.audioContext.state === 'suspended') {
+                    this.config.sounds.audioContext.resume();
+                }
                 return;
             }
 
