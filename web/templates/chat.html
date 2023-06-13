@@ -747,7 +747,9 @@
                                     </figure>
                                 </div>
                                 <div class="column">
-                                    <strong>[[ msg.username ]]</strong> [[msg.message]]
+                                    <strong>[[ nicknameForUsername(msg.username) ]]</strong>
+                                    <small v-if="isUsernameOnline(msg.username)" class="ml-1">(@[[msg.username]])</small>
+                                    [[msg.message]]
                                 </div>
                             </div>
 

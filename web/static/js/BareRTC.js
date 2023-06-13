@@ -872,6 +872,9 @@ const app = Vue.createApp({
             }
             return "";
         },
+        isUsernameOnline(username) {
+            return this.whoMap[username] != undefined;
+        },
         avatarForUsername(username) {
             if (this.whoMap[username] != undefined && this.whoMap[username].avatar) {
                 return this.avatarURL(this.whoMap[username]);
