@@ -1041,6 +1041,7 @@
 const PublicChannels = {{.Config.GetChannels}};
 const WebsiteURL = "{{.Config.WebsiteURL}}";
 const PermitNSFW = {{AsJS .Config.PermitNSFW}};
+const TURN = {{.Config.TURN}};
 const UserJWTToken = {{.JWTTokenString}};
 const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
 const UserJWTClaims = {{.JWTClaims.ToJSON}};

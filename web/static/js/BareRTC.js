@@ -2,9 +2,18 @@
 
 // WebRTC configuration.
 const configuration = {
-    iceServers: [{
-        urls: 'stun:stun.l.google.com:19302'
-    }]
+    iceServers: TURN.URLs.map(val => {
+        let row = {
+            urls: val,
+        };
+
+        if (val.indexOf('turn:') === 0) {
+            row.username = TURN.Username;
+            row.credential = TURN.Credential;
+        }
+
+        return row;
+    })
 };
 
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
