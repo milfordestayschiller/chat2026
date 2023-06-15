@@ -999,7 +999,7 @@
                                         :class="{
                                             'is-danger is-outlined': u.videoActive && u.nsfw,
                                             'is-info is-outlined': u.videoActive && !u.nsfw,
-                                            'cursor-notallowed': u.videoActive && u.videoMutual && !webcam.active,
+                                            'cursor-notallowed': isVideoNotAllowed(u),
                                         }"
                                         :title="`Open video stream` +
                                             (u.videoActive && u.videoMutual ? '; mutual video sharing required' : '') +
@@ -1007,7 +1007,7 @@
 
                                         @click="openVideo(u)">
                                         <i class="fa"
-                                            :class="u.videoActive && u.videoMutual && !webcam.active ? 'fa-video-slash' : 'fa-video'"></i>
+                                            :class="isVideoNotAllowed(u) ? 'fa-video-slash' : 'fa-video'"></i>
                                     </button>
                                 </div>
                             </div>

@@ -430,6 +430,9 @@ const app = Vue.createApp({
                 delete this.muted[username];
             }
 
+            // Hang up videos both ways.
+            this.closeVideo(username);
+
             this.sendMute(username, mute);
             if (mute) {
                 this.ChatClient(
@@ -1057,6 +1060,12 @@ const app = Vue.createApp({
                 return;
             }
 
+            // If we have muted the target, we shouldn't view their video.
+            if (this.isMutedUser(user.username)) {
+                this.ChatClient(`You have muted <strong>${user.username}</strong> and so should not see their camera.`);
+                return;
+            }
+
             // Is the target user NSFW? Go thru the modal.
             let dontShowAgain = localStorage["skip-nsfw-modal"] == "true";
             if (user.nsfw && !dontShowAgain && !force) {
@@ -1134,6 +1143,21 @@ const app = Vue.createApp({
                     this.closeVideo(username);
                 }
             }
+        },
+        isVideoNotAllowed(user) {
+            // Returns whether the video button to open a user's cam will be not allowed (crossed out)
+
+            // Mutual video sharing is required on this camera, and ours is not active
+            if (user.videoActive && user.videoMutual && !this.webcam.active) {
+                return true;
+            }
+
+            // We have muted them and it wouldn't be appropriate to still watch their video but not get their messages.
+            if (this.isMutedUser(user.username)) {
+                return true;
+            }
+
+            return false;
         },
 
         // Show who watches our video.
