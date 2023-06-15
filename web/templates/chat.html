@@ -853,6 +853,14 @@
 
                     </div>
 
+                    <!-- If this is a DM with a muted user, offer to unmute. -->
+                    <div v-if="isDM && isMutedUser(channel)" class="has-text-danger">
+                        <i class="fa fa-comment-slash"></i>
+                        <strong>[[channel]]</strong> is currently <strong>muted</strong> so you have not been seeing their recent
+                        chat messages or DMs.
+                        <a href="#" v-on:click.prevent="muteUser(channel)">Unmute them?</a>
+                    </div>
+
                 </div>
             </div>
         </div>

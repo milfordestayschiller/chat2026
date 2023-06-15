@@ -333,6 +333,11 @@ const app = Vue.createApp({
             this.dial();
         },
 
+        // Normalize a DM channel name into a username (remove the @ prefix)
+        normalizeUsername(channel) {
+            return channel.replace(/^@+/, '');
+        },
+
         /**
          * Chat API Methods (WebSocket packets sent/received)
          */
@@ -417,6 +422,7 @@ const app = Vue.createApp({
 
         // Mute or unmute a user.
         muteUser(username) {
+            username = this.normalizeUsername(username);
             let mute = this.muted[username] == undefined;
             if (mute) {
                 this.muted[username] = true;
@@ -442,7 +448,7 @@ const app = Vue.createApp({
             }));
         },
         isMutedUser(username) {
-            return this.muted[username] != undefined;
+            return this.muted[this.normalizeUsername(username)] != undefined;
         },
 
         // Send a video request to access a user's camera.
