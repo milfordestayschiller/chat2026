@@ -1,5 +1,6 @@
 html {
     height: 100vh;
+    overscroll-behavior: contain;
 }
 body {
     min-height: 100vh;
