@@ -1,5 +1,8 @@
 package barertc
 
+// Auto incrementing Message ID for anything pushed out by the server.
+var MessageID int
+
 /*
 Message is the basic carrier of WebSocket chat protocol actions.
 
@@ -26,6 +29,9 @@ type Message struct {
 	ChatStatus      string `json:"status,omitempty"` // online vs. away
 	NSFW            bool   `json:"nsfw,omitempty"`   // user tags their video NSFW
 
+	// Message ID to support takebacks/local deletions
+	MessageID int `json:"msgID,omitempty"`
+
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`
 
@@ -46,13 +52,14 @@ const (
 	ActionUnmute = "unmute"
 
 	// Actions sent by server or client
-	ActionMessage = "message" // post a message to the room
-	ActionMe      = "me"      // user self-info sent by FE or BE
-	ActionOpen    = "open"    // user wants to view a webcam (open WebRTC)
-	ActionRing    = "ring"    // receiver of a WebRTC open request
-	ActionWatch   = "watch"   // user has received video and is watching you
-	ActionUnwatch = "unwatch" // user has closed your video
-	ActionFile    = "file"    // image sharing in chat
+	ActionMessage  = "message"  // post a message to the room
+	ActionMe       = "me"       // user self-info sent by FE or BE
+	ActionOpen     = "open"     // user wants to view a webcam (open WebRTC)
+	ActionRing     = "ring"     // receiver of a WebRTC open request
+	ActionWatch    = "watch"    // user has received video and is watching you
+	ActionUnwatch  = "unwatch"  // user has closed your video
+	ActionFile     = "file"     // image sharing in chat
+	ActionTakeback = "takeback" // user takes back (deletes) their message for everybody
 
 	// Actions sent by server only
 	ActionPing     = "ping"

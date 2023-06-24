@@ -106,12 +106,20 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 	// Detect and expand media such as YouTube videos.
 	markdown = s.ExpandMedia(markdown)
 
+	// Assign a message ID and own it to the sender.
+	MessageID++
+	var mid = MessageID
+	sub.midMu.Lock()
+	sub.messageIDs[mid] = struct{}{}
+	sub.midMu.Unlock()
+
 	// Message to be echoed to the channel.
 	var message = Message{
-		Action:   ActionMessage,
-		Channel:  msg.Channel,
-		Username: sub.Username,
-		Message:  markdown,
+		Action:    ActionMessage,
+		Channel:   msg.Channel,
+		Username:  sub.Username,
+		Message:   markdown,
+		MessageID: mid,
 	}
 
 	// Is this a DM?
@@ -143,6 +151,25 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 	s.Broadcast(message)
 }
 
+// OnTakeback handles takebacks (delete your message for everybody)
+func (s *Server) OnTakeback(sub *Subscriber, msg Message) {
+	// Permission check.
+	if sub.JWTClaims == nil || !sub.JWTClaims.IsAdmin {
+		sub.midMu.Lock()
+		defer sub.midMu.Unlock()
+		if _, ok := sub.messageIDs[msg.MessageID]; !ok {
+			sub.ChatServer("That is not your message to take back.")
+			return
+		}
+	}
+
+	// Broadcast to everybody to remove this message.
+	s.Broadcast(Message{
+		Action:    ActionTakeback,
+		MessageID: msg.MessageID,
+	})
+}
+
 // OnFile handles a picture shared in chat with a channel.
 func (s *Server) OnFile(sub *Subscriber, msg Message) {
 	if sub.Username == "" {
@@ -172,11 +199,19 @@ func (s *Server) OnFile(sub *Subscriber, msg Message) {
 	img, pvWidth, pvHeight := ProcessImage(filetype, msg.Bytes)
 	var dataURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
 
+	// Assign a message ID and own it to the sender.
+	MessageID++
+	var mid = MessageID
+	sub.midMu.Lock()
+	sub.messageIDs[mid] = struct{}{}
+	sub.midMu.Unlock()
+
 	// Message to be echoed to the channel.
 	var message = Message{
-		Action:   ActionMessage,
-		Channel:  msg.Channel,
-		Username: sub.Username,
+		Action:    ActionMessage,
+		Channel:   msg.Channel,
+		Username:  sub.Username,
+		MessageID: mid,
 
 		// Their image embedded via a data: URI - no server storage needed!
 		Message: fmt.Sprintf(

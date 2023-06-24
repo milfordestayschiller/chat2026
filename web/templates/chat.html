@@ -821,25 +821,43 @@
                                                 <small v-else class="has-text-grey">internal</small>
                                             </div>
 
-                                            <div class="column is-narrow px-1 pt-0"
-                                                v-if="!(msg.username === username || isDM)">
+                                            <div class="column is-narrow pl-1 pt-0">
                                                 <!-- DMs button -->
                                                 <button type="button"
+                                                    v-if="!(msg.username === username || isDM)"
                                                     class="button is-grey is-outlined is-small px-2"
-                                                    @click="openDMs({username: msg.username})">
+                                                    @click="openDMs({username: msg.username})"
+                                                    title="Open a Direct Message (DM) thread">
                                                     <i class="fa fa-message"></i>
                                                 </button>
-                                            </div>
-                                            <div class="column is-narrow pl-1 pt-0"
-                                                v-if="!(msg.username === username)">
+
                                                 <!-- Mute button -->
                                                 <button type="button"
-                                                    class="button is-grey is-outlined is-small px-2"
+                                                    v-if="!(msg.username === username)"
+                                                    class="button is-grey is-outlined is-small px-2 ml-1"
                                                     @click="muteUser(msg.username)"
                                                     title="Mute user">
                                                     <i class="fa fa-comment-slash"
                                                         :class="{'has-text-success': isMutedUser(msg.username),
                                                                 'has-text-danger': !isMutedUser(msg.username)}"></i>
+                                                </button>
+
+                                                <!-- Owner or admin: take back the message -->
+                                                <button type="button"
+                                                    v-if="msg.username === username || isOp"
+                                                    class="button is-grey is-outlined is-small px-2 ml-1"
+                                                    title="Take back this message (delete it for everybody)"
+                                                    @click="takeback(msg)">
+                                                    <i class="fa fa-rotate-left has-text-danger"></i>
+                                                </button>
+
+                                                <!-- Everyone else: can hide it locally -->
+                                                <button type="button"
+                                                    v-if="msg.username !== username"
+                                                    class="button is-grey is-outlined is-small px-2 ml-1"
+                                                    title="Hide this message (delete it only for your view)"
+                                                    @click="removeMessage(msg)">
+                                                    <i class="fa fa-trash"></i>
                                                 </button>
                                             </div>
                                         </div>

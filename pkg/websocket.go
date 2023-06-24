@@ -39,6 +39,10 @@ type Subscriber struct {
 	muteMu sync.RWMutex
 	booted map[string]struct{} // usernames booted off your camera
 	muted  map[string]struct{} // usernames you muted
+
+	// Record which message IDs belong to this user.
+	midMu      sync.Mutex
+	messageIDs map[int]struct{}
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -102,6 +106,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnWatch(sub, msg)
 			case ActionUnwatch:
 				s.OnUnwatch(sub, msg)
+			case ActionTakeback:
+				s.OnTakeback(sub, msg)
 			default:
 				sub.ChatServer("Unsupported message type.")
 			}
@@ -172,6 +178,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 			},
 			booted:     make(map[string]struct{}),
 			muted:      make(map[string]struct{}),
+			messageIDs: make(map[int]struct{}),
 			ChatStatus: "online",
 		}
 

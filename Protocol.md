@@ -123,11 +123,15 @@ The server sends a similar message to push chats to the client:
     "action": "message",
     "channel": "lobby",
     "username": "senderName",
-    "message": "Hello!"
+    "message": "Hello!",
+    "msgID": 123
 }
 ```
 
 If the message is a DM, the channel will be the username prepended by an @ symbol and the ChatClient will add it to the appropriate DM thread (creating a new DM thread if needed).
+
+Every message or file share originated from a user has a "msgID" attached
+which is useful for [takebacks](#takeback).
 
 ## File
 
@@ -145,6 +149,30 @@ The client is posting an image to share in chat.
 ```
 
 The server will massage and validate the image data and then send it to others in the chat via a normal `message` containing an `<img>` tag with a data: URL - directly passing the image data to other chatters without needing to store it somewhere with a public URL.
+
+## Takeback
+
+Sent by: Client, Server.
+
+The takeback message is how a user can delete their previous message from
+everybody else's display. Operators may also take back messages sent by
+other users.
+
+```javascript
+{
+    "action": "takeback",
+    "msgID": 123
+}
+```
+
+Every message or file share initiated by a real user (not ChatClient or
+ChatServer) is assigned an auto-incrementing message ID, and the chat
+server records which message IDs "belong" to which user (so that a
+modded chat client or bot can't takeback other peoples' messages without
+operator rights).
+
+When the front-end receives a takeback, it searches all channels to
+delete the message with that ID.
 
 ## Presence
 

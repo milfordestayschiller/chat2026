@@ -311,6 +311,10 @@ const app = Vue.createApp({
             // Is the current channel a DM?
             return this.channel.indexOf("@") === 0;
         },
+        isOp() {
+            // Returns if the current user has operator rights
+            return this.jwt.claims.op;
+        },
     },
     methods: {
         // Load user prefs from localStorage, called on startup
@@ -503,7 +507,24 @@ const app = Vue.createApp({
                 channel: msg.channel,
                 username: msg.username,
                 message: msg.message,
+                messageID: msg.msgID,
             });
+        },
+
+        // A user deletes their message for everybody
+        onTakeback(msg) {
+            // Search all channels for this message ID and remove it.
+            for (let channel of Object.keys(this.channels)) {
+                for (let i = 0; i < this.channels[channel].history.length; i++) {
+                    let cmp = this.channels[channel].history[i];
+                    if (cmp.msgID === msg.msgID) {
+                        this.channels[channel].history.splice(i, 1);
+                        return;
+                    }
+                }
+            }
+
+            console.error("Got a takeback for msgID %d but did not find it!", msg.msgID);
         },
 
         // User logged in or out.
@@ -607,6 +628,9 @@ const app = Vue.createApp({
                         break;
                     case "message":
                         this.onMessage(msg);
+                        break;
+                    case "takeback":
+                        this.onTakeback(msg);
                         break;
                     case "presence":
                         this.onPresence(msg);
@@ -945,6 +969,27 @@ const app = Vue.createApp({
             let channel = this.channel;
             this.setChannel(this.config.channels[0].ID);
             delete(this.channels[channel]);
+        },
+
+        /* Take back messages (for everyone) or remove locally */
+        takeback(msg) {
+            if (!window.confirm(
+                "Do you want to take this message back? Doing so will remove this message from everybody's view in the chat room."
+            )) return;
+
+            this.ws.conn.send(JSON.stringify({
+                action: "takeback",
+                msgID: msg.msgID,
+            }));
+        },
+        removeMessage(msg) {
+            if (!window.confirm(
+                "Do you want to remove this message from your view? This will delete the message only for you, but others in this chat thread may still see it."
+            )) return;
+
+            this.onTakeback({
+                msgID: msg.msgID,
+            })
         },
 
         activeChannels() {
@@ -1357,7 +1402,7 @@ const app = Vue.createApp({
                 };
             }
         },
-        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient }) {
+        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient, messageID }) {
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
@@ -1372,6 +1417,7 @@ const app = Vue.createApp({
                 action: action,
                 username: username,
                 message: message,
+                msgID: messageID,
                 at: new Date(),
                 isChatServer,
                 isChatClient,
