@@ -852,7 +852,7 @@ const app = Vue.createApp({
         // Set active chat room.
         setChannel(channel) {
             this.channel = typeof(channel) === "string" ? channel : channel.ID;
-            this.scrollHistory();
+            this.scrollHistory(this.channel, true);
             this.channels[this.channel].unread = 0;
 
             // Responsive CSS: switch back to chat panel upon selecting a channel.
@@ -1376,7 +1376,7 @@ const app = Vue.createApp({
                 isChatServer,
                 isChatClient,
             });
-            this.scrollHistory();
+            this.scrollHistory(channel);
 
             // Mark unread notifiers if this is not our channel.
             if (this.channel !== channel) {
@@ -1390,10 +1390,13 @@ const app = Vue.createApp({
             this.makeLinksExternal();
         },
 
-        scrollHistory() {
-            if (!this.autoscroll) return;
+        scrollHistory(channel, force) {
+            if (!this.autoscroll && !force) return;
 
             window.requestAnimationFrame(() => {
+                // Only scroll if it's the current channel.
+                if (channel !== this.channel) return;
+
                 this.historyScrollbox.scroll({
                     top: this.historyScrollbox.scrollHeight,
                     behavior: 'smooth',

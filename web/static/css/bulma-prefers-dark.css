@@ -38,6 +38,10 @@
     color: #56cf98 !important;
   }
 
+  .has-background-dm {
+    background-color: #100010 !important;
+  }
+
   /* end nonshy custom overrides */
 
   html {

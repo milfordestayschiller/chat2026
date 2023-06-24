@@ -19,6 +19,14 @@ body {
     overflow: hidden !important;
 }
 
+/* DM title and bg color */
+.has-background-private {
+    background-color: #b748c7;
+}
+.has-background-dm {
+    background-color: #ffefff;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/
@@ -149,16 +157,16 @@ body {
 }
 
 /* User configurable font size increases */
-#chatHistory.x1 {
+#chatHistory .x1 {
     font-size: large;
 }
-#chatHistory.x2 {
+#chatHistory .x2 {
     font-size: x-large;
 }
-#chatHistory.x3 {
+#chatHistory .x3 {
     font-size: xx-large;
 }
-#chatHistory.x4 {
+#chatHistory .x4 {
     font-size: 64pt;
 }
 
