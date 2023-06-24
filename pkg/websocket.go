@@ -337,10 +337,11 @@ func (s *Server) SendTo(username string, msg Message) error {
 		if sub.Username == username {
 			found = true
 			sub.SendJSON(Message{
-				Action:   msg.Action,
-				Channel:  msg.Channel,
-				Username: msg.Username,
-				Message:  msg.Message,
+				Action:    msg.Action,
+				Channel:   msg.Channel,
+				Username:  msg.Username,
+				Message:   msg.Message,
+				MessageID: msg.MessageID,
 			})
 		}
 	}
