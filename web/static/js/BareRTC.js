@@ -1141,6 +1141,15 @@ const app = Vue.createApp({
 
             // Responsive CSS -> go to chat panel to see the camera
             this.openChatPanel();
+
+            // Send some feedback to the chat window.
+            this.ChatClient(
+                `A request was sent to open <strong>${user.username}</strong>'s camera which should (hopefully) appear on your screen soon.<br><br>`+
+                `<strong class="has-text-danger">Notice:</strong> webcam sharing currently does not work well with iPhones, iPads or Safari browsers. It should generally `+
+                `work well on Firefox or Chrome-like browsers on <em>most</em> devices (including Macbooks) but at this time there is no working `+
+                `option for iPhone/iPad. (Chrome-like browsers also include Edge, Brave, or Opera). If their video does not open or you get a blank `+
+                `screen, try logging on from a different web browser.`
+            );
         },
         closeVideo(username, name) {
             if (name === "offerer") {

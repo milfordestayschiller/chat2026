@@ -1,0 +1,19 @@
+WebsiteURL = "http://localhost:8080"
+Title = "BareRTC"
+Branding = "BareRTC"
+
+[JWT]
+  Enabled = false
+  Strict = false
+  SecretKey = "hello"
+
+[[PublicChannels]]
+  ID = "lobby"
+  Name = "Lobby"
+  Icon = "fa fa-gavel"
+  WelcomeMessages = ["Welcome to the chat server!", "Please follow the basic rules:\n\n1. Have fun\n2. Be kind"]
+
+[[PublicChannels]]
+  ID = "offtopic"
+  Name = "Off Topic"
+  WelcomeMessages = ["Welcome to the Off Topic channel!"]
