@@ -49,8 +49,8 @@ func (s *Server) Statistics() http.HandlerFunc {
 				unique[sub.Username] = struct{}{}
 
 				// Count cameras by color.
-				if sub.VideoActive {
-					if sub.VideoNSFW {
+				if sub.VideoStatus&VideoFlagActive == VideoFlagActive {
+					if sub.VideoStatus&VideoFlagNSFW == VideoFlagNSFW {
 						result.Cameras.Red++
 					} else {
 						result.Cameras.Blue++

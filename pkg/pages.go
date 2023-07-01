@@ -40,9 +40,16 @@ func IndexPage() http.HandlerFunc {
 
 		// Are we enforcing strict JWT authentication?
 		if config.Current.JWT.Enabled && config.Current.JWT.Strict && !authOK {
+			// Do we have a landing page to redirect to?
+			if config.Current.JWT.LandingPageURL != "" {
+				w.Header().Add("Location", config.Current.JWT.LandingPageURL)
+				w.WriteHeader(http.StatusFound)
+				return
+			}
+
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(
-				fmt.Sprintf("Authentication denied. Please go back and try again."),
+				"Authentication denied. Please go back and try again.",
 			))
 			return
 		}

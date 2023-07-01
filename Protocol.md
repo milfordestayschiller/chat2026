@@ -30,6 +30,22 @@ The video stream can be interrupted and closed via various methods:
 * Also, a `who` update that says a person's videoActive went false will instruct all clients who had the video open, to close it (in case the PeerConnection closure didn't already do this).
 * If a user exits the room, e.g. exited their browser abruptly without gracefully closing PeerConnections, any client who had their video open will close it immediately.
 
+# Video Flags
+
+The various video settings sent on Who List updates are now consolidated
+to a bit flag field:
+
+```javascript
+VideoFlag: {
+    Active:         1 << 0,  // or 00000001 in binary
+    NSFW:           1 << 1,  // or 00000010
+    Muted:          1 << 2,  // or 00000100, etc.
+    IsTalking:      1 << 3,
+    MutualRequired: 1 << 4,
+    MutualOpen:     1 << 5,
+}
+```
+
 # WebSocket Message Actions
 
 Every message has an "action" and may have other fields depending on the action type.
@@ -201,8 +217,7 @@ The client sends "me" messages to send their webcam broadcast status and NSFW fl
 // Client Me
 {
     "action": "me",
-    "videoActive": true,
-    "nsfw": false
+    "video": 1,
 }
 ```
 
@@ -213,7 +228,7 @@ The server may also push "me" messages to the user: for example if there is a co
 {
     "action": "me",
     "username": "soandso 12345",
-    "videoActive": true
+    "video": 1,
 }
 ```
 
@@ -233,8 +248,7 @@ The `who` action sends the Who Is Online list to all connected chatters.
             "op": false, // operator status
             "avatar": "/picture/soandso.png",
             "profileURL": "/u/soandso",
-            "videoActive": true,
-            "nsfW": false
+            "video": 0,
         }
     ]
 }

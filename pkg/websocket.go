@@ -21,20 +21,17 @@ import (
 // Subscriber represents a connected WebSocket session.
 type Subscriber struct {
 	// User properties
-	ID              int // ID assigned by server
-	Username        string
-	VideoActive     bool
-	VideoMutual     bool
-	VideoMutualOpen bool
-	VideoNSFW       bool
-	ChatStatus      string
-	JWTClaims       *jwt.Claims
-	authenticated   bool // has passed the login step
-	conn            *websocket.Conn
-	ctx             context.Context
-	cancel          context.CancelFunc
-	messages        chan []byte
-	closeSlow       func()
+	ID            int // ID assigned by server
+	Username      string
+	ChatStatus    string
+	VideoStatus   int
+	JWTClaims     *jwt.Claims
+	authenticated bool // has passed the login step
+	conn          *websocket.Conn
+	ctx           context.Context
+	cancel        context.CancelFunc
+	messages      chan []byte
+	closeSlow     func()
 
 	muteMu sync.RWMutex
 	booted map[string]struct{} // usernames booted off your camera
@@ -130,8 +127,7 @@ func (sub *Subscriber) SendMe() {
 	sub.SendJSON(Message{
 		Action:      ActionMe,
 		Username:    sub.Username,
-		VideoActive: sub.VideoActive,
-		NSFW:        sub.VideoNSFW,
+		VideoStatus: sub.VideoStatus,
 	})
 }
 
@@ -384,18 +380,14 @@ func (s *Server) SendWhoList() {
 			}
 
 			who := WhoList{
-				Username:        user.Username,
-				Status:          user.ChatStatus,
-				VideoActive:     user.VideoActive,
-				VideoMutual:     user.VideoMutual,
-				VideoMutualOpen: user.VideoMutualOpen,
-				NSFW:            user.VideoNSFW,
+				Username: user.Username,
+				Status:   user.ChatStatus,
+				Video:    user.VideoStatus,
 			}
 
 			// If this person had booted us, force their camera to "off"
 			if user.Boots(sub.Username) || user.Mutes(sub.Username) {
-				who.VideoActive = false
-				who.NSFW = false
+				who.Video = 0
 			}
 
 			if user.JWTClaims != nil {

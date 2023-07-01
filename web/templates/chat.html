@@ -544,12 +544,26 @@
                                 <a :href="'#'+c.channel"
                                     @click.prevent="setChannel(c.channel)"
                                     :class="{'is-active': c.channel == channel}">
-                                    [[c.name]]
 
-                                    <span v-if="hasUnread(c.channel)"
-                                        class="tag is-danger">
-                                        [[hasUnread(c.channel)]]
-                                    </span>
+                                    <div class="columns is-mobile">
+                                        <!-- Avatar URL if available (copied from Who List) -->
+                                        <div class="column is-narrow pr-0" style="position: relative">
+                                            <img v-if="avatarForUsername(normalizeUsername(c.channel))" :src="avatarForUsername(normalizeUsername(c.channel))"
+                                                width="24" height="24" alt="">
+                                            <img v-else src="/static/img/shy.png"
+                                                width="24" height="24">
+                                        </div>
+
+                                        <div class="column">
+                                            [[c.name]]
+
+                                            <span v-if="hasUnread(c.channel)"
+                                                class="tag is-danger">
+                                                [[hasUnread(c.channel)]]
+                                            </span>
+                                        </div>
+                                    </div>
+
                                 </a>
                             </li>
                         </ul>
@@ -621,6 +635,8 @@
                         </video>
 
                         <div class="caption">
+                            <i class="fa fa-microphone-slash mr-1 has-text-grey"
+                                v-if="webcam.muted"></i>
                             [[username]]
                         </div>
 
@@ -659,6 +675,8 @@
                             autoplay>
                         </video>
                         <div class="caption">
+                            <i class="fa fa-microphone-slash mr-1 has-text-grey"
+                                v-if="isSourceMuted(username)"></i>
                             [[username]]
                         </div>
                         <div class="close">
@@ -1022,19 +1040,19 @@
 
                                     <!-- Video button -->
                                     <button type="button" class="button is-small px-2 py-1"
-                                        :disabled="!u.videoActive"
+                                        :disabled="!(u.video & VideoFlag.Active)"
                                         :class="{
-                                            'is-danger is-outlined': u.videoActive && u.nsfw,
-                                            'is-info is-outlined': u.videoActive && !u.nsfw,
+                                            'is-danger is-outlined': (u.video & VideoFlag.Active) && (u.video & VideoFlag.NSFW),
+                                            'is-info is-outlined': (u.video & VideoFlag.Active) && !(u.video & VideoFlag.NSFW),
                                             'cursor-notallowed': isVideoNotAllowed(u),
                                         }"
                                         :title="`Open video stream` +
-                                            (u.videoActive && u.videoMutual ? '; mutual video sharing required' : '') +
-                                            (u.videoActive && u.videoMutualOpen ? '; will auto-open your video' : '')"
+                                            (u.video & VideoFlag.MutualRequired ? '; mutual video sharing required' : '') +
+                                            (u.video & VideoFlag.MutualOpen ? '; will auto-open your video' : '')"
 
                                         @click="openVideo(u)">
                                         <i class="fa"
-                                            :class="isVideoNotAllowed(u) ? 'fa-video-slash' : 'fa-video'"></i>
+                                            :class="webcamIconClass(u)"></i>
                                     </button>
                                 </div>
                             </div>

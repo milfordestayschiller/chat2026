@@ -127,6 +127,16 @@ const app = Vue.createApp({
                 audioDeviceID: null,
             },
 
+            // Video flag constants (sync with values in messages.go)
+            VideoFlag: {
+                Active:         1 << 0,
+                NSFW:           1 << 1,
+                Muted:          1 << 2,
+                IsTalking:      1 << 3,
+                MutualRequired: 1 << 4,
+                MutualOpen:     1 << 5,
+            },
+
             // WebRTC sessions with other users.
             WebRTC: {
                 // Streams per username.
@@ -315,6 +325,16 @@ const app = Vue.createApp({
             // Returns if the current user has operator rights
             return this.jwt.claims.op;
         },
+        myVideoFlag() {
+            // Compute the current user's video status flags.
+            let status = 0;
+            if (this.webcam.active) status |= this.VideoFlag.Active;
+            if (this.webcam.muted) status |= this.VideoFlag.Muted;
+            if (this.webcam.nsfw) status |= this.VideoFlag.NSFW;
+            if (this.webcam.mutual) status |= this.VideoFlag.MutualRequired;
+            if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
+            return status;
+        },
     },
     methods: {
         // Load user prefs from localStorage, called on startup
@@ -375,11 +395,8 @@ const app = Vue.createApp({
         sendMe() {
             this.ws.conn.send(JSON.stringify({
                 action: "me",
-                videoActive: this.webcam.active,
-                videoMutual: this.webcam.mutual,
-                videoMutualOpen: this.webcam.mutualOpen,
+                video: this.myVideoFlag,
                 status: this.status,
-                nsfw: this.webcam.nsfw,
             }));
         },
         onMe(msg) {
@@ -391,11 +408,11 @@ const app = Vue.createApp({
             }
 
             // The server can set our webcam NSFW flag.
-            if (this.webcam.nsfw != msg.nsfw) {
-                this.webcam.nsfw = msg.nsfw;
+            let myNSFW = this.webcam.nsfw;
+            let theirNSFW = (msg.video & this.VideoFlag.NSFW) > 0;
+            if (myNSFW != theirNSFW) {
+                this.webcam.nsfw = theirNSFW;
             }
-
-            // this.ChatClient(`User sync from backend: ${JSON.stringify(msg)}`);
         },
 
         // WhoList updates.
@@ -412,14 +429,14 @@ const app = Vue.createApp({
             for (let row of this.whoList) {
                 this.whoMap[row.username] = row;
                 if (this.WebRTC.streams[row.username] != undefined &&
-                    row.videoActive !== true) {
+                    !(row.video & this.VideoFlag.Active)) {
                     this.closeVideo(row.username, "offerer");
                 }
             }
 
             // Has the back-end server forgotten we are on video? This can
             // happen if we disconnect/reconnect while we were streaming.
-            if (this.webcam.active && !this.whoMap[this.username]?.videoActive) {
+            if (this.webcam.active && !(this.whoMap[this.username]?.video & this.VideoFlag.Active)) {
                 this.sendMe();
             }
         },
@@ -473,18 +490,10 @@ const app = Vue.createApp({
         },
         onOpen(msg) {
             // Response for the opener to begin WebRTC connection.
-            const secret = msg.openSecret;
-            // console.log("OPEN: connect to %s with secret %s", msg.username, secret);
-            // this.ChatClient(`onOpen called for ${msg.username}.`);
-
             this.startWebRTC(msg.username, true);
         },
         onRing(msg) {
-            // Message for the receiver to begin WebRTC connection.
-            const secret = msg.openSecret;
-            // console.log("RING: connection from %s with secret %s", msg.username, secret);
             this.ChatServer(`${msg.username} has opened your camera.`);
-
             this.startWebRTC(msg.username, false);
         },
         onUserExited(msg) {
@@ -768,7 +777,7 @@ const app = Vue.createApp({
 
             // If we are the offerer, and this member wants to auto-open our camera
             // then add our own stream to the connection.
-            if (isOfferer && this.whoMap[username].videoMutualOpen && this.webcam.active) {
+            if (isOfferer && (this.whoMap[username].video & this.VideoFlag.MutualOpen) && this.webcam.active) {
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     pc.addTrack(track, stream)
@@ -1113,7 +1122,7 @@ const app = Vue.createApp({
 
             // Is the target user NSFW? Go thru the modal.
             let dontShowAgain = localStorage["skip-nsfw-modal"] == "true";
-            if (user.nsfw && !dontShowAgain && !force) {
+            if ((user.video & this.VideoFlag.NSFW) && !dontShowAgain && !force) {
                 this.nsfwModalView.user = user;
                 this.nsfwModalView.visible = true;
                 return;
@@ -1130,7 +1139,7 @@ const app = Vue.createApp({
             }
 
             // If this user requests mutual viewership...
-            if (user.videoMutual && !this.webcam.active) {
+            if ((user.video & this.VideoFlag.MutualRequired) && !this.webcam.active) {
                 this.ChatClient(
                     `<strong>${user.username}</strong> has requested that you should share your own camera too before opening theirs.`
                 );
@@ -1155,6 +1164,8 @@ const app = Vue.createApp({
             if (name === "offerer") {
                 // We are closing another user's video stream.
                 delete (this.WebRTC.streams[username]);
+                delete (this.WebRTC.muted[username]);
+                delete (this.WebRTC.poppedOut[username]);
                 if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].offerer != undefined) {
                     this.WebRTC.pc[username].offerer.close();
                     delete (this.WebRTC.pc[username]);
@@ -1183,6 +1194,8 @@ const app = Vue.createApp({
                     this.WebRTC.pc[username].answerer.close();
                 }
                 delete (this.WebRTC.pc[username]);
+                delete (this.WebRTC.muted[username]);
+                delete (this.WebRTC.poppedOut[username]);
             }
 
             // Inform backend we have closed it.
@@ -1193,16 +1206,33 @@ const app = Vue.createApp({
             // and then we turn ours off: we should unfollow the ones with mutual video.
             for (let row of this.whoList) {
                 let username = row.username;
-                if (row.videoMutual && this.WebRTC.pc[username] != undefined) {
+                if ((row.video & this.VideoFlag.MutualRequired) && this.WebRTC.pc[username] != undefined) {
                     this.closeVideo(username);
                 }
             }
+        },
+        webcamIconClass(user) {
+            // Return the icon to show on a video button.
+            // - Usually a video icon
+            // - May be a crossed-out video if isVideoNotAllowed
+            // - Or an eyeball for cameras already opened
+            if (user.username === this.username && this.webcam.active) {
+                return 'fa-eye'; // user sees their own self camera always
+            }
+
+            // Already opened?
+            if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.streams[user.username] != undefined) {
+                return 'fa-eye';
+            }
+
+            if (this.isVideoNotAllowed(user)) return 'fa-video-slash';
+            return 'fa-video';
         },
         isVideoNotAllowed(user) {
             // Returns whether the video button to open a user's cam will be not allowed (crossed out)
 
             // Mutual video sharing is required on this camera, and ours is not active
-            if (user.videoActive && user.videoMutual && !this.webcam.active) {
+            if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.MutualRequired) && !this.webcam.active) {
                 return true;
             }
 
@@ -1263,6 +1293,7 @@ const app = Vue.createApp({
             this.webcam.elem.srcObject = null;
             this.webcam.stream = null;
             this.webcam.active = false;
+            this.webcam.muted = false;
             this.whoTab = "online";
 
             // Close all WebRTC sessions.
@@ -1283,6 +1314,16 @@ const app = Vue.createApp({
             this.webcam.stream.getAudioTracks().forEach(track => {
                 track.enabled = !this.webcam.muted;
             });
+
+            // Communicate our local mute to others.
+            this.sendMe();
+        },
+        isSourceMuted(username) {
+            // See if the webcam broadcaster muted their mic at the source
+            if (this.whoMap[username] != undefined && this.whoMap[username].video & this.VideoFlag.Muted) {
+                return true;
+            }
+            return false;
         },
         isMuted(username) {
             return this.WebRTC.muted[username] === true;

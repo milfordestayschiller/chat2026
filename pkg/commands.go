@@ -1,9 +1,12 @@
 package barertc
 
 import (
+	"fmt"
+	"os"
 	"strconv"
 	"time"
 
+	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"github.com/mattn/go-shellwords"
 )
@@ -42,7 +45,7 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 				sub.ChatServer("/nsfw: username not found: %s", username)
 			} else {
 				other.ChatServer("Your camera has been marked as NSFW by %s", sub.Username)
-				other.VideoNSFW = true
+				other.VideoStatus |= VideoFlagNSFW
 				other.SendMe()
 				s.SendWhoList()
 				sub.ChatServer("%s has their camera marked as NSFW", username)
@@ -52,11 +55,23 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 			sub.ChatServer(RenderMarkdown("Moderator commands are:\n\n" +
 				"* `/kick <username>` to kick from chat\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
+				"* `/shutdown` to gracefully shut down (reboot) the chat server\n" +
+				"* `/kickall` to kick EVERYBODY off and force them to log back in\n" +
 				"* `/help` to show this message\n\n" +
 				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
 			))
 			return true
+		case "/shutdown":
+			s.Broadcast(Message{
+				Action:   ActionError,
+				Username: "ChatServer",
+				Message:  "The chat server is going down for a reboot NOW!",
+			})
+			os.Exit(1)
+		case "/kickall":
+			s.KickAllCommand()
 		}
+
 	}
 
 	// Not handled.
@@ -84,6 +99,48 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		})
 		s.DeleteSubscriber(other)
 		sub.ChatServer("%s has been kicked from the room", username)
+	}
+}
+
+// KickAllCommand kicks everybody out of the room.
+func (s *Server) KickAllCommand() {
+
+	// If we have JWT enabled and a landing page, link users to it.
+	if config.Current.JWT.Enabled && config.Current.JWT.LandingPageURL != "" {
+		s.Broadcast(Message{
+			Action:   ActionError,
+			Username: "ChatServer",
+			Message: fmt.Sprintf(
+				"<strong>Notice:</strong> The chat operator has requested that you log back in to the chat room. "+
+					"Probably, this is because a new feature was launched that needs you to reload the page. "+
+					"You may refresh the tab or <a href=\"%s\">click here</a> to re-enter the room.",
+				config.Current.JWT.LandingPageURL,
+			),
+		})
+	} else {
+		s.Broadcast(Message{
+			Action:   ActionError,
+			Username: "ChatServer",
+			Message: "<strong>Notice:</strong> The chat operator has kicked everybody from the room. Usually, this " +
+				"may mean a new feature of the chat has been launched and you need to reload the page for it " +
+				"to function correctly.",
+		})
+	}
+
+	// Kick everyone off.
+	s.Broadcast(Message{
+		Action: ActionKick,
+	})
+
+	// Disconnect everybody.
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+	for _, sub := range s.IterSubscribers(true) {
+		if !sub.authenticated {
+			continue
+		}
+
+		s.DeleteSubscriber(sub)
 	}
 }
 

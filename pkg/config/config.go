@@ -12,16 +12,17 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 3
+var currentVersion = 4
 
 // Config for your BareRTC app.
 type Config struct {
 	Version int // will re-save your settings.toml on migrations
 
 	JWT struct {
-		Enabled   bool
-		Strict    bool
-		SecretKey string
+		Enabled        bool
+		Strict         bool
+		SecretKey      string
+		LandingPageURL string
 	}
 
 	Title      string

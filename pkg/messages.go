@@ -23,11 +23,8 @@ type Message struct {
 	WhoList []WhoList `json:"whoList,omitempty"`
 
 	// Sent on `me` actions along with Username
-	VideoActive     bool   `json:"videoActive,omitempty"` // user tells us their cam status
-	VideoMutual     bool   `json:"videoMutual,omitempty"` // user wants mutual viewers
-	VideoMutualOpen bool   `json:"videoMutualOpen,omitempty"`
-	ChatStatus      string `json:"status,omitempty"` // online vs. away
-	NSFW            bool   `json:"nsfw,omitempty"`   // user tags their video NSFW
+	VideoStatus int    `json:"video,omitempty"`  // user video flags
+	ChatStatus  string `json:"status,omitempty"` // online vs. away
 
 	// Message ID to support takebacks/local deletions
 	MessageID int `json:"msgID,omitempty"`
@@ -75,16 +72,24 @@ const (
 
 // WhoList is a member entry in the chat room.
 type WhoList struct {
-	Username        string `json:"username"`
-	Nickname        string `json:"nickname,omitempty"`
-	VideoActive     bool   `json:"videoActive,omitempty"`
-	VideoMutual     bool   `json:"videoMutual,omitempty"`
-	VideoMutualOpen bool   `json:"videoMutualOpen,omitempty"`
-	NSFW            bool   `json:"nsfw,omitempty"`
-	Status          string `json:"status"`
+	Username string `json:"username"`
+	Nickname string `json:"nickname,omitempty"`
+	Status   string `json:"status"`
+	Video    int    `json:"video"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`
 	Avatar     string `json:"avatar,omitempty"`
 	ProfileURL string `json:"profileURL,omitempty"`
 }
+
+// VideoFlags to convey the state and setting of users' cameras concisely.
+// Also see the VideoFlag object in BareRTC.js for front-end sync.
+const (
+	VideoFlagActive         int = 1 << iota // user's camera is enabled/broadcasting
+	VideoFlagNSFW                           // viewer's camera is marked as NSFW
+	VideoFlagMuted                          // user source microphone is muted
+	VideoFlagIsTalking                      // broadcaster seems to be talking
+	VideoFlagMutualRequired                 // video wants viewers to share their camera too
+	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
+)

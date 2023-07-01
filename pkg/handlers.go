@@ -252,7 +252,7 @@ func (s *Server) OnFile(sub *Subscriber, msg Message) {
 
 // OnMe handles current user state updates.
 func (s *Server) OnMe(sub *Subscriber, msg Message) {
-	if msg.VideoActive {
+	if msg.VideoStatus&VideoFlagActive == VideoFlagActive {
 		log.Debug("User %s turns on their video feed", sub.Username)
 	}
 
@@ -278,10 +278,7 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 		msg.ChatStatus = "away"
 	}
 
-	sub.VideoActive = msg.VideoActive
-	sub.VideoMutual = msg.VideoMutual
-	sub.VideoMutualOpen = msg.VideoMutualOpen
-	sub.VideoNSFW = msg.NSFW
+	sub.VideoStatus = msg.VideoStatus
 	sub.ChatStatus = msg.ChatStatus
 
 	// Sync the WhoList to everybody.
