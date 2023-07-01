@@ -10,10 +10,6 @@ body {
     float: right;
 }
 
-.cursor-default {
-    cursor: default;
-}
-
 /* Bulma override */
 .media-content {
     overflow: hidden !important;
@@ -271,6 +267,12 @@ div.feed.popped-out {
 }
 
 /* Cursors */
+.cursor-default {
+    cursor: default;
+}
+.cursor-pointer {
+    cursor: pointer;
+}
 .cursor-notallowed {
     cursor: not-allowed;
 }
@@ -286,5 +288,5 @@ div.feed.popped-out {
 }
 .emoji-button button {
     background-color: rgba(255, 255, 255, 0.5);
-    color: rgba(0, 0, 0, 0.5);
+    /* color: rgba(0, 0, 0, 0.5); */
 }

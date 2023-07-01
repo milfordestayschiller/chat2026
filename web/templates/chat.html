@@ -893,10 +893,21 @@
                                         </button>
                                     </div>
                                     <div class="dropdown-menu" :id="`react-menu-${msg.msgID}`" role="menu">
-                                        <div class="dropdown-content">
-                                            <a v-for="i in config.reactions" href="#" class="dropdown-item" @click.prevent="sendReact(msg, i)">
-                                                [[i]]
-                                            </a>
+                                        <div class="dropdown-content p-0">
+                                            <!-- Iterate over reactions in rows of emojis-->
+                                            <div class="columns is-mobile ml-0 mb-2 mr-1"
+                                                v-for="row in config.reactions">
+
+                                                <!-- Loop over the icons -->
+                                                <div class="column p-0 is-narrow"
+                                                    v-for="i in row">
+                                                    <button type="button"
+                                                        class="button px-2 mt-1 ml-1 mr-0 mb-1"
+                                                        @click="sendReact(msg, i)">
+                                                        [[i]]
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
