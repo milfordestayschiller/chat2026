@@ -19,6 +19,11 @@
     background-color: rgba(15, 129, 204, 0.25) !important;
   }
 
+  .tag.is-success {
+    background-color: #15241d !important;
+    color: #85dfb6 !important;
+  }
+
   .has-text-dark {
     /* note: this css file otherwise didn't override this, dark's always dark, brighten it! */
     color: #b5b5b5 !important;

@@ -65,9 +65,9 @@ const app = Vue.createApp({
                 },
                 reactions: [
                     ['❤️', '👍', '😂', '😉', '😢', '😡', '🥰'],
-                    ['😏', '🔥', '😈', '🍑', '🍆', '💦', '🍌'],
+                    ['👋', '🔥', '😈', '🍑', '🍆', '💦', '🍌'],
                     ['😋', '⭐', '😇', '😴', '😱', '👀', '🎃'],
-                    ['🙈', '🙉', '🙊', '☀️', '🌈', '✨', '🎂']
+                    ['😏', '🙈', '🙉', '🙊', '☀️', '🌈', '🎂']
                 ]
             },
 
@@ -425,9 +425,22 @@ const app = Vue.createApp({
                 this.messageReactions[msgID][emoji] = [];
             }
 
-            // don't count double reactions of same emoji from same chatter
-            for (let reactor of this.messageReactions[msgID][emoji]) {
-                if (reactor === who) return;
+            // if they double sent the same reaction, it counts as a removal
+            let unreact = false;
+            for (let i = 0; i < this.messageReactions[msgID][emoji].length; i++) {
+                let reactor = this.messageReactions[msgID][emoji][i];
+                if (reactor === who) {
+                    this.messageReactions[msgID][emoji].splice(i, 1);
+                    unreact = true;
+                }
+            }
+
+            // if this emoji reaction is empty, clean it up
+            if (unreact) {
+                if (this.messageReactions[msgID][emoji].length === 0) {
+                    delete(this.messageReactions[msgID][emoji]);
+                }
+                return;
             }
 
             this.messageReactions[msgID][emoji].push(who);
@@ -489,6 +502,13 @@ const app = Vue.createApp({
             username = this.normalizeUsername(username);
             let mute = this.muted[username] == undefined;
             if (mute) {
+                if (!window.confirm(
+                    `Do you want to mute ${username}? If muted, you will no longer see their `+
+                    `chat messages or any DMs they send you going forward. Also, ${username} will `+
+                    `not be able to see whether your webcam is active until you unmute them.`
+                )) {
+                    return;
+                }
                 this.muted[username] = true;
             } else {
                 delete this.muted[username];
@@ -1054,6 +1074,17 @@ const app = Vue.createApp({
         getReactions(msg) {
             if (!this.hasReactions(msg)) return [];
             return this.messageReactions[msg.msgID];
+        },
+        iReacted(msg, emoji) {
+            // test whether the current user has reacted
+            if (this.messageReactions[msg.msgID] != undefined && this.messageReactions[msg.msgID][emoji] != undefined) {
+                for (let reactor of this.messageReactions[msg.msgID][emoji]) {
+                    if (reactor === this.username) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         },
 
         activeChannels() {

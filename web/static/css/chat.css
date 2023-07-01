@@ -76,7 +76,7 @@ body {
 .autoscroll-field {
     position: absolute;
     z-index: 39; /* just below modal shadow */
-    right: 6px;
+    right: 12px;
     bottom: 4px;
 }
 
