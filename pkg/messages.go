@@ -57,6 +57,7 @@ const (
 	ActionUnwatch  = "unwatch"  // user has closed your video
 	ActionFile     = "file"     // image sharing in chat
 	ActionTakeback = "takeback" // user takes back (deletes) their message for everybody
+	ActionReact    = "react"    // emoji reaction to a chat message
 
 	// Actions sent by server only
 	ActionPing     = "ping"

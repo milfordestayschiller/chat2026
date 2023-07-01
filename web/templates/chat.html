@@ -777,7 +777,7 @@
                             </div>
 
                             <!-- Normal chat message: full size card w/ avatar -->
-                            <div v-else class="box mb-2 px-4 pt-3 pb-1">
+                            <div v-else class="box mb-2 px-4 pt-3 pb-1 position-relative">
                                 <div class="media mb-0">
                                     <div class="media-left">
                                         <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
@@ -882,10 +882,39 @@
                                     </div>
                                 </div>
 
+                                <!-- Emoji reactions menu -->
+                                <div v-if="msg.msgID" class="dropdown is-up is-right emoji-button" onclick="this.classList.toggle('is-active')">
+                                    <div class="dropdown-trigger">
+                                        <button class="button is-small px-2" aria-haspopup="true" :aria-controls="`react-menu-${msg.msgID}`">
+                                            <span>
+                                                <i class="fa fa-heart has-text-grey"></i>
+                                                <i class="fa fa-plus has-text-grey pl-1"></i>
+                                            </span>
+                                        </button>
+                                    </div>
+                                    <div class="dropdown-menu" :id="`react-menu-${msg.msgID}`" role="menu">
+                                        <div class="dropdown-content">
+                                            <a v-for="i in config.reactions" href="#" class="dropdown-item" @click.prevent="sendReact(msg, i)">
+                                                [[i]]
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Message box -->
                                 <div class="content pl-5 py-3 mb-0">
                                     <em v-if="msg.action === 'presence'">[[msg.message]]</em>
                                     <div v-else v-html="msg.message"></div>
+
+                                    <!-- Reactions so far? -->
+                                    <div v-if="hasReactions(msg)" class="mt-1">
+                                        <span v-for="(users, emoji) in getReactions(msg)"
+                                            class="tag is-secondary mr-1"
+                                            :title="emoji + ' by: ' + users.join(', ')"
+                                            onclick="window.alert(this.title)">
+                                            [[emoji]] <small class="ml-1">[[users.length]]</small>
+                                        </span>
+                                    </div>
                                 </div>
 
                             </div>

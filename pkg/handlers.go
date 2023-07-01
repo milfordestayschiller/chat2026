@@ -170,6 +170,17 @@ func (s *Server) OnTakeback(sub *Subscriber, msg Message) {
 	})
 }
 
+// OnReact handles emoji reactions for chat messages.
+func (s *Server) OnReact(sub *Subscriber, msg Message) {
+	// Forward the reaction to everybody.
+	s.Broadcast(Message{
+		Action:    ActionReact,
+		Username:  sub.Username,
+		Message:   msg.Message,
+		MessageID: msg.MessageID,
+	})
+}
+
 // OnFile handles a picture shared in chat with a channel.
 func (s *Server) OnFile(sub *Subscriber, msg Message) {
 	if sub.Username == "" {

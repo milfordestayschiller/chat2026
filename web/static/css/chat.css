@@ -274,3 +274,17 @@ div.feed.popped-out {
 .cursor-notallowed {
     cursor: not-allowed;
 }
+
+/* Emoji reaction button support */
+.position-relative {
+    position: relative;
+}
+.emoji-button {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+}
+.emoji-button button {
+    background-color: rgba(255, 255, 255, 0.5) !important;
+    color: rgba(0, 0, 0, 0.5) !important;
+}

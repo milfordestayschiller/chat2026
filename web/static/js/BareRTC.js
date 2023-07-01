@@ -62,7 +62,18 @@ const app = Vue.createApp({
                     ready: false,
                     audioContext: null,
                     audioTracks: {},
-                }
+                },
+                reactions: [
+                    '❤️',
+                    '😂',
+                    // '😉',
+                    // '😢',
+                    // '😡',
+                    '🔥',
+                    // '😈',
+                    '🍑',
+                    '🍆',
+                ]
             },
 
             // User JWT settings if available.
@@ -166,6 +177,14 @@ const app = Vue.createApp({
             autoscroll: true, // scroll to bottom on new messages
             fontSizeClass: "", // font size magnification
             DMs: {},
+            messageReactions: {
+                // Will look like:
+                // "123": {    (message ID)
+                //    "❤️": [  (reaction emoji)
+                //        "username"  // users who reacted
+                //    ]
+                // }
+            },
 
             // Responsive CSS controls for mobile.
             responsive: {
@@ -388,6 +407,35 @@ const app = Vue.createApp({
 
         sendTypingNotification() {
             // TODO
+        },
+
+        // Emoji reactions
+        sendReact(message, emoji) {
+            this.ws.conn.send(JSON.stringify({
+                action: 'react',
+                msgID: message.msgID,
+                message: emoji,
+            }));
+        },
+        onReact(msg) {
+            // Search all channels for this message ID and append the reaction.
+            let msgID = msg.msgID,
+                who = msg.username,
+                emoji = msg.message;
+
+            if (this.messageReactions[msgID] == undefined) {
+                this.messageReactions[msgID] = {};
+            }
+            if (this.messageReactions[msgID][emoji] == undefined) {
+                this.messageReactions[msgID][emoji] = [];
+            }
+
+            // don't count double reactions of same emoji from same chatter
+            for (let reactor of this.messageReactions[msgID][emoji]) {
+                if (reactor === who) return;
+            }
+
+            this.messageReactions[msgID][emoji].push(who);
         },
 
         // Sync the current user state (such as video broadcasting status) to
@@ -640,6 +688,9 @@ const app = Vue.createApp({
                         break;
                     case "takeback":
                         this.onTakeback(msg);
+                        break;
+                    case "react":
+                        this.onReact(msg);
                         break;
                     case "presence":
                         this.onPresence(msg);
@@ -999,6 +1050,15 @@ const app = Vue.createApp({
             this.onTakeback({
                 msgID: msg.msgID,
             })
+        },
+
+        /* message reaction emojis */
+        hasReactions(msg) {
+            return this.messageReactions[msg.msgID] != undefined;
+        },
+        getReactions(msg) {
+            if (!this.hasReactions(msg)) return [];
+            return this.messageReactions[msg.msgID];
         },
 
         activeChannels() {
