@@ -920,9 +920,9 @@
                                     <!-- Reactions so far? -->
                                     <div v-if="hasReactions(msg)" class="mt-1">
                                         <span v-for="(users, emoji) in getReactions(msg)"
-                                            class="tag is-secondary mr-1"
+                                            class="tag is-secondary mr-1 cursor-pointer"
                                             :title="emoji + ' by: ' + users.join(', ')"
-                                            onclick="window.alert(this.title)">
+                                            @click="sendReact(msg, emoji)">
                                             [[emoji]] <small class="ml-1">[[users.length]]</small>
                                         </span>
                                     </div>
