@@ -1376,12 +1376,6 @@ const app = Vue.createApp({
 
         // Stop broadcasting.
         stopVideo() {
-            this.webcam.elem.srcObject = null;
-            this.webcam.stream = null;
-            this.webcam.active = false;
-            this.webcam.muted = false;
-            this.whoTab = "online";
-
             // Close all WebRTC sessions.
             for (username of Object.keys(this.WebRTC.pc)) {
                 this.closeVideo(username, "answerer");
@@ -1389,6 +1383,18 @@ const app = Vue.createApp({
 
             // Hang up on mutual cameras.
             this.unMutualVideo();
+
+            // Close the local camera devices completely.
+            this.webcam.stream.getTracks().forEach(track => {
+                track.stop();
+            });
+
+            // Reset all front-end state.
+            this.webcam.elem.srcObject = null;
+            this.webcam.stream = null;
+            this.webcam.active = false;
+            this.webcam.muted = false;
+            this.whoTab = "online";
 
             // Tell backend our camera state.
             this.sendMe();
