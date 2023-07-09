@@ -153,6 +153,12 @@ body {
 }
 
 /* User configurable font size increases */
+#chatHistory .x-2 {
+    font-size: x-small;
+}
+#chatHistory .x-1 {
+    font-size: small;
+}
 #chatHistory .x1 {
     font-size: large;
 }
