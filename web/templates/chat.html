@@ -114,13 +114,12 @@
                         </div>
                     </div>
 
-                    <!-- Under construction
                     <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                         <div class="column">
                             <label class="label">Video source</label>
                             <div class="select is-fullwidth">
-                                <select v-model="webcam.videoDeviceID">
+                                <select v-model="webcam.videoDeviceID" @change="startVideo({changeCamera: true, force: true})">
                                     <option v-for="(d, i) in webcam.videoDevices"
                                         :value="d.id">
                                         [[ d.label || `Camera ${i}` ]]
@@ -132,7 +131,7 @@
                         <div class="column">
                             <label class="label">Audio source</label>
                             <div class="select is-fullwidth">
-                                <select v-model="webcam.audioDeviceID">
+                                <select v-model="webcam.audioDeviceID" @change="startVideo({changeCamera: true, force: true})">
                                     <option v-for="(d, i) in webcam.audioDevices"
                                         :value="d.id">
                                         [[ d.label || `Microphone ${i}` ]]
@@ -141,7 +140,6 @@
                             </div>
                         </div>
                     </div>
-                    -->
 
                     <h3 class="subtitle mb-2">Sounds</h3>
 
@@ -360,7 +358,7 @@
                         <div class="control has-text-centered">
                             <button type="button"
                                 class="button is-link mr-4"
-                                @click="startVideo(true); nsfwModalCast.visible=false">Start webcam</button>
+                                @click="startVideo({force: true}); nsfwModalCast.visible=false">Start webcam</button>
                             <button type="button"
                                 class="button"
                                 @click="nsfwModalCast.visible=false">Cancel</button>
@@ -442,7 +440,7 @@
                     <button type="button"
                         v-else
                         class="button is-small is-success px-1"
-                        @click="startVideo()"
+                        @click="startVideo({})"
                         :disabled="webcam.busy">
                         <i class="fa fa-video mr-2"></i>
                         Share webcam

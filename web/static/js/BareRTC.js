@@ -277,11 +277,12 @@ const app = Vue.createApp({
         }
     },
     watch: {
-        "webcam.videoScale": () => {
+        "webcam.videoScale": function() {
             document.querySelectorAll(".video-feeds > .feed").forEach(node => {
                 node.style.width = null;
                 node.style.height = null;
             });
+            localStorage.videoScale = this.webcam.videoScale;
         },
         fontSizeClass() {
             // Store the setting persistently.
@@ -355,6 +356,10 @@ const app = Vue.createApp({
         setupConfig() {
             if (localStorage.fontSizeClass != undefined) {
                 this.fontSizeClass = localStorage.fontSizeClass;
+            }
+
+            if (localStorage.videoScale != undefined) {
+                this.webcam.videoScale = localStorage.videoScale;
             }
 
             // Webcam mutality preferences from last broadcast.
@@ -1127,7 +1132,9 @@ const app = Vue.createApp({
         },
 
         // Start broadcasting my webcam.
-        startVideo(force) {
+        // - force=true to skip the NSFW modal prompt (this param is passed by the button in that modal)
+        // - changeCamera=true to re-negotiate WebRTC connections with a new camera device (invoked by the Settings modal)
+        startVideo({force=false, changeCamera=false}) {
             if (this.webcam.busy) return;
 
             // If we are running in PermitNSFW mode, show the user the modal.
@@ -1136,11 +1143,24 @@ const app = Vue.createApp({
                 return;
             }
 
-            this.webcam.busy = true;
-            navigator.mediaDevices.getUserMedia({
+            let mediaParams = {
                 audio: true,
-                video: true,
-            }).then(stream => {
+                video: {
+                    width: { max: 1280 },
+                    height: { max: 720 },
+                },
+            };
+
+            if (changeCamera) {
+                // Name the specific devices chosen by the user.
+                mediaParams.video.deviceId = { exact: this.webcam.videoDeviceID };
+                mediaParams.audio = {
+                    deviceId: { exact: this.webcam.audioDeviceID },
+                };
+            }
+
+            this.webcam.busy = true;
+            navigator.mediaDevices.getUserMedia(mediaParams).then(stream => {
                 this.webcam.active = true;
                 this.webcam.elem.srcObject = stream;
                 this.webcam.stream = stream;
@@ -1159,6 +1179,11 @@ const app = Vue.createApp({
 
                 // Collect video and audio devices to let the user change them in their settings.
                 this.getDevices();
+
+                // If we have changed devices, reconnect everybody's WebRTC channels for your existing watchers.
+                if (changeCamera) {
+                    this.updateWebRTCStreams();
+                }
             }).catch(err => {
                 this.ChatClient(`Webcam error: ${err}`);
             }).finally(() => {
@@ -1177,11 +1202,13 @@ const app = Vue.createApp({
                 this.webcam.audioDevices = [];
                 devices.forEach(device => {
                     if (device.kind === 'videoinput') {
+                        // console.log(`Video device ${device.deviceId} ${device.label}`);
                         this.webcam.videoDevices.push({
                             id: device.deviceId,
                             label: device.label,
                         });
                     } else if (device.kind === 'audioinput') {
+                        // console.log(`Audio device ${device.deviceId} ${device.label}`);
                         this.webcam.audioDevices.push({
                             id: device.deviceId,
                             label: device.label,
@@ -1191,6 +1218,36 @@ const app = Vue.createApp({
             }).catch(err => {
                 this.ChatClient(`Error listing your cameras and microphones: ${err.name}: ${err.message}`);
             })
+        },
+
+        // Replace your video/audio streams for your watchers (on camera changes)
+        updateWebRTCStreams() {
+            console.log("Re-negotiating video and audio channels to your watchers.");
+            for (let username of Object.keys(this.WebRTC.pc)) {
+                let pc = this.WebRTC.pc[username];
+                if (pc.answerer != undefined) {
+                    let oldTracks = pc.answerer.getSenders();
+                    let newTracks = this.webcam.stream.getTracks();
+
+                    // Remove and replace the tracks.
+                    for (let old of oldTracks) {
+                        if (old.track.kind === 'audio') {
+                            for (let replace of newTracks) {
+                                if (replace.kind === 'audio') {
+                                    old.replaceTrack(replace);
+                                }
+                            }
+                        }
+                        else if (old.track.kind === 'video') {
+                            for (let replace of newTracks) {
+                                if (replace.kind === 'video') {
+                                    old.replaceTrack(replace);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
 
         // Begin connecting to someone else's webcam.
