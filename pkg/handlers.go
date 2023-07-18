@@ -51,7 +51,25 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	}
 
 	// Ensure the username is unique, or rename it.
-	msg.Username = s.UniqueUsername(msg.Username)
+	username, err := s.UniqueUsername(msg.Username)
+	if err != nil {
+		// If JWT authentication was used: disconnect the original (conflicting) username.
+		if claims.Subject == msg.Username {
+			if other, err := s.GetSubscriber(msg.Username); err == nil {
+				other.ChatServer("You have been signed out of chat because you logged in from another location.")
+				other.SendJSON(Message{
+					Action: ActionKick,
+				})
+				s.DeleteSubscriber(other)
+			}
+
+			// They will take over their original username.
+			username = msg.Username
+		}
+
+		// If JWT auth was not used: UniqueUsername already gave them a uniquely spelled name.
+	}
+	msg.Username = username
 
 	// Use their username.
 	sub.Username = msg.Username

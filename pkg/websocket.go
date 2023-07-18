@@ -275,8 +275,8 @@ func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
 	return result
 }
 
-// UniqueUsername ensures a username will be unique or renames it.
-func (s *Server) UniqueUsername(username string) string {
+// UniqueUsername ensures a username will be unique or renames it. If the name is already unique, the error result is nil.
+func (s *Server) UniqueUsername(username string) (string, error) {
 	var (
 		subs         = s.IterSubscribers()
 		usernames    = map[string]interface{}{}
@@ -297,7 +297,11 @@ func (s *Server) UniqueUsername(username string) string {
 		}
 	}
 
-	return username
+	if username != origUsername {
+		return username, errors.New("username was not unique and a unique name has been returned")
+	}
+
+	return username, nil
 }
 
 // Broadcast a message to the chat room.

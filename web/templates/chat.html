@@ -503,7 +503,7 @@
                     <div class="columns is-mobile card-header-title has-text-light">
                         <div class="column is-narrow mobile-only">
                             <button type="button"
-                                class="button is-success"
+                                class="button is-success px-2"
                                 @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>
@@ -525,7 +525,7 @@
                                     :class="{'is-active': c.ID == channel}">
                                     [[c.Name]]
                                     <span v-if="hasUnread(c.ID)"
-                                        class="tag is-danger">
+                                        class="tag">
                                         [[hasUnread(c.ID)]]
                                     </span>
                                 </a>
@@ -581,11 +581,16 @@
                         <div class="column is-narrow mobile-only pr-0">
                             <!-- Responsive mobile button to pan to Left Column -->
                             <button type="button"
-                                class="button is-success"
-                                :class="{'is-small': isDM}"
+                                class="button is-success px-2"
                                 @click="openChannelsPanel">
                                 <i v-if="isDM" class="fa fa-arrow-left"></i>
-                                <i v-else class="fa fa-message"></i>
+                                <i v-else class="fa fa-comments"></i>
+
+                                <!-- Indicator badge for unread messages -->
+                                <span v-if="hasAnyUnread() > 0"
+                                    class="tag ml-1" :class="{'is-danger': anyUnreadDMs()}">
+                                    [[hasAnyUnread()]]
+                                </span>
                             </button>
                         </div>
                         <div class="column">
@@ -613,7 +618,7 @@
                         <div v-if="!isDM" class="column is-narrow mobile-only">
                             <!-- Responsive mobile button to pan to Right Column -->
                             <button type="button"
-                                class="button is-success"
+                                class="button is-success px-2"
                                 @click="openWhoPanel">
                                 <i class="fa fa-user-group"></i>
                             </button>
@@ -881,7 +886,9 @@
                                 </div>
 
                                 <!-- Emoji reactions menu -->
-                                <div v-if="msg.msgID" class="dropdown is-up is-right emoji-button" onclick="this.classList.toggle('is-active')">
+                                <div v-if="msg.msgID" class="dropdown is-right emoji-button"
+                                    :class="{'is-up': i >= 2}"
+                                    onclick="this.classList.toggle('is-active')">
                                     <div class="dropdown-trigger">
                                         <button class="button is-small px-2" aria-haspopup="true" :aria-controls="`react-menu-${msg.msgID}`">
                                             <span>
@@ -956,7 +963,8 @@
                                 <input type="text" class="input"
                                     v-model="message"
                                     placeholder="Message"
-                                    @keydown="sendTypingNotification()">
+                                    @keydown="sendTypingNotification()"
+                                    :disabled="!ws.connected">
                             </form>
                         </div>
                         <div class="column pl-1 is-narrow">
@@ -979,7 +987,7 @@
                         <div class="column">Who Is Online</div>
                         <div class="column is-narrow mobile-only">
                             <button type="button"
-                                class="button is-success"
+                                class="button is-success px-2"
                                 @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>

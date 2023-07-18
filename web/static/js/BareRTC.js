@@ -975,6 +975,23 @@ const app = Vue.createApp({
             }
             return this.channels[channel].unread;
         },
+        hasAnyUnread() {
+            // Returns total unread count (for mobile responsive view to show in the left drawer button)
+            let count = 0;
+            for (let channel of Object.keys(this.channels)) {
+                count += this.channels[channel].unread;
+            }
+            return count;
+        },
+        anyUnreadDMs() {
+            // Returns true if any unread messages are DM threads
+            for (let channel of Object.keys(this.channels)) {
+                if (channel.indexOf("@") === 0 && this.channels[channel].unread > 0) {
+                    return true;
+                }
+            }
+            return false;
+        },
         openDMs(user) {
             let channel = "@" + user.username;
             this.initHistory(channel);
