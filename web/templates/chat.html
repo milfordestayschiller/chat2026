@@ -72,226 +72,180 @@
                 </header>
                 <div class="card-content">
 
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">Video size</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="webcam.videoScale">
-                                            <option v-for="s in webcam.videoScaleOptions"
-                                                v-bind:key="s[0]"
-                                                :value="s[0]">
-                                                [[ s[1] ]]
-                                            </option>
-                                        </select>
+                    <!-- Tab bar for the settings -->
+                    <div class="tabs">
+                        <ul>
+                            <li :class="{'is-active': settingsModal.tab==='prefs'}">
+                                <a href="#" @click.prevent="settingsModal.tab='prefs'">
+                                    Display
+                                </a>
+                            </li>
+                            <li :class="{'is-active': settingsModal.tab==='sounds'}">
+                                <a href="#" @click.prevent="settingsModal.tab='sounds'">
+                                    Sound effects
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Display preferences -->
+                    <div v-if="settingsModal.tab==='prefs'">
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
+                                <label class="label">Video size</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select v-model="webcam.videoScale">
+                                                <option v-for="s in webcam.videoScaleOptions"
+                                                    v-bind:key="s[0]"
+                                                    :value="s[0]">
+                                                    [[ s[1] ]]
+                                                </option>
+                                            </select>
+                                        </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
+                                <label class="label">Text size</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select v-model="fontSizeClass">
+                                                <option v-for="s in config.fontSizeClasses"
+                                                    v-bind:key="s[0]"
+                                                    :value="s[0]">
+                                                    [[ s[1] ]]
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Scrollback buffer</label>
+                            <div class="control">
+                                <input type="number"
+                                    class="input"
+                                    v-model="scrollback"
+                                    min="0"
+                                    inputmode="numeric">
+                            </div>
+                            <p class="help">
+                                How many chat history messages to keep at once (per channel/DM thread).
+                                Older messages will be removed so your web browser doesn't run low on memory.
+                                A value of zero (0) will mean "unlimited" and the chat history is never trimmed.
+                            </p>
+                        </div>
+
+                        <h3 class="subtitle mb-2" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
+                            Webcam Devices
+                        </h3>
+                        <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
+
+                            <div class="column">
+                                <label class="label">Video source</label>
+                                <div class="select is-fullwidth">
+                                    <select v-model="webcam.videoDeviceID" @change="startVideo({changeCamera: true, force: true})">
+                                        <option v-for="(d, i) in webcam.videoDevices"
+                                            :value="d.id">
+                                            [[ d.label || `Camera ${i}` ]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="column">
+                                <label class="label">Audio source</label>
+                                <div class="select is-fullwidth">
+                                    <select v-model="webcam.audioDeviceID" @change="startVideo({changeCamera: true, force: true})">
+                                        <option v-for="(d, i) in webcam.audioDevices"
+                                            :value="d.id">
+                                            [[ d.label || `Microphone ${i}` ]]
+                                        </option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">Text size</label>
+                    <!-- Sound settings -->
+                    <div v-else-if="settingsModal.tab==='sounds'">
+
+                        <div class="columns is-mobile">
+                            <div class="column is-2 pr-1">
+                                <label class="label">DM chat</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="column is-2 pr-1">
+                                <label class="label">Public chat</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="fontSizeClass">
-                                            <option v-for="s in config.fontSizeClasses"
-                                                v-bind:key="s[0]"
-                                                :value="s[0]">
-                                                [[ s[1] ]]
-                                            </option>
-                                        </select>
-                                    </div>
+
+                        <div class="columns is-mobile">
+                            <div class="column is-2 pr-1">
+                                <label class="label">Room enter</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="column is-2 pr-1">
+                                <label class="label">Room leave</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
-
-                        <div class="column">
-                            <label class="label">Video source</label>
-                            <div class="select is-fullwidth">
-                                <select v-model="webcam.videoDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                    <option v-for="(d, i) in webcam.videoDevices"
-                                        :value="d.id">
-                                        [[ d.label || `Camera ${i}` ]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="column">
-                            <label class="label">Audio source</label>
-                            <div class="select is-fullwidth">
-                                <select v-model="webcam.audioDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                    <option v-for="(d, i) in webcam.audioDevices"
-                                        :value="d.id">
-                                        [[ d.label || `Microphone ${i}` ]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 class="subtitle mb-2">Sounds</h3>
-
-                    <div class="columns is-mobile">
-                        <div class="column is-2 pr-1">
-                            <label class="label">DM chat</label>
-                        </div>
-                        <div class="column">
-                            <div class="select is-fullwidth">
-                                <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
-                                    <option v-for="s in config.sounds.available"
-                                        v-bind:key="s.name"
-                                        :value="s.name">
-                                        [[s.name]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="column is-2 pr-1">
-                            <label class="label">Public chat</label>
-                        </div>
-                        <div class="column">
-                            <div class="select is-fullwidth">
-                                <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
-                                    <option v-for="s in config.sounds.available"
-                                        v-bind:key="s.name"
-                                        :value="s.name">
-                                        [[s.name]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="columns is-mobile">
-                        <div class="column is-2 pr-1">
-                            <label class="label">Room enter</label>
-                        </div>
-                        <div class="column">
-                            <div class="select is-fullwidth">
-                                <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
-                                    <option v-for="s in config.sounds.available"
-                                        v-bind:key="s.name"
-                                        :value="s.name">
-                                        [[s.name]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="column is-2 pr-1">
-                            <label class="label">Room leave</label>
-                        </div>
-                        <div class="column">
-                            <div class="select is-fullwidth">
-                                <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
-                                    <option v-for="s in config.sounds.available"
-                                        v-bind:key="s.name"
-                                        :value="s.name">
-                                        [[s.name]]
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">DM chat</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
-                                            <option v-for="s in config.sounds.available"
-                                                v-bind:key="s.name"
-                                                :value="s.name">
-                                                [[s.name]]
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">Public chat</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
-                                            <option v-for="s in config.sounds.available"
-                                                v-bind:key="s.name"
-                                                :value="s.name">
-                                                [[s.name]]
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">Room enter</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
-                                            <option v-for="s in config.sounds.available"
-                                                v-bind:key="s.name"
-                                                :value="s.name">
-                                                [[s.name]]
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label">Room leave</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
-                                            <option v-for="s in config.sounds.available"
-                                                v-bind:key="s.name"
-                                                :value="s.name">
-                                                [[s.name]]
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    -->
 
                 </div>
                 <footer class="card-footer">
@@ -417,7 +371,7 @@
                 <img id="modalImage">
             </div>
         </div>
-        <button class="modal-close is-large" aria-label="close"></button>
+        <button class="modal-close is-large" aria-label="close" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></button>
     </div>
 
     <div class="chat-container">
@@ -537,7 +491,7 @@
                         </p>
 
                         <ul class="menu-list">
-                            <li v-for="c in activeDMs()"
+                            <li v-for="c in activeDMs"
                                 v-bind:key="c.channel">
                                 <a :href="'#'+c.channel"
                                     @click.prevent="setChannel(c.channel)"
@@ -681,6 +635,9 @@
                             <i class="fa fa-microphone-slash mr-1 has-text-grey"
                                 v-if="isSourceMuted(username)"></i>
                             [[username]]
+                            <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7"
+                                :title="username+' is watching your camera too'"
+                                v-if="isWatchingMe(username)"></i>
                         </div>
                         <div class="close">
                             <a href="#"

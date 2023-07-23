@@ -44,11 +44,15 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 			if err != nil {
 				sub.ChatServer("/nsfw: username not found: %s", username)
 			} else {
-				other.ChatServer("Your camera has been marked as NSFW by %s", sub.Username)
+				other.ChatServer(
+					"Just a friendly reminder to mark your camera as 'Explicit' by using the button at the top "+
+						"of the page if you are going to be sexual on webcam. Your camera has been marked as Explicit "+
+						"for you by @%s", sub.Username,
+				)
 				other.VideoStatus |= VideoFlagNSFW
 				other.SendMe()
 				s.SendWhoList()
-				sub.ChatServer("%s has their camera marked as NSFW", username)
+				sub.ChatServer("%s now has their camera marked as Explicit", username)
 			}
 			return true
 		case "/help":

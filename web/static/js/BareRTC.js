@@ -175,6 +175,7 @@ const app = Vue.createApp({
             historyScrollbox: null,
             autoscroll: true, // scroll to bottom on new messages
             fontSizeClass: "", // font size magnification
+            scrollback: 1000,  // scrollback buffer (messages to keep per channel)
             DMs: {},
             messageReactions: {
                 // Will look like:
@@ -204,6 +205,7 @@ const app = Vue.createApp({
 
             settingsModal: {
                 visible: false,
+                tab: 'prefs', // selected setting tab
             },
 
             nsfwModalCast: {
@@ -292,6 +294,9 @@ const app = Vue.createApp({
             // Store the setting persistently.
             localStorage.fontSizeClass = this.fontSizeClass;
         },
+        scrollback() {
+            localStorage.scrollback = this.scrollback;
+        },
         status() {
             // Send presence updates to the server.
             this.sendMe();
@@ -319,6 +324,26 @@ const app = Vue.createApp({
                 // });
             }
             return history;
+        },
+        activeDMs() {
+            // List your currently open DM threads, sorted by most recent.
+            let result = [];
+            for (let channel of Object.keys(this.channels)) {
+                // @mentions only
+                if (channel.indexOf("@") !== 0) {
+                    continue;
+                }
+
+                result.push({
+                    channel: channel,
+                    name: channel.substring(1),
+                    updated: this.channels[channel].updated,
+                    unread: this.channels[channel].unread,
+                });
+            }
+
+            result.sort((a, b) => b.updated - a.updated);
+            return result;
         },
         channelName() {
             // Return a suitable channel title.
@@ -364,6 +389,10 @@ const app = Vue.createApp({
 
             if (localStorage.videoScale != undefined) {
                 this.webcam.videoScale = localStorage.videoScale;
+            }
+
+            if (localStorage.scrollback != undefined) {
+                this.scrollback = parseInt(localStorage.scrollback);
             }
 
             // Webcam mutality preferences from last broadcast.
@@ -944,6 +973,10 @@ const app = Vue.createApp({
                 username: username,
             }));
         },
+        isWatchingMe(username) {
+            // Return whether the user is watching your camera
+            return this.webcam.watching[username] === true;
+        },
 
         /**
          * Front-end web app concerns.
@@ -1127,28 +1160,6 @@ const app = Vue.createApp({
                 }
                 result.push(data);
             }
-            return result;
-        },
-        activeDMs() {
-            // List your currently open DM threads, sorted by most recent.
-            let result = [];
-            for (let channel of Object.keys(this.channels)) {
-                // @mentions only
-                if (channel.indexOf("@") !== 0) {
-                    continue;
-                }
-
-                result.push({
-                    channel: channel,
-                    name: channel.substring(1),
-                    updated: this.channels[channel].updated,
-                    unread: this.channels[channel].unread,
-                });
-            }
-
-            result.sort((a, b) => {
-                return a.updated < b.updated;
-            });
             return result;
         },
 
@@ -1632,7 +1643,7 @@ const app = Vue.createApp({
             this.initHistory(channel);
 
             // Append the message.
-            this.channels[channel].updated = Date.now();
+            this.channels[channel].updated = new Date().getTime();
             this.channels[channel].history.push({
                 action: action,
                 username: username,
@@ -1642,6 +1653,15 @@ const app = Vue.createApp({
                 isChatServer,
                 isChatClient,
             });
+
+            // Trim the history per the scrollback buffer.
+            if (this.scrollback > 0 && this.channels[channel].history.length > this.scrollback) {
+                this.channels[channel].history = this.channels[channel].history.slice(
+                    -this.scrollback,
+                    this.channels[channel].history.length+1,
+                );
+            }
+
             this.scrollHistory(channel);
 
             // Mark unread notifiers if this is not our channel.
