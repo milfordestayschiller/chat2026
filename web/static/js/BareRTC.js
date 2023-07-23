@@ -91,7 +91,7 @@ const app = Vue.createApp({
 
             // Idle detection variables
             idleTimeout: null,
-            idleThreshold: 60, // number of seconds you must be idle
+            idleThreshold: 300, // number of seconds you must be idle
 
             // WebSocket connection.
             ws: {

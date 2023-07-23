@@ -479,7 +479,7 @@
                                     :class="{'is-active': c.ID == channel}">
                                     [[c.Name]]
                                     <span v-if="hasUnread(c.ID)"
-                                        class="tag">
+                                        class="tag is-success">
                                         [[hasUnread(c.ID)]]
                                     </span>
                                 </a>
