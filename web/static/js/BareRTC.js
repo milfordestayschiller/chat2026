@@ -1760,6 +1760,10 @@ const app = Vue.createApp({
 
         // The image upload button handler.
         uploadFile() {
+            if (this.isDM) {
+                return;
+            }
+
             let input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';

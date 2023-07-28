@@ -923,7 +923,8 @@
                 <div class="card-content p-2">
 
                     <div class="columns is-mobile">
-                        <div class="column pr-1">
+                        <div class="column"
+                            :class="{'pr-1': !isDM}">
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
                                     v-model="message"
@@ -932,7 +933,7 @@
                                     :disabled="!ws.connected">
                             </form>
                         </div>
-                        <div class="column pl-1 is-narrow">
+                        <div class="column pl-1 is-narrow" v-if="!isDM">
                             <button type="button" class="button"
                                 @click="uploadFile()">
                                 <i class="fa fa-image"></i>

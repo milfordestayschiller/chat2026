@@ -104,7 +104,10 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 
 // OnMessage handles a chat message posted by the user.
 func (s *Server) OnMessage(sub *Subscriber, msg Message) {
-	log.Info("[%s] %s", sub.Username, msg.Message)
+	if !strings.HasPrefix(msg.Channel, "@") {
+		log.Info("[%s to #%s] %s", sub.Username, msg.Channel, msg.Message)
+	}
+
 	if sub.Username == "" {
 		sub.ChatServer("You must log in first.")
 		return
