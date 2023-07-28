@@ -704,6 +704,14 @@
 
                     <div :class="fontSizeClass">
 
+                        <!-- Disclaimer at the top of DMs -->
+                        <!-- TODO: make this disclaimer configurable for other sites to modify -->
+                        <div class="notification is-warning is-light" v-if="isDM">
+                            <i class="fa fa-info-circle mr-1"></i>
+                            <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.
+                            Please refer to {{AsHTML .Config.Branding}}'s Privacy Policy or Terms of Service with regard to DMs.
+                        </div>
+
                         <!-- No history? -->
                         <div v-if="chatHistory.length === 0">
                             <em v-if="isDM">
