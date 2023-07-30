@@ -8,11 +8,12 @@ import (
 
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"github.com/BurntSushi/toml"
+	"github.com/google/uuid"
 )
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 4
+var currentVersion = 5
 
 // Config for your BareRTC app.
 type Config struct {
@@ -29,8 +30,9 @@ type Config struct {
 	Branding   string
 	WebsiteURL string
 
-	CORSHosts  []string
-	PermitNSFW bool
+	CORSHosts   []string
+	AdminAPIKey string
+	PermitNSFW  bool
 
 	UseXForwardedFor bool
 
@@ -72,9 +74,10 @@ var Current = DefaultConfig()
 // settings.toml file to disk.
 func DefaultConfig() Config {
 	var c = Config{
-		Title:      "BareRTC",
-		Branding:   "BareRTC",
-		WebsiteURL: "https://www.example.com",
+		Title:       "BareRTC",
+		Branding:    "BareRTC",
+		WebsiteURL:  "https://www.example.com",
+		AdminAPIKey: uuid.New().String(),
 		CORSHosts: []string{
 			"https://www.example.com",
 		},

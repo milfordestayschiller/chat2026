@@ -35,6 +35,9 @@ type Message struct {
 	// Send on `file` actions, passing e.g. image data.
 	Bytes []byte `json:"bytes,omitempty"`
 
+	// Send on `blocklist` actions, for doing a `mute` on a list of users
+	Usernames []string `json:"usernames,omitempty"`
+
 	// WebRTC negotiation messages: proxy their signaling messages
 	// between the two users to negotiate peer connection.
 	Candidate   string `json:"candidate,omitempty"`   // candidate
@@ -43,10 +46,11 @@ type Message struct {
 
 const (
 	// Actions sent by the client side only
-	ActionLogin  = "login" // post the username to backend
-	ActionBoot   = "boot"  // boot a user off your video feed
-	ActionMute   = "mute"  // mute a user's chat messages
-	ActionUnmute = "unmute"
+	ActionLogin     = "login" // post the username to backend
+	ActionBoot      = "boot"  // boot a user off your video feed
+	ActionMute      = "mute"  // mute a user's chat messages
+	ActionUnmute    = "unmute"
+	ActionBlocklist = "blocklist" // mute in bulk for usernames
 
 	// Actions sent by server or client
 	ActionMessage  = "message"  // post a message to the room

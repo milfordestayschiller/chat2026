@@ -230,6 +230,42 @@ Returns basic info about the count and usernames of connected chatters:
 }
 ```
 
+* `POST /api/blocklist`
+
+Your server may pre-cache the user's blocklist for them **before** they
+enter the chat room. Your site will use the `AdminAPIKey` parameter that
+matches the setting in BareRTC's settings.toml (by default, a random UUID
+is generated the first time).
+
+The request payload coming from your site will be an application/json
+post body like:
+
+```json
+{
+    APIKey: "from your settings.toml",
+    Username: "soandso",
+    Blocklist: [ "usernames", "that", "they", "block" ],
+}
+```
+
+The server holds onto these in memory and when that user enters the chat
+room (**JWT authentication only**) the front-end page will embed their
+cached blocklist. When they connect to the WebSocket server, they send a
+`blocklist` message to push their blocklist to the server -- it is
+basically a bulk `mute` action that mutes all these users pre-emptively:
+the user will not see their chat messages and the muted users can not see
+the user's webcam when they broadcast later, the same as a regular `mute`
+action.
+
+The JSON response to this endpoint may look like:
+
+```json
+{
+    "OK": true,
+    "Error": "if error, or this key is omitted if OK"
+}
+```
+
 # Tour of the Codebase
 
 This app uses WebSockets and WebRTC at the very simplest levels, without using a framework like `Socket.io`. Here is a tour of the codebase with the more interesting modules listed first.

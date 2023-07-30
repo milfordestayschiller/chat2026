@@ -95,6 +95,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnBoot(sub, msg)
 			case ActionMute, ActionUnmute:
 				s.OnMute(sub, msg, msg.Action == ActionMute)
+			case ActionBlocklist:
+				s.OnBlocklist(sub, msg)
 			case ActionCandidate:
 				s.OnCandidate(sub, msg)
 			case ActionSDP:

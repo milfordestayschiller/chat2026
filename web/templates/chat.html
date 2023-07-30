@@ -924,7 +924,7 @@
 
                     <div class="columns is-mobile">
                         <div class="column"
-                            :class="{'pr-1': !isDM}">
+                            :class="{'pr-1': canUploadFile}">
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
                                     v-model="message"
@@ -933,7 +933,7 @@
                                     :disabled="!ws.connected">
                             </form>
                         </div>
-                        <div class="column pl-1 is-narrow" v-if="!isDM">
+                        <div class="column pl-1 is-narrow" v-if="canUploadFile">
                             <button type="button" class="button"
                                 @click="uploadFile()">
                                 <i class="fa fa-image"></i>
@@ -1110,6 +1110,7 @@ const TURN = {{.Config.TURN}};
 const UserJWTToken = {{.JWTTokenString}};
 const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
 const UserJWTClaims = {{.JWTClaims.ToJSON}};
+const CachedBlocklist = {{.CachedBlocklist}};
 </script>
 
 <script src="/static/js/vue-3.2.45.js"></script>

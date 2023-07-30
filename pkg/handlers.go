@@ -374,6 +374,21 @@ func (s *Server) OnMute(sub *Subscriber, msg Message, mute bool) {
 	s.SendWhoList()
 }
 
+// OnBlocklist is a bulk user mute from the CachedBlocklist sent by the website.
+func (s *Server) OnBlocklist(sub *Subscriber, msg Message) {
+	log.Info("%s syncs their blocklist: %s", sub.Username, msg.Usernames)
+
+	sub.muteMu.Lock()
+	for _, username := range msg.Usernames {
+		sub.muted[username] = struct{}{}
+	}
+
+	sub.muteMu.Unlock()
+
+	// Send the Who List in case our cam will show as disabled to the muted party.
+	s.SendWhoList()
+}
+
 // OnCandidate handles WebRTC candidate signaling.
 func (s *Server) OnCandidate(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.

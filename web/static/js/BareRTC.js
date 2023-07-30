@@ -72,7 +72,10 @@ const app = Vue.createApp({
                     ['😋', '⭐', '😇', '😴', '😱', '👀', '🎃'],
                     ['🤮', '🥳', '🙏', '🤦', '💩', '🤯', '💯'],
                     ['😏', '🙈', '🙉', '🙊', '☀️', '🌈', '🎂'],
-                ]
+                ],
+
+                // Cached blocklist for the current user sent by your website.
+                CachedBlocklist: CachedBlocklist,
             },
 
             // User JWT settings if available.
@@ -365,6 +368,27 @@ const app = Vue.createApp({
             // Is the current channel a DM?
             return this.channel.indexOf("@") === 0;
         },
+        canUploadFile() {
+            // Public channels: OK
+            if (!this.channel.indexOf('@') === 0) {
+                return true;
+            }
+
+            // User is an admin?
+            if (this.jwt.claims.op) {
+                return true;
+            }
+
+            // User is in a DM thread with an admin?
+            if (this.isDM) {
+                let partner = this.normalizeUsername(this.channel);
+                if (this.whoMap[partner] != undefined && this.whoMap[partner].op) {
+                    return true;
+                }
+            }
+
+            return !this.isDM;
+        },
         isOp() {
             // Returns if the current user has operator rights
             return this.jwt.claims.op;
@@ -507,6 +531,11 @@ const app = Vue.createApp({
             if (myNSFW != theirNSFW) {
                 this.webcam.nsfw = theirNSFW;
             }
+
+            // Note: Me events only come when we join the server or a moderator has
+            // flagged our video. This is as good of an "on connected" handler as we
+            // get, so push over our cached blocklist from the website now.
+            this.bulkMuteUsers();
         },
 
         // WhoList updates.
@@ -574,6 +603,27 @@ const app = Vue.createApp({
         },
         isMutedUser(username) {
             return this.muted[this.normalizeUsername(username)] != undefined;
+        },
+        bulkMuteUsers() {
+            // On page load, if the website sent you a CachedBlocklist, mute all
+            // of these users in bulk when the server connects.
+            // this.ChatClient("BulkMuteUsers: sending our blocklist " + this.config.CachedBlocklist);
+
+            if (this.config.CachedBlocklist.length === 0) {
+                return; // nothing to do
+            }
+
+            // Set the client side mute.
+            let blocklist = this.config.CachedBlocklist;
+            for (let username of blocklist) {
+                this.muted[username] = true;
+            }
+
+            // Send the username list to the server.
+            this.ws.conn.send(JSON.stringify({
+                action: "blocklist",
+                usernames: blocklist,
+            }))
         },
 
         // Send a video request to access a user's camera.
@@ -1760,10 +1810,6 @@ const app = Vue.createApp({
 
         // The image upload button handler.
         uploadFile() {
-            if (this.isDM) {
-                return;
-            }
-
             let input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';

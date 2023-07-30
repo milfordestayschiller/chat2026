@@ -20,9 +20,10 @@ func IndexPage() http.HandlerFunc {
 
 		// Handle a JWT authentication token.
 		var (
-			tokenStr = r.FormValue("jwt")
-			claims   = &jwt.Claims{}
-			authOK   bool
+			tokenStr  = r.FormValue("jwt")
+			claims    = &jwt.Claims{}
+			authOK    bool
+			blocklist = []string{} // cached blocklist from your website, for JWT auth only
 		)
 		if tokenStr != "" {
 			parsed, ok, err := jwt.ParseAndValidate(tokenStr)
@@ -36,6 +37,7 @@ func IndexPage() http.HandlerFunc {
 
 			authOK = ok
 			claims = parsed
+			blocklist = GetCachedBlocklist(claims.Subject)
 		}
 
 		// Are we enforcing strict JWT authentication?
@@ -66,6 +68,9 @@ func IndexPage() http.HandlerFunc {
 			"JWTTokenString": tokenStr,
 			"JWTAuthOK":      authOK,
 			"JWTClaims":      claims,
+
+			// Cached user blocklist sent by your website.
+			"CachedBlocklist": blocklist,
 		}
 
 		tmpl.Funcs(template.FuncMap{
