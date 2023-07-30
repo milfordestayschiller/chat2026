@@ -233,9 +233,7 @@ func (s *Server) AddSubscriber(sub *Subscriber) {
 
 // GetSubscriber by username.
 func (s *Server) GetSubscriber(username string) (*Subscriber, error) {
-	s.subscribersMu.RLock()
-	defer s.subscribersMu.RUnlock()
-	for _, sub := range s.IterSubscribers(true) {
+	for _, sub := range s.IterSubscribers() {
 		if sub.Username == username {
 			return sub, nil
 		}
@@ -310,9 +308,11 @@ func (s *Server) Broadcast(msg Message) {
 		log.Debug("Broadcast: %+v", msg)
 	}
 
-	s.subscribersMu.RLock()
-	defer s.subscribersMu.RUnlock()
-	for _, sub := range s.IterSubscribers(true) {
+	// Get the list of users who are online NOW, so we don't hold the mutex lock too long.
+	// Example: sending a fat GIF to a large audience could hang up the server for a long
+	// time until every copy of the GIF has been sent.
+	var subs = s.IterSubscribers()
+	for _, sub := range subs {
 		if !sub.authenticated {
 			continue
 		}
@@ -331,11 +331,10 @@ func (s *Server) Broadcast(msg Message) {
 func (s *Server) SendTo(username string, msg Message) error {
 	log.Debug("SendTo(%s): %+v", username, msg)
 	username = strings.TrimPrefix(username, "@")
-	s.subscribersMu.RLock()
-	defer s.subscribersMu.RUnlock()
 
 	var found bool
-	for _, sub := range s.IterSubscribers(true) {
+	var subs = s.IterSubscribers()
+	for _, sub := range subs {
 		if sub.Username == username {
 			found = true
 			sub.SendJSON(Message{

@@ -137,9 +137,7 @@ func (s *Server) KickAllCommand() {
 	})
 
 	// Disconnect everybody.
-	s.subscribersMu.RLock()
-	defer s.subscribersMu.RUnlock()
-	for _, sub := range s.IterSubscribers(true) {
+	for _, sub := range s.IterSubscribers() {
 		if !sub.authenticated {
 			continue
 		}
