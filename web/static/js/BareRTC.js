@@ -105,6 +105,7 @@ const app = Vue.createApp({
             // Who List for the room.
             whoList: [],
             whoTab: 'online',
+            whoSort: 'a-z',
             whoMap: {}, // map username to wholist entry
             muted: {},  // muted usernames for client side state
 
@@ -403,6 +404,40 @@ const app = Vue.createApp({
             if (this.webcam.mutual) status |= this.VideoFlag.MutualRequired;
             if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
             return status;
+        },
+        sortedWhoList() {
+            let result = [...this.whoList];
+
+            switch (this.whoSort) {
+                case "broadcasting":
+                    result.sort((a, b) => {
+                        return (b.video & this.VideoFlag.Active) - (a.video & this.VideoFlag.Active);
+                    });
+                    break;
+                case "nsfw":
+                    result.sort((a, b) => {
+                        let left = (a.video & (this.VideoFlag.Active | this.VideoFlag.NSFW)),
+                            right = (b.video & (this.VideoFlag.Active | this.VideoFlag.NSFW));
+                        return right - left;
+                    });
+                    break;
+                case "status":
+                    result.sort((a, b) => {
+                        if (a.status === b.status) return 0;
+                        return b.status < a.status ? -1 : 1;
+                    });
+                    break;
+                case "op":
+                    result.sort((a, b) => {
+                        return b.op - a.op;
+                    });
+                    break;
+                case "z-a":
+                    result = result.reverse();
+            }
+
+            // Default ordering from ChatServer = a-z
+            return result;
         },
     },
     methods: {

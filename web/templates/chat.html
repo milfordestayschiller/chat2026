@@ -963,7 +963,7 @@
                 <div class="card-content p-2">
 
                     <div class="columns is-mobile mb-0">
-                        <div class="column is-narrow">
+                        <div class="column is-one-quarter">
                             Status:
                         </div>
                         <div class="column">
@@ -973,6 +973,24 @@
                                     <option value="away">🕒 Away</option>
                                     <option value="idle" v-show="status==='idle'">🕒 Idle</option>
                                     <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="columns is-mobile mb-0 mt-1">
+                        <div class="column is-one-quarter">
+                            Sort:
+                        </div>
+                        <div class="column">
+                            <div class="select is-small is-fullwidth">
+                                <select v-model="whoSort">
+                                    <option value="a-z">Username (a-z)</option>
+                                    <option value="z-a">Username (z-a)</option>
+                                    <option value="broadcasting">Broadcasting</option>
+                                    <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
+                                    <option value="status">Status</option>
+                                    <option value="op">User level</option>
                                 </select>
                             </div>
                         </div>
@@ -998,7 +1016,7 @@
 
                     <!-- Who Is Online -->
                     <ul class="menu-list" v-if="whoTab==='online'">
-                        <li v-for="(u, i) in whoList" v-bind:key="i">
+                        <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
                                 <div class="column is-narrow pr-0" style="position: relative">
@@ -1016,12 +1034,12 @@
                                         </div>
                                     </a>
                                 </div>
-                                <div class="column pr-0"
+                                <div class="column pr-0 is-clipped"
                                     :class="{'pl-1': u.avatar}">
                                     <i class="fa fa-gavel has-text-warning-dark"
                                         v-if="u.op"
                                         title="Operator"></i>
-                                    [[ u.username ]]
+                                    <span class="truncate-text-line">[[ u.username ]]</span>
                                 </div>
                                 <div class="column is-narrow pl-0">
                                     <!-- Profile button -->

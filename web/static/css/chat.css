@@ -23,6 +23,11 @@ body {
     background-color: #ffefff;
 }
 
+/* Truncate long text, e.g. usernames in the who list */
+.truncate-text-line {
+    text-overflow: ellipsis;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/
