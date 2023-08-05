@@ -34,14 +34,14 @@ It is very much in the style of the old-school Flash based webcam chat rooms of 
 * WebRTC means peer-to-peer video streaming so cheap on hosting costs!
 * Simple integration with your existing userbase via signed JWT tokens.
 * User configurable sound effects to be notified of DMs or users entering/exiting the room.
-
-Some important features still lacking:
-
 * Operator commands
     * [x] /kick users
-    * [x] /nsfw to mark someone's camera
-    * [ ] /ban users
-    * [ ] /op users (give temporary mod control)
+    * [x] /ban users (and /unban, /bans to list)
+    * [x] /nsfw to tag a user's camera as explicit
+    * [x] /shutdown to gracefully reboot the server
+    * [x] /kickall to kick EVERYBODY off the server (e.g., for mandatory front-end reload for new features)
+    * [x] /op and /deop users (give temporary mod control)
+    * [x] /help to get in-chat help for moderator commands
 
 # Configuration
 

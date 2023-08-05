@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
+	ourjwt "git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/mattn/go-shellwords"
 )
 
@@ -35,6 +37,12 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 		case "/ban":
 			s.BanCommand(words, sub)
 			return true
+		case "/unban":
+			s.UnbanCommand(words, sub)
+			return true
+		case "/bans":
+			s.BansCommand(words, sub)
+			return true
 		case "/nsfw":
 			if len(words) == 1 {
 				sub.ChatServer("Usage: `/nsfw username` to add the NSFW flag to their camera.")
@@ -58,7 +66,12 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 		case "/help":
 			sub.ChatServer(RenderMarkdown("Moderator commands are:\n\n" +
 				"* `/kick <username>` to kick from chat\n" +
+				"* `/ban <username> <duration>` to ban from chat (default duration is 24 (hours))\n" +
+				"* `/unban <username>` to list the ban on a user\n" +
+				"* `/bans` to list current banned users and their expiration date\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
+				"* `/op <username>` to grant operator rights to a user\n" +
+				"* `/deop <username>` to remove operator rights from a user\n" +
 				"* `/shutdown` to gracefully shut down (reboot) the chat server\n" +
 				"* `/kickall` to kick EVERYBODY off and force them to log back in\n" +
 				"* `/help` to show this message\n\n" +
@@ -72,8 +85,16 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 				Message:  "The chat server is going down for a reboot NOW!",
 			})
 			os.Exit(1)
+			return true
 		case "/kickall":
 			s.KickAllCommand()
+			return true
+		case "/op":
+			s.OpCommand(words, sub)
+			return true
+		case "/deop":
+			s.DeopCommand(words, sub)
+			return true
 		}
 
 	}
@@ -151,7 +172,7 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 	if len(words) == 1 {
 		sub.ChatServer(RenderMarkdown(
 			"Usage: `/ban username` to remove the user from the chat room for 24 hours (default).\n\n" +
-				"Set another duration (in hours, fractions supported) like: `/ban username 0.5` for a 30-minute ban.",
+				"Set another duration (in hours) like: `/ban username 2` for a 2-hour ban.",
 		))
 		return
 	}
@@ -162,27 +183,112 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 		duration = 24 * time.Hour
 	)
 	if len(words) >= 3 {
-		if dur, err := strconv.ParseFloat(words[2], 64); err == nil {
-			if dur < 1 {
-				duration = time.Duration(dur*60) * time.Second
-			} else {
-				duration = time.Duration(dur) * time.Hour
-			}
+		if dur, err := strconv.Atoi(words[2]); err == nil {
+			duration = time.Duration(dur) * time.Hour
 		}
 	}
 
-	// TODO: banning, for now it just kicks.
-	_ = duration
+	log.Info("Operator %s bans %s for %d hours", sub.Username, username, duration/time.Hour)
 
 	other, err := s.GetSubscriber(username)
 	if err != nil {
 		sub.ChatServer("/ban: username not found: %s", username)
 	} else {
-		other.ChatServer("You have been kicked from the chat room by %s", sub.Username)
+		// Ban them.
+		BanUser(username, duration)
+
+		other.ChatServer("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour)
 		other.SendJSON(Message{
 			Action: ActionKick,
 		})
 		s.DeleteSubscriber(other)
-		sub.ChatServer("%s has been kicked from the room", username)
+		sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
+	}
+}
+
+// UnbanCommand handles the `/unban` operator command.
+func (s *Server) UnbanCommand(words []string, sub *Subscriber) {
+	if len(words) == 1 {
+		sub.ChatServer(RenderMarkdown(
+			"Usage: `/unban username` to lift the ban on a user and allow them back into the chat room.",
+		))
+		return
+	}
+
+	// Parse the command.
+	var username = words[1]
+
+	if UnbanUser(username) {
+		sub.ChatServer("The ban on %s has been lifted.", username)
+	} else {
+		sub.ChatServer("/unban: user %s was not found to be banned. Try `/bans` to see current banned users.", username)
+	}
+}
+
+// BansCommand handles the `/bans` operator command.
+func (s *Server) BansCommand(words []string, sub *Subscriber) {
+	result := StringifyBannedUsers()
+	sub.ChatServer(
+		RenderMarkdown("The listing of banned users currently includes:\n\n" + result),
+	)
+}
+
+// OpCommand handles the `/op` operator command.
+func (s *Server) OpCommand(words []string, sub *Subscriber) {
+	if len(words) == 1 {
+		sub.ChatServer(RenderMarkdown(
+			"Usage: `/op username` to grant temporary operator rights to a user.",
+		))
+		return
+	}
+
+	// Parse the command.
+	var username = words[1]
+	if other, err := s.GetSubscriber(username); err != nil {
+		sub.ChatServer("/op: user %s was not found.", username)
+	} else {
+		if other.JWTClaims == nil {
+			other.JWTClaims = &ourjwt.Claims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					Subject: username,
+				},
+			}
+		}
+		other.JWTClaims.IsAdmin = true
+
+		// Send everyone the Who List.
+		s.SendWhoList()
+
+		sub.ChatServer("Operator rights have been granted to %s", username)
+	}
+}
+
+// DeopCommand handles the `/deop` operator command.
+func (s *Server) DeopCommand(words []string, sub *Subscriber) {
+	if len(words) == 1 {
+		sub.ChatServer(RenderMarkdown(
+			"Usage: `/deop username` to remove operator rights from a user.",
+		))
+		return
+	}
+
+	// Parse the command.
+	var username = words[1]
+	if other, err := s.GetSubscriber(username); err != nil {
+		sub.ChatServer("/deop: user %s was not found.", username)
+	} else {
+		if other.JWTClaims == nil {
+			other.JWTClaims = &ourjwt.Claims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					Subject: username,
+				},
+			}
+		}
+		other.JWTClaims.IsAdmin = false
+
+		// Send everyone the Who List.
+		s.SendWhoList()
+
+		sub.ChatServer("Operator rights have been taken from %s", username)
 	}
 }

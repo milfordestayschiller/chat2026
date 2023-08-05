@@ -71,6 +71,19 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	}
 	msg.Username = username
 
+	// Is the username currently banned?
+	if IsBanned(msg.Username) {
+		sub.ChatServer(
+			"You are currently banned from entering the chat room. Chat room bans are temporarily and usually last for " +
+				"24 hours. Please try coming back later.",
+		)
+		sub.SendJSON(Message{
+			Action: ActionKick,
+		})
+		s.DeleteSubscriber(sub)
+		return
+	}
+
 	// Use their username.
 	sub.Username = msg.Username
 	sub.authenticated = true
