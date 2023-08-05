@@ -155,6 +155,7 @@ const app = Vue.createApp({
                 // Streams per username.
                 streams: {},
                 muted: {}, // muted bool per username
+                booted: {}, // booted bool per username
                 poppedOut: {}, // popped-out video per username
 
                 // RTCPeerConnections per username.
@@ -655,6 +656,13 @@ const app = Vue.createApp({
             this.startWebRTC(msg.username, true);
         },
         onRing(msg) {
+            // Admin moderation feature: if the user has booted an admin off their camera, do not
+            // notify if the admin re-opens their camera.
+            if (this.isBootedAdmin(msg.username)) {
+                this.startWebRTC(msg.username, false);
+                return;
+            }
+
             this.ChatServer(`${msg.username} has opened your camera.`);
             this.startWebRTC(msg.username, false);
         },
@@ -1021,6 +1029,7 @@ const app = Vue.createApp({
         },
         onWatch(msg) {
             // The user has our video feed open now.
+            if (this.isBootedAdmin(msg.username)) return;
             this.webcam.watching[msg.username] = true;
         },
         onUnwatch(msg) {
@@ -1510,6 +1519,7 @@ const app = Vue.createApp({
             }
 
             this.sendBoot(username);
+            this.WebRTC.booted[username] = true;
 
             // Close the WebRTC peer connection.
             if (this.WebRTC.pc[username] != undefined) {
@@ -1522,6 +1532,11 @@ const app = Vue.createApp({
                 `to them it appears as though you had turned yours off.<br><br>This will be `+
                 `in place for the remainder of your current chat session.`
             );
+        },
+        isBootedAdmin(username) {
+            return (this.WebRTC.booted[username] === true || this.muted[username] === true) &&
+                this.whoMap[username] != undefined &&
+                this.whoMap[username].op;
         },
 
         // Stop broadcasting.

@@ -330,6 +330,15 @@ func (s *Server) OnOpen(sub *Subscriber, msg Message) {
 	secret := util.RandomString(16)
 	log.Info("WebRTC: %s opens %s with secret %s", sub.Username, other.Username, secret)
 
+	// If the current user is an admin and was booted or muted, inform them.
+	if sub.IsAdmin() {
+		if other.Boots(sub.Username) {
+			sub.ChatServer("Note: %s had booted you off their camera before, and won't be notified of your watch.", other.Username)
+		} else if other.Mutes(sub.Username) {
+			sub.ChatServer("Note: %s had muted you before, and won't be notified of your watch.", other.Username)
+		}
+	}
+
 	// Ring the target of this request and give them the secret.
 	other.SendJSON(Message{
 		Action:     ActionRing,
@@ -353,6 +362,14 @@ func (s *Server) OnBoot(sub *Subscriber, msg Message) {
 	sub.booted[msg.Username] = struct{}{}
 	sub.muteMu.Unlock()
 
+	// If the subject of the boot is an admin, inform them they have been booted.
+	if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
+		other.ChatServer(
+			"%s has booted you off of their camera!",
+			sub.Username,
+		)
+	}
+
 	s.SendWhoList()
 }
 
@@ -369,6 +386,14 @@ func (s *Server) OnMute(sub *Subscriber, msg Message, mute bool) {
 	}
 
 	sub.muteMu.Unlock()
+
+	// If the subject of the mute is an admin, inform them they have been booted.
+	if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
+		other.ChatServer(
+			"%s has muted you! Your new mute status is: %v",
+			sub.Username, mute,
+		)
+	}
 
 	// Send the Who List in case our cam will show as disabled to the muted party.
 	s.SendWhoList()

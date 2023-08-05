@@ -116,6 +116,11 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 	}()
 }
 
+// IsAdmin safely checks if the subscriber is an admin.
+func (sub *Subscriber) IsAdmin() bool {
+	return sub.JWTClaims != nil && sub.JWTClaims.IsAdmin
+}
+
 // SendJSON sends a JSON message to the websocket client.
 func (sub *Subscriber) SendJSON(v interface{}) error {
 	data, err := json.Marshal(v)
@@ -393,7 +398,7 @@ func (s *Server) SendWhoList() {
 			}
 
 			// If this person had booted us, force their camera to "off"
-			if user.Boots(sub.Username) || user.Mutes(sub.Username) {
+			if (user.Boots(sub.Username) || user.Mutes(sub.Username)) && !sub.IsAdmin() {
 				who.Video = 0
 			}
 
