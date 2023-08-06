@@ -121,9 +121,12 @@ Configure a shared secret key (random text string) in both the BareRTC settings 
 {
     // Custom claims
     "sub": "username", // Username for chat (standard JWT claim)
-    "op": true,  // User will have admin/operator permissions.
+    "op": true,        // User will have admin/operator permissions.
+    "nick": "Display name",               // Friendly name
     "img": "/static/photos/username.jpg", // user picture URL
     "url": "/u/username",                 // user profile URL
+    "gender": "m",                        // gender (m, f, o)
+    "emoji": "🤖",                        // emoji icon
 
     // Standard JWT claims that we support:
     "iss": "my own app", // Issuer name
@@ -134,6 +137,9 @@ Configure a shared secret key (random text string) in both the BareRTC settings 
 ```
 
 **Notice:** your picture and profile URL may be relative URIs beginning with a forward slash as seen above; BareRTC will append them to the end of your WebsiteURL and you can save space on your JWT token size this way. Full URLs beginning with `https?://` will also be accepted and used as-is.
+
+See [Custom JWT Claims](#custom-jwt-claims) for more information on the
+custom claims and how they work.
 
 An example how to sign your JWT tokens in Go (using [golang-jwt](https://github.com/golang-jwt/jwt)):
 
@@ -187,6 +193,27 @@ func SignForUser(user User) string {
     return tokenstr
 }
 ```
+
+## Custom JWT Claims
+
+With JWT authentication your website can pass a lot of fun variables to decorate your Who Is Online list for your users.
+
+Here is in-depth documentation on what custom claims are supported by BareRTC and what effects they have in chat:
+
+* **Subject** (`sub`): this is a standard JWT claim and BareRTC will collect your username from it. The username is shown in the Who's Online list and below the user's nickname on their chat messages (in "@username" format). Do not prefix your subject with the @ symbol yourself.
+* **Operator** (`op`): this boolean will mark your user to have operator (admin) status in chat. In the Who List they will have a gavel icon after their username, and they will be allowed to run operator commands (e.g. to kick other users from chat).
+* **Nickname** (`nick`): you may send your users in with a custom Display Name that will appear on their chat messages. If they don't have a nickname, their username will be used in its place.
+* **Image** (`img`): a profile picture or avatar for your users. It should be a square image and will appear in the Who List and alongside their chat messages. If they don't have an image, a default blue silhouette avatar is used. The image URL may be a relative URI beginning with `/` and it will be appended onto your configured WebsiteURL.
+* **Profile URL** (`url`): a link to a user's profile page. If provided, clicking on their picture in chat or the Who List will open this URL in a new tab. They will also get a profile button added next to their name on the Who List. Relative URLs beginning with `/` are supported, and will be appended to your WebsiteURL automatically.
+* **Gender** (`gender`): a single-character gender code for your user. If they also have a Profile URL, their profile button on the Who List can be color-coded by gender. Supported values include:
+    * **m** (male) to set their profile button blue.
+    * **f** (female) to set their profile button pink.
+    * Other value (canonically, **o**) to set their profile button purple.
+    * Missing/no value won't set a color and it will be the default text color.
+* **Emoji** (`emoji`): you may associate users with an emoji character that will appear on the Who List next to their name. Some example ideas and use cases include:
+    * Country flag emojis, to indicate where your users are connecting from.
+    * Robot emojis, to indicate bot users.
+    * Any emoji you want! Mark your special guests or VIP users, etc.
 
 ## JWT Strict Mode
 
