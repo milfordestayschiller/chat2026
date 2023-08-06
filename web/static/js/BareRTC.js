@@ -432,6 +432,20 @@ const app = Vue.createApp({
                         return b.op - a.op;
                     });
                     break;
+                case "emoji":
+                    result.sort((a, b) => {
+                        if (a.emoji === b.emoji) return 0;
+                        return a.emoji < b.emoji ? -1 : 1;
+                    })
+                    break;
+                case "gender":
+                    result.sort((a, b) => {
+                        if (a.gender === b.gender) return 0;
+                        let left = a.gender || 'z',
+                            right = b.gender || 'z';
+                        return left < right ? -1 : 1;
+                    })
+                    break;
                 case "z-a":
                     result = result.reverse();
             }
@@ -1863,6 +1877,19 @@ const app = Vue.createApp({
 
             let hour = hours%12 || 12;
             return `${(hour)}:${minutes} ${ampm}`;
+        },
+
+        // CSS classes for the profile button (color coded genders)
+        profileButtonClass(user) {
+            let gender = (user.gender || "").toLowerCase();
+            if (gender.indexOf("m") === 0) {
+                return "has-text-gender-male";
+            } else if (gender.indexOf("f") === 0) {
+                return "has-text-gender-female";
+            } else if (gender.length > 0) {
+                return "has-text-gender-other";
+            }
+            return "";
         },
 
         /**

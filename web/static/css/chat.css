@@ -301,3 +301,14 @@ div.feed.popped-out {
     background-color: rgba(255, 255, 255, 0.5);
     /* color: rgba(0, 0, 0, 0.5); */
 }
+
+/* Gender colors for profile icon */
+.has-text-gender-male {
+    color: #0099ff !important;
+}
+.has-text-gender-female {
+    color: #ff99ff !important;
+}
+.has-text-gender-other {
+    color: #cc00cc !important;
+}

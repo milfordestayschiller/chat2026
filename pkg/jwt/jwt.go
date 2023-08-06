@@ -13,10 +13,12 @@ import (
 // Custom JWT Claims.
 type Claims struct {
 	// Custom claims.
-	IsAdmin    bool   `json:"op"`
-	Avatar     string `json:"img"`
-	ProfileURL string `json:"url"`
-	Nick       string `json:"nick"`
+	IsAdmin    bool   `json:"op,omitempty"`
+	Avatar     string `json:"img,omitempty"`
+	ProfileURL string `json:"url,omitempty"`
+	Nick       string `json:"nick,omitempty"`
+	Emoji      string `json:"emoji,omitempty"`
+	Gender     string `json:"gender,omitempty"`
 
 	// Standard claims. Notes:
 	// subject = username

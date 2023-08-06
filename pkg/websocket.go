@@ -407,6 +407,8 @@ func (s *Server) SendWhoList() {
 				who.Avatar = user.JWTClaims.Avatar
 				who.ProfileURL = user.JWTClaims.ProfileURL
 				who.Nickname = user.JWTClaims.Nick
+				who.Emoji = user.JWTClaims.Emoji
+				who.Gender = user.JWTClaims.Gender
 			}
 			users = append(users, who)
 		}

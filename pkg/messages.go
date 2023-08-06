@@ -86,6 +86,8 @@ type WhoList struct {
 	Operator   bool   `json:"op"`
 	Avatar     string `json:"avatar,omitempty"`
 	ProfileURL string `json:"profileURL,omitempty"`
+	Emoji      string `json:"emoji,omitempty"`
+	Gender     string `json:"gender,omitempty"`
 }
 
 // VideoFlags to convey the state and setting of users' cameras concisely.
