@@ -81,6 +81,7 @@ type WhoList struct {
 	Nickname string `json:"nickname,omitempty"`
 	Status   string `json:"status"`
 	Video    int    `json:"video"`
+	LoginAt  int64  `json:"loginAt"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`

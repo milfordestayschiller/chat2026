@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
@@ -87,6 +88,7 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	// Use their username.
 	sub.Username = msg.Username
 	sub.authenticated = true
+	sub.loginAt = time.Now()
 	log.Debug("OnLogin: %s joins the room", sub.Username)
 
 	// Tell everyone they joined.

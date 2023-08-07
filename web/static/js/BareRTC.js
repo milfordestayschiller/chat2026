@@ -438,6 +438,11 @@ const app = Vue.createApp({
                         return a.emoji < b.emoji ? -1 : 1;
                     })
                     break;
+                case "login":
+                    result.sort((a, b) => {
+                        return b.loginAt - a.loginAt;
+                    });
+                    break;
                 case "gender":
                     result.sort((a, b) => {
                         if (a.gender === b.gender) return 0;

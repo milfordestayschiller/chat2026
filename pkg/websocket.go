@@ -27,6 +27,7 @@ type Subscriber struct {
 	VideoStatus   int
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
+	loginAt       time.Time
 	conn          *websocket.Conn
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -395,6 +396,7 @@ func (s *Server) SendWhoList() {
 				Username: user.Username,
 				Status:   user.ChatStatus,
 				Video:    user.VideoStatus,
+				LoginAt:  user.loginAt.Unix(),
 			}
 
 			// If this person had booted us, force their camera to "off"
