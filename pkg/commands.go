@@ -124,6 +124,13 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		})
 		s.DeleteSubscriber(other)
 		sub.ChatServer("%s has been kicked from the room", username)
+
+		// Broadcast it to everyone.
+		s.Broadcast(Message{
+			Action:   ActionPresence,
+			Username: username,
+			Message:  "has been kicked from the room!",
+		})
 	}
 }
 
@@ -196,6 +203,13 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 	} else {
 		// Ban them.
 		BanUser(username, duration)
+
+		// Broadcast it to everyone.
+		s.Broadcast(Message{
+			Action:   ActionPresence,
+			Username: username,
+			Message:  "has been banned!",
+		})
 
 		other.ChatServer("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour)
 		other.SendJSON(Message{
