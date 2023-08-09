@@ -1517,6 +1517,13 @@ const app = Vue.createApp({
             );
         },
         closeVideo(username, name) {
+            // Clean up any lingering camera freeze states.
+            delete (this.WebRTC.frozenStreamDetected[username]);
+            if (this.WebRTC.frozenStreamInterval[username]) {
+                clearInterval(this.WebRTC.frozenStreamInterval);
+                delete(this.WebRTC.frozenStreamInterval[username]);
+            }
+
             if (name === "offerer") {
                 // We are closing another user's video stream.
                 delete (this.WebRTC.streams[username]);
@@ -1525,13 +1532,6 @@ const app = Vue.createApp({
                 if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].offerer != undefined) {
                     this.WebRTC.pc[username].offerer.close();
                     delete (this.WebRTC.pc[username]);
-                }
-
-                // Clean up any lingering camera freeze states.
-                delete (this.WebRTC.frozenStreamDetected[username]);
-                if (this.WebRTC.frozenStreamInterval[username]) {
-                    clearInterval(this.WebRTC.frozenStreamInterval);
-                    delete(this.WebRTC.frozenStreamInterval[username]);
                 }
 
                 // Inform backend we have closed it.
