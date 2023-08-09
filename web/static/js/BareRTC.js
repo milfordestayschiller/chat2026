@@ -161,6 +161,13 @@ const app = Vue.createApp({
 
                 // RTCPeerConnections per username.
                 pc: {},
+
+                // Video stream freeze detection.
+                frozenStreamInterval: {}, // map usernames to intervals
+                frozenStreamDetected: {}, // map usernames to bools
+
+                // Debounce connection attempts since now every click = try to connect.
+                debounceOpens: {}, // map usernames to bools
             },
 
             // Chat history.
@@ -398,6 +405,7 @@ const app = Vue.createApp({
         myVideoFlag() {
             // Compute the current user's video status flags.
             let status = 0;
+            if (!this.webcam.active) return 0; // unset all flags if not active now
             if (this.webcam.active) status |= this.VideoFlag.Active;
             if (this.webcam.muted) status |= this.VideoFlag.Muted;
             if (this.webcam.nsfw) status |= this.VideoFlag.NSFW;
@@ -504,6 +512,16 @@ const app = Vue.createApp({
 
             if (!this.ws.connected) {
                 this.ChatClient("You are not connected to the server.");
+                return;
+            }
+
+            // DEBUGGING: fake set the freeze indicator.
+            let match = this.message.match(/^\/freeze (.+?)$/i);
+            if (match) {
+                let username = match[1];
+                this.WebRTC.frozenStreamDetected[username] = true;
+                this.ChatClient(`DEBUG: Marked ${username} stream as frozen.`);
+                this.message = "";
                 return;
             }
 
@@ -987,6 +1005,28 @@ const app = Vue.createApp({
 
                 // Inform them they are being watched.
                 this.sendWatch(username, true);
+
+                // Set a mute video handler to detect freezes.
+                stream.getVideoTracks().forEach(videoTrack => {
+                    let freezeDetected = () => {
+                        console.log("FREEZE DETECTED:", username);
+                        // Wait 3 seconds to see if the stream has recovered on its own
+                        setTimeout(() => {
+                            // Flag it as likely frozen.
+                            if (videoTrack.muted) {
+                                this.WebRTC.frozenStreamDetected[username] = true;
+                            }
+                        }, 3000);
+                    };
+
+                    console.log("Apply onmute handler for", username);
+                    videoTrack.onmute = freezeDetected;
+
+                    // Double check for frozen streams on an interval.
+                    this.WebRTC.frozenStreamInterval[username] = setInterval(() => {
+                        if (videoTrack.muted) freezeDetected();
+                    }, 3000);
+                })
             };
 
             // If we were already broadcasting video, send our stream to
@@ -1212,6 +1252,14 @@ const app = Vue.createApp({
             }
             return username;
         },
+        isUsernameCamNSFW(username) {
+            // returns true if the username is broadcasting and NSFW, false otherwise.
+            // (used for the color coding of their nickname on their video box - so assumed they are broadcasting)
+            if (this.whoMap[username] != undefined && this.whoMap[username].video & this.VideoFlag.NSFW) {
+                return true;
+            }
+            return false;
+        },
         leaveDM() {
             // Validate we're in a DM currently.
             if (this.channel.indexOf("@") !== 0) return;
@@ -1407,7 +1455,21 @@ const app = Vue.createApp({
         },
 
         // Begin connecting to someone else's webcam.
+        openVideoByUsername(username, force) {
+            if (this.whoMap[username] != undefined) {
+                this.openVideo(this.whoMap[username], force);
+                return;
+            }
+            this.ChatClient("Couldn't open video by username: not found.");
+        },
         openVideo(user, force) {
+            // Debounce so we don't spam too much for the same user.
+            if (this.WebRTC.debounceOpens[user.username]) return;
+            this.WebRTC.debounceOpens[user.username] = true;
+            setTimeout(() => {
+                delete(this.WebRTC.debounceOpens[user.username]);
+            }, 5000);
+
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
                 return;
@@ -1434,7 +1496,6 @@ const app = Vue.createApp({
             // Camera is already open? Then disconnect the connection.
             if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.pc[user.username].offerer != undefined) {
                 this.closeVideo(user.username, "offerer");
-                return;
             }
 
             // If this user requests mutual viewership...
@@ -1466,6 +1527,13 @@ const app = Vue.createApp({
                     delete (this.WebRTC.pc[username]);
                 }
 
+                // Clean up any lingering camera freeze states.
+                delete (this.WebRTC.frozenStreamDetected[username]);
+                if (this.WebRTC.frozenStreamInterval[username]) {
+                    clearInterval(this.WebRTC.frozenStreamInterval);
+                    delete(this.WebRTC.frozenStreamInterval[username]);
+                }
+
                 // Inform backend we have closed it.
                 this.sendWatch(username, false);
                 return;
@@ -1491,6 +1559,13 @@ const app = Vue.createApp({
                 delete (this.WebRTC.pc[username]);
                 delete (this.WebRTC.muted[username]);
                 delete (this.WebRTC.poppedOut[username]);
+            }
+
+            // Clean up any lingering camera freeze states.
+            delete (this.WebRTC.frozenStreamDetected[username]);
+            if (this.WebRTC.frozenStreamInterval[username]) {
+                clearInterval(this.WebRTC.frozenStreamInterval);
+                delete(this.WebRTC.frozenStreamInterval[username]);
             }
 
             // Inform backend we have closed it.

@@ -28,6 +28,14 @@ body {
     text-overflow: ellipsis;
 }
 
+/* Color coded webcam usernames per camera setting */
+.has-text-camera-blue {
+    color: #00ccff !important;
+}
+.has-text-camera-red {
+    color: #ff9999 !important;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/
