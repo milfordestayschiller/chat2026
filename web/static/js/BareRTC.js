@@ -1463,13 +1463,6 @@ const app = Vue.createApp({
             this.ChatClient("Couldn't open video by username: not found.");
         },
         openVideo(user, force) {
-            // Debounce so we don't spam too much for the same user.
-            if (this.WebRTC.debounceOpens[user.username]) return;
-            this.WebRTC.debounceOpens[user.username] = true;
-            setTimeout(() => {
-                delete(this.WebRTC.debounceOpens[user.username]);
-            }, 5000);
-
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
                 return;
@@ -1492,6 +1485,13 @@ const app = Vue.createApp({
                 // user doesn't want to see the modal again.
                 localStorage["skip-nsfw-modal"] = "true";
             }
+
+            // Debounce so we don't spam too much for the same user.
+            if (this.WebRTC.debounceOpens[user.username]) return;
+            this.WebRTC.debounceOpens[user.username] = true;
+            setTimeout(() => {
+                delete(this.WebRTC.debounceOpens[user.username]);
+            }, 5000);
 
             // Camera is already open? Then disconnect the connection.
             if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.pc[user.username].offerer != undefined) {
