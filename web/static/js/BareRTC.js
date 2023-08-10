@@ -641,6 +641,21 @@ const app = Vue.createApp({
         muteUser(username) {
             username = this.normalizeUsername(username);
             let mute = this.muted[username] == undefined;
+
+            // If the user is muted because they were blocked on your main website (CachedBlocklist),
+            // do not allow a temporary unmute in chat: make them live with their choice.
+            if (this.config.CachedBlocklist.length > 0) {
+                for (let user of this.config.CachedBlocklist) {
+                    if (user === username) {
+                        this.ChatClient(
+                            `You can not unmute <strong>${username}</strong> because you have blocked them on the main website. `+
+                            `To unmute them, you will need to unblock them on the website and then reload the chat room.`
+                        );
+                        return;
+                    }
+                }
+            }
+
             if (mute) {
                 if (!window.confirm(
                     `Do you want to mute ${username}? If muted, you will no longer see their `+
