@@ -1025,13 +1025,13 @@ const app = Vue.createApp({
                 stream.getVideoTracks().forEach(videoTrack => {
                     let freezeDetected = () => {
                         console.log("FREEZE DETECTED:", username);
-                        // Wait 3 seconds to see if the stream has recovered on its own
+                        // Wait some seconds to see if the stream has recovered on its own
                         setTimeout(() => {
                             // Flag it as likely frozen.
                             if (videoTrack.muted) {
                                 this.WebRTC.frozenStreamDetected[username] = true;
                             }
-                        }, 3000);
+                        }, 7500); // 7.5s
                     };
 
                     console.log("Apply onmute handler for", username);

@@ -982,6 +982,11 @@
                                 <select v-model="status">
                                     <option value="online">☀️ Active</option>
                                     <option value="away">🕒 Away</option>
+                                    <option value="brb">⏰ Be right back</option>
+                                    <option value="lunch">🍴 Out to lunch</option>
+                                    <option value="call">📞 On the phone</option>
+                                    <option value="busy">💼 Working</option>
+                                    <option value="horny" v-if="config.permitNSFW">🔥 Horny</option>
                                     <option value="idle" v-show="status==='idle'">🕒 Idle</option>
                                     <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
                                 </select>
@@ -1043,8 +1048,15 @@
                                             width="24" height="24">
 
                                         <!-- Away symbol -->
-                                        <div v-if="u.status !== 'online'" class="status-away-icon" :title="'Status: '+u.status">
-                                            <i class="fa fa-clock has-text-light"></i>
+                                        <div v-if="u.status !== 'online'" class="status-away-icon">
+                                            <i v-if="u.status === 'away'" class="fa fa-clock has-text-light" title="Status: Away"></i>
+                                            <i v-else-if="u.status === 'lunch'" class="fa fa-utensils has-text-light" title="Status: Out to lunch"></i>
+                                            <i v-else-if="u.status === 'call'" class="fa fa-phone-volume has-text-light" title="Status: On the phone"></i>
+                                            <i v-else-if="u.status === 'brb'" class="fa fa-stopwatch-20 has-text-light" title="Status: Be right back"></i>
+                                            <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light" title="Status: Working"></i>
+                                            <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light" title="Status: Idle"></i>
+                                            <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light" title="Status: Horny"></i>
+                                            <i v-else class="fa fa-clock has-text-light" :title="'Status: '+u.status"></i>
                                         </div>
                                     </a>
                                 </div>
