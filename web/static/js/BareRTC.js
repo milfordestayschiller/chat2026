@@ -1630,6 +1630,7 @@ const app = Vue.createApp({
         unMutualVideo() {
             // If we had our camera on to watch a video of someone who wants mutual cameras,
             // and then we turn ours off: we should unfollow the ones with mutual video.
+            if (this.webcam.active) return;
             for (let row of this.whoList) {
                 let username = row.username;
                 if ((row.video & this.VideoFlag.MutualRequired) && this.WebRTC.pc[username] != undefined) {
@@ -1668,26 +1669,6 @@ const app = Vue.createApp({
             }
 
             return false;
-        },
-
-        // Show who watches our video.
-        showViewers() {
-            // TODO: for now, ChatClient is our bro.
-            let users = Object.keys(this.webcam.watching);
-            if (users.length === 0) {
-                this.ChatClient("There is currently nobody viewing your camera.");
-            } else {
-                this.ChatClient("Your current webcam viewers are:<br><br>" + users.join(", "));
-            }
-
-            // Also focus the Watching list.
-            this.whoTab = 'watching';
-
-            // TODO: if mobile, show the panel - this width matches
-            // the media query in chat.css
-            if (screen.width < 1024) {
-                this.openWhoPanel();
-            }
         },
 
         // Boot someone off yourn video.
