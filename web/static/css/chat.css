@@ -162,7 +162,7 @@ body {
 /* Ensure the chat history isn't squished too far by the Videos panel if
    the user has a lot open/has made their size very big */
 #chatHistory {
-    min-height: 150px;
+    min-height: 200px;
 }
 
 /* User configurable font size increases */
@@ -194,9 +194,10 @@ body {
     width: 100%;
     max-width: 100%;
 
-    /* display: flex;
+    display: flex;
     flex-wrap: wrap;
-    align-items: left; */
+    align-items: flex-start;
+    overflow-y: auto;
 }
 
 .feed {
