@@ -355,15 +355,24 @@
                     <p class="card-header-title has-text-light">Broadcast my webcam</p>
                 </header>
                 <div class="card-content">
-                    <p class="block">
+                    <p class="block mb-1">
                     You can turn on your webcam and enable others in the room to connect to yours.
-                    The controls to stop, <i class="fa fa-microphone-slash"></i> mute audio, and
-                    <i class="fa fa-eye"></i> see who is watching will be at the top of the page.
+                    The controls to <i class="fa fa-stop has-text-danger"></i> stop and <i class="fa fa-microphone-slash has-text-danger"></i> mute audio
+                    will be at the top of the page.
                     </p>
 
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                v-model="webcam.autoMute">
+                            Start with my microphone on mute by default
+                        </label>
+                    </div>
+
                     <p class="block mb-1">
-                    If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual content, please mark it as such by
-                    clicking on the <i class="fa fa-fire has-text-danger"></i> button or checking the box below to start with it enabled.
+                    If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual content, please
+                    mark it as such by clicking on the "<small><i class="fa fa-fire mr-1 has-text-danger"></i> Explicit</small>"
+                    button at the top of the page, or check the box below to start with it enabled.
                     </p>
 
                     <div class="field">
@@ -519,7 +528,8 @@
                                  'is-danger': webcam.nsfw}"
                         @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
                         title="Toggle the NSFW setting for your camera broadcast">
-                        <i class="fa fa-fire mr-1"></i> Explicit
+                        <i class="fa fa-fire mr-1"
+                            :class="{'has-text-danger': !webcam.nsfw}"></i> Explicit
                     </button>
                 </div>
                 <div class="column is-narrow pl-1">

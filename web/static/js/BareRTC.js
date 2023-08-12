@@ -116,6 +116,7 @@ const app = Vue.createApp({
                 elem: null,   // <video id="localVideo"> element
                 stream: null, // MediaStream object
                 muted: false, // our outgoing mic is muted, not by default
+                autoMute: false, // mute our mic automatically when going live (user option)
                 nsfw: false,  // user has flagged their camera to be NSFW
                 mutual: false, // user wants viewers to share their own videos
                 mutualOpen: false, // user wants to open video mutually
@@ -505,6 +506,9 @@ const app = Vue.createApp({
             }
             if (localStorage.videoMutualOpen === "true") {
                 this.webcam.mutualOpen = true;
+            }
+            if (localStorage.videoAutoMute === "true") {
+                this.webcam.autoMute = true;
             }
         },
 
@@ -1408,6 +1412,22 @@ const app = Vue.createApp({
                 // Save our mutuality prefs.
                 localStorage.videoMutual = this.webcam.mutual;
                 localStorage.videoMutualOpen = this.webcam.mutualOpen;
+                localStorage.videoAutoMute = this.webcam.autoMute;
+
+                // Auto-mute our camera? Two use cases:
+                // 1. The user marked their cam as muted but then changed video device,
+                //    so we set the mute to match their preference as shown on their UI.
+                // 2. The user opted to auto-mute their camera from the get to on their
+                //    NSFW broadcast modal popup.
+                if (this.webcam.muted || this.webcam.autoMute) {
+                    // Mute their audio tracks.
+                    this.webcam.stream.getAudioTracks().forEach(track => {
+                        track.enabled = false;
+                    });
+
+                    // Set their front-end mute toggle to match (in case of autoMute).
+                    this.webcam.muted = true;
+                }
 
                 // Tell backend the camera is ready.
                 this.sendMe();

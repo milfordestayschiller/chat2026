@@ -28,6 +28,10 @@
     /* note: this css file otherwise didn't override this, dark's always dark, brighten it! */
     color: #b5b5b5 !important;
   }
+  .is-outlined.is-dark {
+    border-color: #b5b5b5 !important;
+    color: #b5b5b5 !important;
+  }
 
   a.has-text-dark:focus,
   a.has-text-dark:hover {
