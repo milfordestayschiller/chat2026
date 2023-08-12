@@ -44,24 +44,7 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 			s.BansCommand(words, sub)
 			return true
 		case "/nsfw":
-			if len(words) == 1 {
-				sub.ChatServer("Usage: `/nsfw username` to add the NSFW flag to their camera.")
-			}
-			username := words[1]
-			other, err := s.GetSubscriber(username)
-			if err != nil {
-				sub.ChatServer("/nsfw: username not found: %s", username)
-			} else {
-				other.ChatServer(
-					"Just a friendly reminder to mark your camera as 'Explicit' by using the button at the top "+
-						"of the page if you are going to be sexual on webcam. Your camera has been marked as Explicit "+
-						"for you by @%s", sub.Username,
-				)
-				other.VideoStatus |= VideoFlagNSFW
-				other.SendMe()
-				s.SendWhoList()
-				sub.ChatServer("%s now has their camera marked as Explicit", username)
-			}
+			s.NSFWCommand(words, sub)
 			return true
 		case "/help":
 			sub.ChatServer(RenderMarkdown("Moderator commands are:\n\n" +
@@ -101,6 +84,35 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 
 	// Not handled.
 	return false
+}
+
+// NSFWCommand handles the `/nsfw` operator command.
+func (s *Server) NSFWCommand(words []string, sub *Subscriber) {
+	if len(words) == 1 {
+		sub.ChatServer("Usage: `/nsfw username` to add the NSFW flag to their camera.")
+	}
+	username := words[1]
+	other, err := s.GetSubscriber(username)
+	if err != nil {
+		sub.ChatServer("/nsfw: username not found: %s", username)
+	} else {
+		// The message to deliver to the target.
+		var message = "Just a friendly reminder to mark your camera as 'Explicit' by using the button at the top " +
+			"of the page if you are going to be sexual on webcam. "
+
+		// If the admin who marked it was previously booted
+		if other.Boots(sub.Username) {
+			message += "Your camera was detected to depict 'Explicit' activity and has been marked for you."
+		} else {
+			message += fmt.Sprintf("Your camera has been marked as Explicit for you by @%s", sub.Username)
+		}
+
+		other.ChatServer(message)
+		other.VideoStatus |= VideoFlagNSFW
+		other.SendMe()
+		s.SendWhoList()
+		sub.ChatServer("%s now has their camera marked as Explicit", username)
+	}
 }
 
 // KickCommand handles the `/kick` operator command.
