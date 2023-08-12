@@ -194,9 +194,9 @@ body {
     width: 100%;
     max-width: 100%;
 
-    display: flex;
+    /* display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: flex-start; */
     overflow-y: auto;
 }
 
