@@ -312,7 +312,24 @@ const app = Vue.createApp({
         status() {
             // Send presence updates to the server.
             this.sendMe();
-        }
+        },
+
+        // Webcam preferences that the user can edit while live.
+        "webcam.nsfw": function() {
+            if (this.webcam.active) {
+                this.sendMe();
+            }
+        },
+        "webcam.mutual": function() {
+            if (this.webcam.active) {
+                this.sendMe();
+            }
+        },
+        "webcam.mutualOpen": function() {
+            if (this.webcam.active) {
+                this.sendMe();
+            }
+        },
     },
     computed: {
         chatHistory() {
@@ -629,6 +646,10 @@ const app = Vue.createApp({
                     this.closeVideo(row.username, "offerer");
                 }
             }
+
+            // Hang up on mutual cameras, if they changed their setting while we
+            // are already watching them.
+            this.unMutualVideo();
 
             // Has the back-end server forgotten we are on video? This can
             // happen if we disconnect/reconnect while we were streaming.
