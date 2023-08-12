@@ -283,6 +283,7 @@ div.feed.popped-out {
     position: absolute;
     top: 14px;
     left: 16px;
+    text-shadow: 0px 0px 4px #000;
 }
 
 /* Cursors */

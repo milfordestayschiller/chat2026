@@ -1067,15 +1067,21 @@
                         <div class="column">
                             <div class="select is-small is-fullwidth">
                                 <select v-model="status">
-                                    <option value="online">☀️ Active</option>
-                                    <option value="away">🕒 Away</option>
-                                    <option value="brb">⏰ Be right back</option>
-                                    <option value="lunch">🍴 Out to lunch</option>
-                                    <option value="call">📞 On the phone</option>
-                                    <option value="busy">💼 Working</option>
-                                    <option value="horny" v-if="config.permitNSFW">🔥 Horny</option>
-                                    <option value="idle" v-show="status==='idle'">🕒 Idle</option>
-                                    <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
+                                    <optgroup label="Status">
+                                        <option value="online">☀️ Active</option>
+                                        <option value="away">🕒 Away</option>
+                                        <option value="brb">⏰ Be right back</option>
+                                        <option value="lunch">🍴 Out to lunch</option>
+                                        <option value="call">📞 On the phone</option>
+                                        <option value="busy">💼 Working</option>
+                                        <option value="idle" v-show="status==='idle'">🕒 Idle</option>
+                                        <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
+                                    </optgroup>
+                                    <optgroup label="Mood">
+                                        <option value="chatty">🗫 Chatty and sociable</option>
+                                        <option value="introverted">🥄 Introverted and quiet</option>
+                                        <option value="horny" v-if="config.permitNSFW">🔥 Horny</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -1143,6 +1149,8 @@
                                             <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light" title="Status: Working"></i>
                                             <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light" title="Status: Idle"></i>
                                             <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light" title="Status: Horny"></i>
+                                            <i v-else-if="u.status === 'chatty'" class="fa fa-comment has-text-light" title="Status: Chatty and sociable"></i>
+                                            <i v-else-if="u.status === 'introverted'" class="fa fa-spoon has-text-light" title="Status: Introverted and quiet"></i>
                                             <i v-else class="fa fa-clock has-text-light" :title="'Status: '+u.status"></i>
                                         </div>
                                     </a>
