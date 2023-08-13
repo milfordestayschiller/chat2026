@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 5
+var currentVersion = 6
 
 // Config for your BareRTC app.
 type Config struct {
@@ -43,6 +43,8 @@ type Config struct {
 	TURN TurnConfig
 
 	PublicChannels []Channel
+
+	WebhookURLs []WebhookURL
 }
 
 type TurnConfig struct {
@@ -65,6 +67,13 @@ type Channel struct {
 
 	// ChatServer messages to send to the user immediately upon connecting.
 	WelcomeMessages []string
+}
+
+// WebhookURL allows tighter integration with your website.
+type WebhookURL struct {
+	Name    string
+	Enabled bool
+	URL     string
 }
 
 // Current loaded configuration.
@@ -107,6 +116,12 @@ func DefaultConfig() Config {
 				"stun:stun.l.google.com:19302",
 			},
 		},
+		WebhookURLs: []WebhookURL{
+			{
+				Name: "report",
+				URL:  "https://example.com/barertc/report",
+			},
+		},
 	}
 	c.JWT.Strict = true
 	return c
@@ -126,6 +141,9 @@ func LoadSettings() error {
 	}
 
 	_, err = toml.Decode(string(data), &Current)
+	if err != nil {
+		return err
+	}
 
 	// Have we added new config fields? Save the settings.toml.
 	if Current.Version != currentVersion {

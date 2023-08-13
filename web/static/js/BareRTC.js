@@ -49,6 +49,7 @@ const app = Vue.createApp({
                 channels: PublicChannels,
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
+                webhookURLs: WebhookURLs,
                 fontSizeClasses: [
                     [ "x-2", "Very small chat room text" ],
                     [ "x-1", "50% smaller chat room text" ],
@@ -57,6 +58,14 @@ const app = Vue.createApp({
                     [ "x2", "2x larger chat room text" ],
                     [ "x3", "3x larger chat room text" ],
                     [ "x4", "4x larger chat room text" ],
+                ],
+                reportClassifications: [
+                    "It's spam",
+                    "It's abusive (racist, homophobic, etc.)",
+                    "It's malicious (e.g. link to a malware website)",
+                    "It's illegal (e.g. controlled substances)",
+                    "It's child porn (CP, CSAM, pedophilia, etc.)",
+                    "Other (please describe)",
                 ],
                 sounds: {
                     available: SoundEffects,
@@ -229,6 +238,15 @@ const app = Vue.createApp({
                 visible: false,
                 dontShowAgain: false,
                 user: null, // staged User we wanted to open
+            },
+
+            reportModal: {
+                visible: false,
+                busy: false,
+                message: {},
+                origMessage: {}, // pointer, so we can set the "reported" flag
+                classification: "It's spam",
+                comment: "",
             },
         }
     },
@@ -1884,6 +1902,7 @@ const app = Vue.createApp({
             this.channels[channel].updated = new Date().getTime();
             this.channels[channel].history.push({
                 action: action,
+                channel: channel,
                 username: username,
                 message: message,
                 msgID: messageID,
@@ -1984,6 +2003,7 @@ const app = Vue.createApp({
 
         // Format a datetime nicely for chat timestamp.
         prettyDate(date) {
+            if (date == undefined) return '';
             let hours = date.getHours(),
                 minutes = String(date.getMinutes()).padStart(2, '0'),
                 ampm = hours >= 11 ? "pm" : "am";
@@ -2157,7 +2177,61 @@ const app = Vue.createApp({
             if (this.status === "online") {
                 this.status = "idle";
             }
-        }
+        },
+
+        /*
+         * Webhook methods
+         */
+        isWebhookEnabled(name) {
+            for (let webhook of this.config.webhookURLs) {
+                if (webhook.Name === name && webhook.Enabled) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        reportMessage(message) {
+            // User is reporting a message on chat.
+            if (message.reported) {
+                if (!window.confirm("You have already reported this message. Do you want to report it again?")) return;
+            }
+
+            // Clone the message.
+            let clone = Object.assign({}, message);
+
+            // Sub out attached images.
+            clone.message = clone.message.replace(/<img .+?>/g, "[inline image]");
+
+            this.reportModal.message = clone;
+            this.reportModal.origMessage = message;
+            this.reportModal.classification = this.config.reportClassifications[0];
+            this.reportModal.comment = "";
+            this.reportModal.visible = true;
+        },
+        doReport() {
+            // Submit the queued up report.
+            if (this.reportModal.busy) return;
+            this.reportModal.busy = true;
+
+            let msg = this.reportModal.message;
+
+            this.ws.conn.send(JSON.stringify({
+                action: "report",
+                channel: msg.channel,
+                username: msg.username,
+                timestamp: ""+msg.at,
+                reason: this.reportModal.classification,
+                message: msg.message,
+                comment: this.reportModal.comment,
+            }));
+
+            this.reportModal.busy = false;
+            this.reportModal.visible = false;
+
+            // Set the "reported" flag.
+            this.reportModal.origMessage.reported = true;
+        },
     }
 });
 

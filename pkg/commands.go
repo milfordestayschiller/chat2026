@@ -72,6 +72,9 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 		case "/kickall":
 			s.KickAllCommand()
 			return true
+		case "/reconfigure":
+			s.ReconfigureCommand(sub)
+			return true
 		case "/op":
 			s.OpCommand(words, sub)
 			return true
@@ -257,6 +260,17 @@ func (s *Server) BansCommand(words []string, sub *Subscriber) {
 	sub.ChatServer(
 		RenderMarkdown("The listing of banned users currently includes:\n\n" + result),
 	)
+}
+
+// ReconfigureCommand handles the `/reconfigure` operator command.
+func (s *Server) ReconfigureCommand(sub *Subscriber) {
+	// Reload the settings.
+	if err := config.LoadSettings(); err != nil {
+		sub.ChatServer("Error reloading the server config: %s", err)
+		return
+	}
+
+	sub.ChatServer("The server config file has been reloaded successfully!")
 }
 
 // OpCommand handles the `/op` operator command.

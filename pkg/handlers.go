@@ -429,6 +429,33 @@ func (s *Server) OnBlocklist(sub *Subscriber, msg Message) {
 	s.SendWhoList()
 }
 
+// OnReport handles a user's report of a message.
+func (s *Server) OnReport(sub *Subscriber, msg Message) {
+	if !WebhookEnabled(WebhookReport) {
+		sub.ChatServer("Unfortunately, the report webhook is not enabled so your report could not be received!")
+		return
+	}
+
+	// Post to the report webhook.
+	if err := PostWebhook(WebhookReport, WebhookRequest{
+		Action: WebhookReport,
+		APIKey: config.Current.AdminAPIKey,
+		Report: WebhookRequestReport{
+			FromUsername:  sub.Username,
+			AboutUsername: msg.Username,
+			Channel:       msg.Channel,
+			Timestamp:     msg.Timestamp,
+			Reason:        msg.Reason,
+			Message:       msg.Message,
+			Comment:       msg.Comment,
+		},
+	}); err != nil {
+		sub.ChatServer("Error sending the report to the website: %s", err)
+	} else {
+		sub.ChatServer("Your report has been delivered successfully.")
+	}
+}
+
 // OnCandidate handles WebRTC candidate signaling.
 func (s *Server) OnCandidate(sub *Subscriber, msg Message) {
 	// Look up the other subscriber.

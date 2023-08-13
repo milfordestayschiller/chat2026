@@ -36,6 +36,12 @@ body {
     color: #ff9999 !important;
 }
 
+/* Max height for message in report modal */
+.report-modal-message {
+    max-height: 150px;
+    overflow: auto;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/

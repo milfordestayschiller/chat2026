@@ -38,6 +38,11 @@ type Message struct {
 	// Send on `blocklist` actions, for doing a `mute` on a list of users
 	Usernames []string `json:"usernames,omitempty"`
 
+	// Sent on `report` actions.
+	Timestamp string `json:"timestamp,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+	Comment   string `json:"comment,omitempty"`
+
 	// WebRTC negotiation messages: proxy their signaling messages
 	// between the two users to negotiate peer connection.
 	Candidate   string `json:"candidate,omitempty"`   // candidate
@@ -51,6 +56,7 @@ const (
 	ActionMute      = "mute"  // mute a user's chat messages
 	ActionUnmute    = "unmute"
 	ActionBlocklist = "blocklist" // mute in bulk for usernames
+	ActionReport    = "report"    // user reports a message
 
 	// Actions sent by server or client
 	ActionMessage  = "message"  // post a message to the room

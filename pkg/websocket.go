@@ -110,6 +110,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnTakeback(sub, msg)
 			case ActionReact:
 				s.OnReact(sub, msg)
+			case ActionReport:
+				s.OnReport(sub, msg)
 			default:
 				sub.ChatServer("Unsupported message type.")
 			}

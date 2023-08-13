@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -29,7 +30,9 @@ func main() {
 	}
 
 	// Load configuration.
-	config.LoadSettings()
+	if err := config.LoadSettings(); err != nil {
+		panic(fmt.Sprintf("Error loading settings.toml: %s", err))
+	}
 
 	app := barertc.NewServer()
 	app.Setup()

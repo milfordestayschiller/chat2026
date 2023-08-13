@@ -458,6 +458,87 @@
         </div>
     </div>
 
+    <!-- Report Modal -->
+    <div class="modal" :class="{'is-active': reportModal.visible}">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="card">
+                <header class="card-header has-background-warning">
+                    <p class="card-header-title has-text-dark">Report a message</p>
+                </header>
+                <div class="card-content">
+
+                    <!-- Message preview we are reporting on
+                         TODO: make it DRY: style copied/referenced from chat history cards -->
+                    <div class="box mb-2 px-4 pt-3 pb-1 position-relative">
+                        <div class="media mb-0">
+                            <div class="media-left">
+                                <figure class="image is-48x48">
+                                    <img v-if="avatarForUsername(reportModal.message.username)"
+                                        :src="avatarForUsername(reportModal.message.username)">
+                                    <img v-else src="/static/img/shy.png">
+                                </figure>
+                            </div>
+                            <div class="media-content">
+                                <div>
+                                    <strong>
+                                        <!-- User nickname/display name -->
+                                        [[nicknameForUsername(reportModal.message.username)]]
+                                    </strong>
+                                </div>
+
+                                <!-- User @username below it which may link to a profile URL if JWT -->
+                                <div>
+                                    <small class="has-text-grey">
+                                        @[[reportModal.message.username]]
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Message copy -->
+                        <div class="content pl-5 py-3 mb-5 report-modal-message"
+                            v-html="reportModal.message.message">
+                        </div>
+                    </div>
+
+                    <div class="field mb-1">
+                        <label class="label" for="classification">Report classification:</label>
+                        <div class="select is-fullwidth">
+                            <select id="classification"
+                                v-model="reportModal.classification"
+                                :disabled="busy">
+                                <option v-for="i in config.reportClassifications"
+                                    :value="i">[[i]]</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label" for="reportComment">Comment:</label>
+                        <textarea class="textarea"
+                            v-model="reportModal.comment"
+                            :disabled="busy"
+                            cols="80" rows="2"
+                            placeholder="Optional: describe the issue"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <div class="control has-text-centered">
+                            <button type="button"
+                                class="button is-link mr-4"
+                                :disabled="busy"
+                                @click="doReport()">Submit report</button>
+                            <button type="button"
+                                class="button"
+                                @click="reportModal.visible=false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Photo Detail Modal -->
     <div class="modal" id="photo-modal">
         <div class="modal-background" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></div>
@@ -947,32 +1028,47 @@
                                     </div>
                                 </div>
 
-                                <!-- Emoji reactions menu -->
-                                <div v-if="msg.msgID" class="dropdown is-right emoji-button"
-                                    :class="{'is-up': i >= 2}"
-                                    onclick="this.classList.toggle('is-active')">
-                                    <div class="dropdown-trigger">
-                                        <button class="button is-small px-2" aria-haspopup="true" :aria-controls="`react-menu-${msg.msgID}`">
-                                            <span>
-                                                <i class="fa fa-heart has-text-grey"></i>
-                                                <i class="fa fa-plus has-text-grey pl-1"></i>
-                                            </span>
+                                <!-- Report & Emoji buttons -->
+                                <div v-if="msg.msgID" class="emoji-button columns is-mobile is-gapless mb-0">
+                                    <!-- Report message button -->
+                                    <div class="column" v-if="isWebhookEnabled('report')">
+                                        <button class="button is-small is-outlined mr-1"
+                                            :class="{'is-danger': !msg.reported,
+                                                     'has-text-grey': msg.reported}"
+                                            title="Report this message"
+                                            @click="reportMessage(msg)">
+                                            <i class="fa fa-flag"></i>
+                                            <i class="fa fa-check ml-1" v-if="msg.reported"></i>
                                         </button>
                                     </div>
-                                    <div class="dropdown-menu" :id="`react-menu-${msg.msgID}`" role="menu">
-                                        <div class="dropdown-content p-0">
-                                            <!-- Iterate over reactions in rows of emojis-->
-                                            <div class="columns is-mobile ml-0 mb-2 mr-1"
-                                                v-for="row in config.reactions">
 
-                                                <!-- Loop over the icons -->
-                                                <div class="column p-0 is-narrow"
-                                                    v-for="i in row">
-                                                    <button type="button"
-                                                        class="button px-2 mt-1 ml-1 mr-0 mb-1"
-                                                        @click="sendReact(msg, i)">
-                                                        [[i]]
-                                                    </button>
+                                    <!-- Emoji reactions menu -->
+                                    <div class="column dropdown"
+                                        :class="{'is-up': i >= 2}"
+                                        onclick="this.classList.toggle('is-active')">
+                                        <div class="dropdown-trigger">
+                                            <button class="button is-small px-2" aria-haspopup="true" :aria-controls="`react-menu-${msg.msgID}`">
+                                                <span>
+                                                    <i class="fa fa-heart has-text-grey"></i>
+                                                    <i class="fa fa-plus has-text-grey pl-1"></i>
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div class="dropdown-menu" :id="`react-menu-${msg.msgID}`" role="menu">
+                                            <div class="dropdown-content p-0">
+                                                <!-- Iterate over reactions in rows of emojis-->
+                                                <div class="columns is-mobile ml-0 mb-2 mr-1"
+                                                    v-for="row in config.reactions">
+
+                                                    <!-- Loop over the icons -->
+                                                    <div class="column p-0 is-narrow"
+                                                        v-for="i in row">
+                                                        <button type="button"
+                                                            class="button px-2 mt-1 ml-1 mr-0 mb-1"
+                                                            @click="sendReact(msg, i)">
+                                                            [[i]]
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -980,7 +1076,7 @@
                                 </div>
 
                                 <!-- Message box -->
-                                <div class="content pl-5 py-3 mb-0">
+                                <div class="content pl-5 py-3 mb-5">
                                     <em v-if="msg.action === 'presence'">[[msg.message]]</em>
                                     <div v-else v-html="msg.message"></div>
 
@@ -1252,6 +1348,7 @@ const PublicChannels = {{.Config.GetChannels}};
 const WebsiteURL = "{{.Config.WebsiteURL}}";
 const PermitNSFW = {{AsJS .Config.PermitNSFW}};
 const TURN = {{.Config.TURN}};
+const WebhookURLs = {{.Config.WebhookURLs}};
 const UserJWTToken = {{.JWTTokenString}};
 const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
 const UserJWTClaims = {{.JWTClaims.ToJSON}};
