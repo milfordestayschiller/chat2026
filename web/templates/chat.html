@@ -1040,7 +1040,7 @@
                                 <!-- Report & Emoji buttons -->
                                 <div v-if="msg.msgID" class="emoji-button columns is-mobile is-gapless mb-0">
                                     <!-- Report message button -->
-                                    <div class="column" v-if="isWebhookEnabled('report')">
+                                    <div class="column" v-if="isWebhookEnabled('report') && msg.username !== username">
                                         <button class="button is-small is-outlined mr-1"
                                             :class="{'is-danger': !msg.reported,
                                                      'has-text-grey': msg.reported}"
