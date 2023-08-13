@@ -62,9 +62,9 @@ const app = Vue.createApp({
                 reportClassifications: [
                     "It's spam",
                     "It's abusive (racist, homophobic, etc.)",
-                    "It's malicious (e.g. link to a malware website)",
-                    "It's illegal (e.g. controlled substances)",
-                    "It's child porn (CP, CSAM, pedophilia, etc.)",
+                    "It's malicious (e.g. link to a malware website, phishing)",
+                    "It's illegal (e.g. controlled substances, violence)",
+                    "It's child abuse (CP, CSAM, pedophilia, etc.)",
                     "Other (please describe)",
                 ],
                 sounds: {
