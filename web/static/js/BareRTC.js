@@ -1689,7 +1689,27 @@ const app = Vue.createApp({
             return false;
         },
 
-        // Boot someone off yourn video.
+        // Show who watches our video.
+        showViewers() {
+            // TODO: for now, ChatClient is our bro.
+            let users = Object.keys(this.webcam.watching);
+            if (users.length === 0) {
+                this.ChatClient("There is currently nobody viewing your camera.");
+            } else {
+                this.ChatClient("Your current webcam viewers are:<br><br>" + users.join(", "));
+            }
+
+            // Also focus the Watching list.
+            this.whoTab = 'watching';
+
+            // TODO: if mobile, show the panel - this width matches
+            // the media query in chat.css
+            if (screen.width < 1024) {
+                this.openWhoPanel();
+            }
+        },
+
+        // Boot someone off your video.
         bootUser(username) {
             if (!window.confirm(
                 `Kick ${username} off your camera? This will also prevent them `+
