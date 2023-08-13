@@ -246,7 +246,7 @@ For better integration with your website, the chat server exposes some data via 
 
 Current API endpoints include:
 
-* `GET /api/statistics`
+## GET /api/statistics
 
 Returns basic info about the count and usernames of connected chatters:
 
@@ -257,7 +257,7 @@ Returns basic info about the count and usernames of connected chatters:
 }
 ```
 
-* `POST /api/blocklist`
+## POST /api/blocklist
 
 Your server may pre-cache the user's blocklist for them **before** they
 enter the chat room. Your site will use the `AdminAPIKey` parameter that
@@ -292,6 +292,52 @@ The JSON response to this endpoint may look like:
     "Error": "if error, or this key is omitted if OK"
 }
 ```
+
+# Webhook URLs
+
+BareRTC supports setting up webhook URLs so the chat server can call out to _your_ website in response to certain events, such as allowing users to send you reports about messages they receive on chat.
+
+Webhooks are configured in your settings.toml file and look like so:
+
+```toml
+[[WebhookURLs]]
+  Name = "report"
+  Enabled = true
+  URL = "http://localhost:8080/v1/barertc/report"
+```
+
+All Webhooks will be called as **POST** requests and will contain a JSON payload that will always have the following two keys:
+
+* `Action` will be the name of the webhook (e.g. "report")
+* `APIKey` will be your AdminAPIKey as configure in the settings.toml (shared secret so your web app can authenticate BareRTC's webhooks).
+
+The JSON payload may also contain a relevant object per the Action -- see the specific examples below.
+
+## Report Webhook
+
+Enabling this webhook will cause BareRTC to display a red "Report" flag button underneath user messages on chat so that they can report problematic messages to your website.
+
+The webhook name for your settings.toml is "report"
+
+Example JSON payload posted to the webhook:
+
+```javascript
+{
+    "Action": "report",
+    "APIKey": "shared secret from settings.toml#AdminAPIKey",
+    "Report": {
+        "FromUsername": "sender",
+        "AboutUsername": "user being reported on",
+        "Channel": "lobby",  // or "@username" for DM threads
+        "Timestamp": "(stringified timestamp of chat message)",
+        "Reason": "It's spam",
+        "Comment": "custom user note about the report",
+        "Message": "the actual message that was being reported on",
+    }
+}
+```
+
+BareRTC expects your webhook URL to return a 200 OK status code or it will surface an error in chat to the reporter.
 
 # Tour of the Codebase
 

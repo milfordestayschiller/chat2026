@@ -57,6 +57,7 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 				"* `/deop <username>` to remove operator rights from a user\n" +
 				"* `/shutdown` to gracefully shut down (reboot) the chat server\n" +
 				"* `/kickall` to kick EVERYBODY off and force them to log back in\n" +
+				"* `/reconfigure` to dynamically reload the chat server settings file\n" +
 				"* `/help` to show this message\n\n" +
 				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
 			))
