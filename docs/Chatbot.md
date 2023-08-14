@@ -122,6 +122,8 @@ You can invoke these by using the `<call>` tag in your RiveScript responses -- s
 
 This command can reload the chatbot's RiveScript sources from disk, making it easy to iterate on your robot without rebooting the whole program.
 
+Usage: `reload`
+
 Example:
 
 ```rivescript
@@ -136,6 +138,8 @@ It returns a message like "The RiveScript brain has been reloaded!"
 
 You can send an emoji reaction to a message ID. The current message ID is available in the `<get messageID>` tag of a RiveScript reply.
 
+Usage: `react <int MessageID> <string Emoji>`
+
 Example:
 
 ```rivescript
@@ -148,3 +152,62 @@ Example:
 Note: the `react` command returns no text (except on error). Couple it with a `<noreply>` if you want to ensure the bot does not send a reply to the message in chat, but simply applies the reaction emoji.
 
 The reaction is delayed about 2.5 seconds.
+
+## DM
+
+Slide into a user's DMs and send them a Direct Message no matter what channel you saw their message in.
+
+Usage: `dm <username> <message to send>`
+
+Example: say you have a global keyword trigger on public rooms and want to DM a user if they match one.
+
+```rivescript
+> topic PublicChannel
+
+    + [*] sensitive keywords [*]
+    - <call>dm <id> I saw you say something in the public channel!</call>
+    ^ Please don't say that stuff on here! @<id>
+
+< topic
+```
+
+## Takeback
+
+Take back a message by its ID. This may be useful if you have a global moderator trigger set up so you can remove a user's message.
+
+Usage: `takeback <int MessageID>`
+
+Example:
+
+```rivescript
+> topic PublicChannel
+
+    + [*] sensitive keywords [*]
+    - <call>takeback <get messageID></call>
+    ^ Please don't say that stuff on here! @<id>
+
+< topic
+```
+
+Note: the `takeback` command returns no text (except on error).
+
+## Report
+
+Send a BareRTC `report` action about a message ID. If your chat server is configured with a webhook URL to report messages to your website, those reports can be sent automatically by your bot.
+
+Usage: `report <int MessageID> <custom comment to attach>`
+
+The message ID must have been recently sent: the chatbot holds a buffer of recently seen message IDs (last 500 or so). This should work OK since most likely you would report the current message automatically based on a keyword trigger.
+
+Example:
+
+```rivescript
+> topic PublicChannel
+
+    + [*] (sensitive|keywords) [*]
+    - <call>report <get messageID> User has said the keyword '<star>'</call>
+
+< topic
+```
+
+Note: the `report` command returns no text (except on error).

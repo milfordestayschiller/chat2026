@@ -5,3 +5,4 @@ run:
 .PHONY: build
 build:
 	go build -o BareRTC cmd/BareRTC/main.go
+	go build -o BareBot cmd/BareBot/main.go

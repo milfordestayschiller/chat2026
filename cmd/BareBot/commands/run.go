@@ -54,7 +54,7 @@ func init() {
 
 			// Get the JWT auth token.
 			log.Info("Authenticating with BareRTC (getting JWT token)")
-			client, err := client.NewClient("ws://localhost:9000/ws", jwt.Claims{
+			client, err := client.NewClient(config.Current.BareRTC.URL, jwt.Claims{
 				IsAdmin:    config.Current.Profile.IsAdmin,
 				Avatar:     config.Current.Profile.AvatarURL,
 				ProfileURL: config.Current.Profile.ProfileURL,

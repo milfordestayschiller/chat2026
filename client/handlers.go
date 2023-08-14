@@ -12,6 +12,9 @@ import (
 	"github.com/aichaos/rivescript-go"
 )
 
+// Number of recent chat messages to hold onto.
+const ScrollbackBuffer = 500
+
 // BotHandlers holds onto a set of handler functions for the BareBot.
 type BotHandlers struct {
 	rs     *rivescript.RiveScript
@@ -22,8 +25,15 @@ type BotHandlers struct {
 	whoMu   sync.RWMutex
 
 	// Auto-greeter cooldowns
-	autoGreet   map[string]time.Time
-	autoGreetMu sync.RWMutex
+	autoGreet         map[string]time.Time
+	autoGreetCooldown time.Time // global cooldown between auto-greets
+	autoGreetMu       sync.RWMutex
+
+	// MessageID history. Keep a buffer of recent messages sent in
+	// case the robot needs to report one (which should generally
+	// happen immediately, if it does).
+	messageBuf   []messages.Message
+	messageBufMu sync.RWMutex
 }
 
 // SetupChatbot configures a sensible set of default handlers for the BareBot application.
@@ -37,7 +47,8 @@ func (c *Client) SetupChatbot() error {
 		rs: rivescript.New(&rivescript.Config{
 			UTF8: true,
 		}),
-		autoGreet: map[string]time.Time{},
+		autoGreet:  map[string]time.Time{},
+		messageBuf: []messages.Message{},
 	}
 
 	log.Info("Initializing RiveScript brain")
@@ -85,6 +96,31 @@ func (h *BotHandlers) OnMe(msg messages.Message) {
 	}
 }
 
+// Buffer a message seen on chat for a while.
+func (h *BotHandlers) cacheMessage(msg messages.Message) {
+	h.messageBufMu.Lock()
+	defer h.messageBufMu.Unlock()
+
+	h.messageBuf = append(h.messageBuf, msg)
+
+	if len(h.messageBuf) > ScrollbackBuffer {
+		h.messageBuf = h.messageBuf[len(h.messageBuf)-ScrollbackBuffer:]
+	}
+}
+
+// Get a message by ID from the recent message buffer.
+func (h *BotHandlers) getMessageByID(msgID int) (messages.Message, bool) {
+	h.messageBufMu.RLock()
+	defer h.messageBufMu.RUnlock()
+	for _, msg := range h.messageBuf {
+		if msg.MessageID == msgID {
+			return msg, true
+		}
+	}
+
+	return messages.Message{}, false
+}
+
 // OnMessage handles Who List updates in chat.
 func (h *BotHandlers) OnMessage(msg messages.Message) {
 	// Strip HTML.
@@ -94,6 +130,9 @@ func (h *BotHandlers) OnMessage(msg messages.Message) {
 	if msg.Username == h.client.Username() {
 		return
 	}
+
+	// Cache it in our message buffer.
+	h.cacheMessage(msg)
 
 	// Do we send a reply to this?
 	var (
@@ -210,6 +249,12 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 
 	// A join message?
 	if strings.Contains(msg.Message, "has joined the room") {
+		// Global auto-greet cooldown.
+		if time.Now().Before(h.autoGreetCooldown) {
+			return
+		}
+		h.autoGreetCooldown = time.Now().Add(15 * time.Minute)
+
 		// Don't greet the same user too often in case of bouncing.
 		h.autoGreetMu.Lock()
 		if timeout, ok := h.autoGreet[msg.Username]; ok {

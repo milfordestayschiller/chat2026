@@ -73,10 +73,16 @@ func (c *Client) Run() error {
 		c.jwt = token
 	}
 
+	// Get the WebSocket URL.
+	wss, err := WebSocketURL(c.url)
+	if err != nil {
+		return fmt.Errorf("couldn't get WebSocket URL from %s: %s", c.url, err)
+	}
+
 	ctx := context.Background()
 	c.ctx = ctx
 
-	conn, _, err := websocket.Dial(ctx, c.url, nil)
+	conn, _, err := websocket.Dial(ctx, wss, nil)
 	if err != nil {
 		return fmt.Errorf("dialing websocket URL (%s): %s", c.url, err)
 	}
@@ -93,13 +99,6 @@ func (c *Client) Run() error {
 	}); err != nil {
 		return fmt.Errorf("sending login message: %s", err)
 	}
-
-	// Testing!
-	c.Send(messages.Message{
-		Action:  messages.ActionMessage,
-		Channel: "lobby",
-		Message: "Hello, world! BareBot client connected!",
-	})
 
 	// Enter the Read Loop
 	for {

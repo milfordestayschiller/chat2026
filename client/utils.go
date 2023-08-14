@@ -1,7 +1,9 @@
 package client
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -15,6 +17,25 @@ var (
 func StripHTML(s string) string {
 	s = reIMG.ReplaceAllString(s, "inline embedded image")
 	return strings.TrimSpace(reHTML.ReplaceAllString(s, ""))
+}
+
+// WebSocketURL converts the BareRTC base (https) URL into the WebSocket link.
+func WebSocketURL(baseURL string) (string, error) {
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+
+	switch url.Scheme {
+	case "https":
+		return fmt.Sprintf("wss://%s/ws", url.Host), nil
+	case "http":
+		return fmt.Sprintf("ws://%s/ws", url.Host), nil
+	case "ws", "wss":
+		return fmt.Sprintf("%s//%s/ws", url.Scheme, url.Host), nil
+	default:
+		return "", errors.New("unsupported URL scheme")
+	}
 }
 
 // AtMentioned checks if somebody has "at mentioned" your username (having your

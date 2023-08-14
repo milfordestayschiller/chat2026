@@ -3,8 +3,10 @@ package client
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
 	"github.com/aichaos/rivescript-go"
 )
@@ -47,8 +49,74 @@ func (h *BotHandlers) setObjectMacros() {
 			} else {
 				return fmt.Sprintf("[react: %s]", err)
 			}
+			return ""
+		}
+		return "[react: invalid number of parameters]"
+	})
+
+	// Takeback a message (admin action especially)
+	h.rs.SetSubroutine("takeback", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 1 {
+			if msgID, err := strconv.Atoi(args[0]); err == nil {
+				// Take it back.
+				h.client.Send(messages.Message{
+					Action:    messages.ActionTakeback,
+					MessageID: msgID,
+				})
+			} else {
+				return fmt.Sprintf("[takeback: %s]", err)
+			}
+			return ""
+		}
+		return "[takeback: invalid number of parameters]"
+	})
+
+	// Flag (report) a message on chat.
+	h.rs.SetSubroutine("report", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 2 {
+			if msgID, err := strconv.Atoi(args[0]); err == nil {
+				var comment = strings.Join(args[1:], " ")
+
+				// Look up this message.
+				if msg, ok := h.getMessageByID(msgID); ok {
+					// Report it with the custom comment.
+					h.client.Send(messages.Message{
+						Action:    messages.ActionReport,
+						Channel:   msg.Channel,
+						Username:  msg.Username,
+						Timestamp: "not recorded",
+						Reason:    "Automated chatbot flag",
+						Message:   msg.Message,
+						Comment:   comment,
+					})
+					return ""
+				}
+
+				return "[msgID not found]"
+			} else {
+				return fmt.Sprintf("[report: %s]", err)
+			}
+		}
+		return "[report: invalid number of parameters]"
+	})
+
+	// Send a user a Direct Message.
+	h.rs.SetSubroutine("dm", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 2 {
+			var (
+				username = args[0]
+				message  = strings.Join(args[1:], " ")
+			)
+
+			// Slide into their DMs.
+			log.Error("Send DM to [%s]: %s", username, message)
+			h.client.Send(messages.Message{
+				Action:  messages.ActionMessage,
+				Channel: "@" + username,
+				Message: message,
+			})
 		} else {
-			return "[react: invalid number of parameters]"
+			return "[dm: invalid number of parameters]"
 		}
 		return ""
 	})
