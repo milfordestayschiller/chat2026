@@ -10,11 +10,12 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/messages"
 	"git.kirsle.net/apps/barertc/pkg/util"
 )
 
 // OnLogin handles "login" actions from the client.
-func (s *Server) OnLogin(sub *Subscriber, msg Message) {
+func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 	// Using a JWT token for authentication?
 	var claims = &jwt.Claims{}
 	if msg.JWTToken != "" || (config.Current.JWT.Enabled && config.Current.JWT.Strict) {
@@ -58,8 +59,8 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 		if claims.Subject == msg.Username {
 			if other, err := s.GetSubscriber(msg.Username); err == nil {
 				other.ChatServer("You have been signed out of chat because you logged in from another location.")
-				other.SendJSON(Message{
-					Action: ActionKick,
+				other.SendJSON(messages.Message{
+					Action: messages.ActionKick,
 				})
 				s.DeleteSubscriber(other)
 			}
@@ -78,8 +79,8 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 			"You are currently banned from entering the chat room. Chat room bans are temporarily and usually last for " +
 				"24 hours. Please try coming back later.",
 		)
-		sub.SendJSON(Message{
-			Action: ActionKick,
+		sub.SendJSON(messages.Message{
+			Action: messages.ActionKick,
 		})
 		s.DeleteSubscriber(sub)
 		return
@@ -92,8 +93,8 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	log.Debug("OnLogin: %s joins the room", sub.Username)
 
 	// Tell everyone they joined.
-	s.Broadcast(Message{
-		Action:   ActionPresence,
+	s.Broadcast(messages.Message{
+		Action:   messages.ActionPresence,
 		Username: msg.Username,
 		Message:  "has joined the room!",
 	})
@@ -107,9 +108,9 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 	// Send the initial ChatServer messages to the public channels.
 	for _, channel := range config.Current.PublicChannels {
 		for _, msg := range channel.WelcomeMessages {
-			sub.SendJSON(Message{
+			sub.SendJSON(messages.Message{
 				Channel:  channel.ID,
-				Action:   ActionError,
+				Action:   messages.ActionError,
 				Username: "ChatServer",
 				Message:  RenderMarkdown(msg),
 			})
@@ -118,7 +119,7 @@ func (s *Server) OnLogin(sub *Subscriber, msg Message) {
 }
 
 // OnMessage handles a chat message posted by the user.
-func (s *Server) OnMessage(sub *Subscriber, msg Message) {
+func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 	if !strings.HasPrefix(msg.Channel, "@") {
 		log.Info("[%s to #%s] %s", sub.Username, msg.Channel, msg.Message)
 	}
@@ -143,15 +144,15 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 	markdown = s.ExpandMedia(markdown)
 
 	// Assign a message ID and own it to the sender.
-	MessageID++
-	var mid = MessageID
+	messages.MessageID++
+	var mid = messages.MessageID
 	sub.midMu.Lock()
 	sub.messageIDs[mid] = struct{}{}
 	sub.midMu.Unlock()
 
 	// Message to be echoed to the channel.
-	var message = Message{
-		Action:    ActionMessage,
+	var message = messages.Message{
+		Action:    messages.ActionMessage,
 		Channel:   msg.Channel,
 		Username:  sub.Username,
 		Message:   markdown,
@@ -188,7 +189,7 @@ func (s *Server) OnMessage(sub *Subscriber, msg Message) {
 }
 
 // OnTakeback handles takebacks (delete your message for everybody)
-func (s *Server) OnTakeback(sub *Subscriber, msg Message) {
+func (s *Server) OnTakeback(sub *Subscriber, msg messages.Message) {
 	// Permission check.
 	if sub.JWTClaims == nil || !sub.JWTClaims.IsAdmin {
 		sub.midMu.Lock()
@@ -200,17 +201,17 @@ func (s *Server) OnTakeback(sub *Subscriber, msg Message) {
 	}
 
 	// Broadcast to everybody to remove this message.
-	s.Broadcast(Message{
-		Action:    ActionTakeback,
+	s.Broadcast(messages.Message{
+		Action:    messages.ActionTakeback,
 		MessageID: msg.MessageID,
 	})
 }
 
 // OnReact handles emoji reactions for chat messages.
-func (s *Server) OnReact(sub *Subscriber, msg Message) {
+func (s *Server) OnReact(sub *Subscriber, msg messages.Message) {
 	// Forward the reaction to everybody.
-	s.Broadcast(Message{
-		Action:    ActionReact,
+	s.Broadcast(messages.Message{
+		Action:    messages.ActionReact,
 		Username:  sub.Username,
 		Message:   msg.Message,
 		MessageID: msg.MessageID,
@@ -218,7 +219,7 @@ func (s *Server) OnReact(sub *Subscriber, msg Message) {
 }
 
 // OnFile handles a picture shared in chat with a channel.
-func (s *Server) OnFile(sub *Subscriber, msg Message) {
+func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 	if sub.Username == "" {
 		sub.ChatServer("You must log in first.")
 		return
@@ -247,15 +248,15 @@ func (s *Server) OnFile(sub *Subscriber, msg Message) {
 	var dataURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
 
 	// Assign a message ID and own it to the sender.
-	MessageID++
-	var mid = MessageID
+	messages.MessageID++
+	var mid = messages.MessageID
 	sub.midMu.Lock()
 	sub.messageIDs[mid] = struct{}{}
 	sub.midMu.Unlock()
 
 	// Message to be echoed to the channel.
-	var message = Message{
-		Action:    ActionMessage,
+	var message = messages.Message{
+		Action:    messages.ActionMessage,
 		Channel:   msg.Channel,
 		Username:  sub.Username,
 		MessageID: mid,
@@ -298,8 +299,8 @@ func (s *Server) OnFile(sub *Subscriber, msg Message) {
 }
 
 // OnMe handles current user state updates.
-func (s *Server) OnMe(sub *Subscriber, msg Message) {
-	if msg.VideoStatus&VideoFlagActive == VideoFlagActive {
+func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
+	if msg.VideoStatus&messages.VideoFlagActive == messages.VideoFlagActive {
 		log.Debug("User %s turns on their video feed", sub.Username)
 	}
 
@@ -307,15 +308,15 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 	if sub.JWTClaims != nil && sub.JWTClaims.IsAdmin {
 		if sub.ChatStatus != "hidden" && msg.ChatStatus == "hidden" {
 			// Going hidden - fake leave message
-			s.Broadcast(Message{
-				Action:   ActionPresence,
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionPresence,
 				Username: sub.Username,
 				Message:  "has exited the room!",
 			})
 		} else if sub.ChatStatus == "hidden" && msg.ChatStatus != "hidden" {
 			// Leaving hidden - fake join message
-			s.Broadcast(Message{
-				Action:   ActionPresence,
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionPresence,
 				Username: sub.Username,
 				Message:  "has joined the room!",
 			})
@@ -333,7 +334,7 @@ func (s *Server) OnMe(sub *Subscriber, msg Message) {
 }
 
 // OnOpen is a client wanting to start WebRTC with another, e.g. to see their camera.
-func (s *Server) OnOpen(sub *Subscriber, msg Message) {
+func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
@@ -355,22 +356,22 @@ func (s *Server) OnOpen(sub *Subscriber, msg Message) {
 	}
 
 	// Ring the target of this request and give them the secret.
-	other.SendJSON(Message{
-		Action:     ActionRing,
+	other.SendJSON(messages.Message{
+		Action:     messages.ActionRing,
 		Username:   sub.Username,
 		OpenSecret: secret,
 	})
 
 	// To the caller, echo back the Open along with the secret.
-	sub.SendJSON(Message{
-		Action:     ActionOpen,
+	sub.SendJSON(messages.Message{
+		Action:     messages.ActionOpen,
 		Username:   other.Username,
 		OpenSecret: secret,
 	})
 }
 
 // OnBoot is a user kicking you off their video stream.
-func (s *Server) OnBoot(sub *Subscriber, msg Message) {
+func (s *Server) OnBoot(sub *Subscriber, msg messages.Message) {
 	log.Info("%s boots %s off their camera", sub.Username, msg.Username)
 
 	sub.muteMu.Lock()
@@ -389,7 +390,7 @@ func (s *Server) OnBoot(sub *Subscriber, msg Message) {
 }
 
 // OnMute is a user kicking setting the mute flag for another user.
-func (s *Server) OnMute(sub *Subscriber, msg Message, mute bool) {
+func (s *Server) OnMute(sub *Subscriber, msg messages.Message, mute bool) {
 	log.Info("%s mutes or unmutes %s: %v", sub.Username, msg.Username, mute)
 
 	sub.muteMu.Lock()
@@ -415,7 +416,7 @@ func (s *Server) OnMute(sub *Subscriber, msg Message, mute bool) {
 }
 
 // OnBlocklist is a bulk user mute from the CachedBlocklist sent by the website.
-func (s *Server) OnBlocklist(sub *Subscriber, msg Message) {
+func (s *Server) OnBlocklist(sub *Subscriber, msg messages.Message) {
 	log.Info("%s syncs their blocklist: %s", sub.Username, msg.Usernames)
 
 	sub.muteMu.Lock()
@@ -430,7 +431,7 @@ func (s *Server) OnBlocklist(sub *Subscriber, msg Message) {
 }
 
 // OnReport handles a user's report of a message.
-func (s *Server) OnReport(sub *Subscriber, msg Message) {
+func (s *Server) OnReport(sub *Subscriber, msg messages.Message) {
 	if !WebhookEnabled(WebhookReport) {
 		sub.ChatServer("Unfortunately, the report webhook is not enabled so your report could not be received!")
 		return
@@ -457,7 +458,7 @@ func (s *Server) OnReport(sub *Subscriber, msg Message) {
 }
 
 // OnCandidate handles WebRTC candidate signaling.
-func (s *Server) OnCandidate(sub *Subscriber, msg Message) {
+func (s *Server) OnCandidate(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
@@ -465,15 +466,15 @@ func (s *Server) OnCandidate(sub *Subscriber, msg Message) {
 		return
 	}
 
-	other.SendJSON(Message{
-		Action:    ActionCandidate,
+	other.SendJSON(messages.Message{
+		Action:    messages.ActionCandidate,
 		Username:  sub.Username,
 		Candidate: msg.Candidate,
 	})
 }
 
 // OnSDP handles WebRTC sdp signaling.
-func (s *Server) OnSDP(sub *Subscriber, msg Message) {
+func (s *Server) OnSDP(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
@@ -481,15 +482,15 @@ func (s *Server) OnSDP(sub *Subscriber, msg Message) {
 		return
 	}
 
-	other.SendJSON(Message{
-		Action:      ActionSDP,
+	other.SendJSON(messages.Message{
+		Action:      messages.ActionSDP,
 		Username:    sub.Username,
 		Description: msg.Description,
 	})
 }
 
 // OnWatch communicates video watching status between users.
-func (s *Server) OnWatch(sub *Subscriber, msg Message) {
+func (s *Server) OnWatch(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
@@ -497,14 +498,14 @@ func (s *Server) OnWatch(sub *Subscriber, msg Message) {
 		return
 	}
 
-	other.SendJSON(Message{
-		Action:   ActionWatch,
+	other.SendJSON(messages.Message{
+		Action:   messages.ActionWatch,
 		Username: sub.Username,
 	})
 }
 
 // OnUnwatch communicates video Unwatching status between users.
-func (s *Server) OnUnwatch(sub *Subscriber, msg Message) {
+func (s *Server) OnUnwatch(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
@@ -512,8 +513,8 @@ func (s *Server) OnUnwatch(sub *Subscriber, msg Message) {
 		return
 	}
 
-	other.SendJSON(Message{
-		Action:   ActionUnwatch,
+	other.SendJSON(messages.Message{
+		Action:   messages.ActionUnwatch,
 		Username: sub.Username,
 	})
 }

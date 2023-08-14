@@ -4,23 +4,27 @@ go 1.19
 
 require (
 	git.kirsle.net/go/log v0.0.0-20200902035305-70ac2848949b
-	github.com/BurntSushi/toml v1.2.1
+	github.com/BurntSushi/toml v1.3.2
+	github.com/aichaos/rivescript-go v0.3.1
 	github.com/edwvee/exiffix v0.0.0-20210922235313-0f6cbda5e58f
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/microcosm-cc/bluemonday v1.0.22
 	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629
+	github.com/urfave/cli/v2 v2.25.7
 	golang.org/x/image v0.6.0
 	nhooyr.io/websocket v1.8.7
 )
 
 require (
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/klauspost/compress v1.10.3 // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shurcooL/go v0.0.0-20200502201357-93f07166e636 // indirect
@@ -32,6 +36,7 @@ require (
 	github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d // indirect
 	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	github.com/tomnomnom/xtermcolor v0.0.0-20160428124646-b78803f00a7e // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect

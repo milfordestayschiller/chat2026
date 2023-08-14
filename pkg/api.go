@@ -7,7 +7,9 @@ import (
 	"sync"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
+	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/messages"
 )
 
 // Statistics (/api/statistics) returns info about the users currently logged onto the chat,
@@ -52,8 +54,8 @@ func (s *Server) Statistics() http.HandlerFunc {
 				unique[sub.Username] = struct{}{}
 
 				// Count cameras by color.
-				if sub.VideoStatus&VideoFlagActive == VideoFlagActive {
-					if sub.VideoStatus&VideoFlagNSFW == VideoFlagNSFW {
+				if sub.VideoStatus&messages.VideoFlagActive == messages.VideoFlagActive {
+					if sub.VideoStatus&messages.VideoFlagNSFW == messages.VideoFlagNSFW {
 						result.Cameras.Red++
 					} else {
 						result.Cameras.Blue++
@@ -66,6 +68,109 @@ func (s *Server) Statistics() http.HandlerFunc {
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
 		enc.Encode(result)
+	})
+}
+
+// Authenticate (/api/authenticate) for the chatbot API.
+//
+// This endpoint will sign a JWT token using the claims you pass in. It requires
+// the shared secret `AdminAPIKey` from your settings.toml and will sign the
+// JWT claims you give it.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"APIKey": "from settings.toml",
+//		"Claims": {
+//			"sub": "username",
+//			"nick": "Display Name",
+//			"op": false,
+//			"img": "/static/photos/avatar.png",
+//			"url": "/users/username",
+//			"emoji": "🤖",
+//			"gender": "m"
+//		}
+//	}
+//
+// The return schema looks like:
+//
+//	{
+//		"OK": true,
+//		"Error": "error string, omitted if none",
+//		"JWT": "jwt token string"
+//	}
+func (s *Server) Authenticate() http.HandlerFunc {
+	type request struct {
+		APIKey string
+		Claims jwt.Claims
+	}
+
+	type result struct {
+		OK    bool
+		Error string `json:",omitempty"`
+		JWT   string `json:",omitempty"`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Validate the API key.
+		if params.APIKey != config.Current.AdminAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Authentication denied.",
+			})
+			return
+		}
+
+		// Encode the JWT token.
+		var claims = params.Claims
+		token, err := claims.ReSign()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			enc.Encode(result{
+				Error: "Error signing the JWT claims.",
+			})
+			return
+		}
+
+		enc.Encode(result{
+			OK:  true,
+			JWT: token,
+		})
 	})
 }
 

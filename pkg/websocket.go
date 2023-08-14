@@ -14,6 +14,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/messages"
 	"git.kirsle.net/apps/barertc/pkg/util"
 	"nhooyr.io/websocket"
 )
@@ -54,8 +55,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 
 				// Notify if this user was auth'd and not hidden
 				if sub.authenticated && sub.ChatStatus != "hidden" {
-					s.Broadcast(Message{
-						Action:   ActionPresence,
+					s.Broadcast(messages.Message{
+						Action:   messages.ActionPresence,
 						Username: sub.Username,
 						Message:  "has exited the room!",
 					})
@@ -70,47 +71,47 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 			}
 
 			// Read the user's posted message.
-			var msg Message
+			var msg messages.Message
 			if err := json.Unmarshal(data, &msg); err != nil {
 				log.Error("Read(%d=%s) Message error: %s", sub.ID, sub.Username, err)
 				continue
 			}
 
-			if msg.Action != ActionFile {
+			if msg.Action != messages.ActionFile {
 				log.Debug("Read(%d=%s): %s", sub.ID, sub.Username, data)
 			}
 
 			// What action are they performing?
 			switch msg.Action {
-			case ActionLogin:
+			case messages.ActionLogin:
 				s.OnLogin(sub, msg)
-			case ActionMessage:
+			case messages.ActionMessage:
 				s.OnMessage(sub, msg)
-			case ActionFile:
+			case messages.ActionFile:
 				s.OnFile(sub, msg)
-			case ActionMe:
+			case messages.ActionMe:
 				s.OnMe(sub, msg)
-			case ActionOpen:
+			case messages.ActionOpen:
 				s.OnOpen(sub, msg)
-			case ActionBoot:
+			case messages.ActionBoot:
 				s.OnBoot(sub, msg)
-			case ActionMute, ActionUnmute:
-				s.OnMute(sub, msg, msg.Action == ActionMute)
-			case ActionBlocklist:
+			case messages.ActionMute, messages.ActionUnmute:
+				s.OnMute(sub, msg, msg.Action == messages.ActionMute)
+			case messages.ActionBlocklist:
 				s.OnBlocklist(sub, msg)
-			case ActionCandidate:
+			case messages.ActionCandidate:
 				s.OnCandidate(sub, msg)
-			case ActionSDP:
+			case messages.ActionSDP:
 				s.OnSDP(sub, msg)
-			case ActionWatch:
+			case messages.ActionWatch:
 				s.OnWatch(sub, msg)
-			case ActionUnwatch:
+			case messages.ActionUnwatch:
 				s.OnUnwatch(sub, msg)
-			case ActionTakeback:
+			case messages.ActionTakeback:
 				s.OnTakeback(sub, msg)
-			case ActionReact:
+			case messages.ActionReact:
 				s.OnReact(sub, msg)
-			case ActionReport:
+			case messages.ActionReport:
 				s.OnReport(sub, msg)
 			default:
 				sub.ChatServer("Unsupported message type.")
@@ -136,8 +137,8 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 
 // SendMe sends the current user state to the client.
 func (sub *Subscriber) SendMe() {
-	sub.SendJSON(Message{
-		Action:      ActionMe,
+	sub.SendJSON(messages.Message{
+		Action:      messages.ActionMe,
 		Username:    sub.Username,
 		VideoStatus: sub.VideoStatus,
 	})
@@ -145,8 +146,8 @@ func (sub *Subscriber) SendMe() {
 
 // ChatServer is a convenience function to deliver a ChatServer error to the client.
 func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
-	sub.SendJSON(Message{
-		Action:   ActionError,
+	sub.SendJSON(messages.Message{
+		Action:   messages.ActionError,
 		Username: "ChatServer",
 		Message:  fmt.Sprintf(message, v...),
 	})
@@ -213,8 +214,8 @@ func (s *Server) WebSocket() http.HandlerFunc {
 					}
 				}
 
-				sub.SendJSON(Message{
-					Action:   ActionPing,
+				sub.SendJSON(messages.Message{
+					Action:   messages.ActionPing,
 					JWTToken: token,
 				})
 			case <-ctx.Done():
@@ -313,7 +314,7 @@ func (s *Server) UniqueUsername(username string) (string, error) {
 }
 
 // Broadcast a message to the chat room.
-func (s *Server) Broadcast(msg Message) {
+func (s *Server) Broadcast(msg messages.Message) {
 	if len(msg.Message) < 1024 {
 		log.Debug("Broadcast: %+v", msg)
 	}
@@ -338,7 +339,7 @@ func (s *Server) Broadcast(msg Message) {
 }
 
 // SendTo sends a message to a given username.
-func (s *Server) SendTo(username string, msg Message) error {
+func (s *Server) SendTo(username string, msg messages.Message) error {
 	log.Debug("SendTo(%s): %+v", username, msg)
 	username = strings.TrimPrefix(username, "@")
 
@@ -347,7 +348,7 @@ func (s *Server) SendTo(username string, msg Message) error {
 	for _, sub := range subs {
 		if sub.Username == username {
 			found = true
-			sub.SendJSON(Message{
+			sub.SendJSON(messages.Message{
 				Action:    msg.Action,
 				Channel:   msg.Channel,
 				Username:  msg.Username,
@@ -387,14 +388,14 @@ func (s *Server) SendWhoList() {
 			continue
 		}
 
-		var users = []WhoList{}
+		var users = []messages.WhoList{}
 		for _, un := range usernames {
 			user := userSub[un]
 			if user.ChatStatus == "hidden" {
 				continue
 			}
 
-			who := WhoList{
+			who := messages.WhoList{
 				Username: user.Username,
 				Status:   user.ChatStatus,
 				Video:    user.VideoStatus,
@@ -417,8 +418,8 @@ func (s *Server) SendWhoList() {
 			users = append(users, who)
 		}
 
-		sub.SendJSON(Message{
-			Action:  ActionWhoList,
+		sub.SendJSON(messages.Message{
+			Action:  messages.ActionWhoList,
 			WhoList: users,
 		})
 	}

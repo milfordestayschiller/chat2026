@@ -1,4 +1,4 @@
-package barertc
+package messages
 
 // Auto incrementing Message ID for anything pushed out by the server.
 var MessageID int

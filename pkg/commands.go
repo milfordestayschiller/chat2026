@@ -9,12 +9,13 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/config"
 	ourjwt "git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/messages"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/mattn/go-shellwords"
 )
 
 // ProcessCommand parses a chat message for "/commands"
-func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
+func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 	if len(msg.Message) == 0 || msg.Message[0] != '/' {
 		return false
 	}
@@ -63,8 +64,8 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg Message) bool {
 			))
 			return true
 		case "/shutdown":
-			s.Broadcast(Message{
-				Action:   ActionError,
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionError,
 				Username: "ChatServer",
 				Message:  "The chat server is going down for a reboot NOW!",
 			})
@@ -112,7 +113,7 @@ func (s *Server) NSFWCommand(words []string, sub *Subscriber) {
 		}
 
 		other.ChatServer(message)
-		other.VideoStatus |= VideoFlagNSFW
+		other.VideoStatus |= messages.VideoFlagNSFW
 		other.SendMe()
 		s.SendWhoList()
 		sub.ChatServer("%s now has their camera marked as Explicit", username)
@@ -135,15 +136,15 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		sub.ChatServer("/kick: did you really mean to kick yourself?")
 	} else {
 		other.ChatServer("You have been kicked from the chat room by %s", sub.Username)
-		other.SendJSON(Message{
-			Action: ActionKick,
+		other.SendJSON(messages.Message{
+			Action: messages.ActionKick,
 		})
 		s.DeleteSubscriber(other)
 		sub.ChatServer("%s has been kicked from the room", username)
 
 		// Broadcast it to everyone.
-		s.Broadcast(Message{
-			Action:   ActionPresence,
+		s.Broadcast(messages.Message{
+			Action:   messages.ActionPresence,
 			Username: username,
 			Message:  "has been kicked from the room!",
 		})
@@ -155,8 +156,8 @@ func (s *Server) KickAllCommand() {
 
 	// If we have JWT enabled and a landing page, link users to it.
 	if config.Current.JWT.Enabled && config.Current.JWT.LandingPageURL != "" {
-		s.Broadcast(Message{
-			Action:   ActionError,
+		s.Broadcast(messages.Message{
+			Action:   messages.ActionError,
 			Username: "ChatServer",
 			Message: fmt.Sprintf(
 				"<strong>Notice:</strong> The chat operator has requested that you log back in to the chat room. "+
@@ -166,8 +167,8 @@ func (s *Server) KickAllCommand() {
 			),
 		})
 	} else {
-		s.Broadcast(Message{
-			Action:   ActionError,
+		s.Broadcast(messages.Message{
+			Action:   messages.ActionError,
 			Username: "ChatServer",
 			Message: "<strong>Notice:</strong> The chat operator has kicked everybody from the room. Usually, this " +
 				"may mean a new feature of the chat has been launched and you need to reload the page for it " +
@@ -176,8 +177,8 @@ func (s *Server) KickAllCommand() {
 	}
 
 	// Kick everyone off.
-	s.Broadcast(Message{
-		Action: ActionKick,
+	s.Broadcast(messages.Message{
+		Action: messages.ActionKick,
 	})
 
 	// Disconnect everybody.
@@ -221,15 +222,15 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 		BanUser(username, duration)
 
 		// Broadcast it to everyone.
-		s.Broadcast(Message{
-			Action:   ActionPresence,
+		s.Broadcast(messages.Message{
+			Action:   messages.ActionPresence,
 			Username: username,
 			Message:  "has been banned!",
 		})
 
 		other.ChatServer("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour)
-		other.SendJSON(Message{
-			Action: ActionKick,
+		other.SendJSON(messages.Message{
+			Action: messages.ActionKick,
 		})
 		s.DeleteSubscriber(other)
 		sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
