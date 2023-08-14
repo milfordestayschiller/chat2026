@@ -165,9 +165,10 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		s.SendTo(sub.Username, message)
 		message.Channel = "@" + sub.Username
 
-		// Don't deliver it if the receiver has muted us.
+		// Don't deliver it if the receiver has muted us. Note: admin users, even if muted,
+		// can still deliver a DM to the one who muted them.
 		rcpt, err := s.GetSubscriber(strings.TrimPrefix(msg.Channel, "@"))
-		if err == nil && rcpt.Mutes(sub.Username) {
+		if err == nil && rcpt.Mutes(sub.Username) && !sub.IsAdmin() {
 			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
 			return
 		}
