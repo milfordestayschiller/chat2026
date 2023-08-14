@@ -46,7 +46,7 @@ func AtMentioned(c *Client, message string) (bool, string) {
 	// Patterns to look for.
 	var (
 		reAtMention = regexp.MustCompile(
-			fmt.Sprintf(`^@?%s|@?%s$`, c.Username(), c.Username()),
+			fmt.Sprintf(`(?i)^@?%s|@?%s$`, c.Username(), c.Username()),
 		)
 	)
 	m := reAtMention.FindStringSubmatch(message)
