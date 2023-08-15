@@ -12,8 +12,17 @@ import (
 	"github.com/aichaos/rivescript-go"
 )
 
-// Number of recent chat messages to hold onto.
-const ScrollbackBuffer = 500
+const (
+	// Number of recent chat messages to hold onto.
+	ScrollbackBuffer = 500
+
+	// How long for the lobby room to be quiet before you'll greet the
+	// next person who joins the room.
+	LobbyDeadThreshold = 30 * time.Minute
+
+	// Default (lobby) channel.
+	LobbyChannel = "lobby"
+)
 
 // BotHandlers holds onto a set of handler functions for the BareBot.
 type BotHandlers struct {
@@ -34,6 +43,17 @@ type BotHandlers struct {
 	// happen immediately, if it does).
 	messageBuf   []messages.Message
 	messageBufMu sync.RWMutex
+
+	// Main (lobby) channel quiet detector. Record the time of the last
+	// message seen: if the lobby has been quiet for a long time, and
+	// someone new joins the room, greet them - overriding the global
+	// autoGreet cooldown or ignoring the number of chatters in the room.
+	lobbyChannelLastUpdated time.Time
+
+	// Store the reactions we have previously sent by messageID,
+	// so we don't accidentally take back our own reactions.
+	reactions   map[int]map[string]interface{}
+	reactionsMu sync.Mutex
 }
 
 // SetupChatbot configures a sensible set of default handlers for the BareBot application.
@@ -49,6 +69,7 @@ func (c *Client) SetupChatbot() error {
 		}),
 		autoGreet:  map[string]time.Time{},
 		messageBuf: []messages.Message{},
+		reactions:  map[int]map[string]interface{}{},
 	}
 
 	log.Info("Initializing RiveScript brain")
@@ -133,6 +154,11 @@ func (h *BotHandlers) OnMessage(msg messages.Message) {
 
 	// Cache it in our message buffer.
 	h.cacheMessage(msg)
+
+	// Record the last seen if this is the lobby channel.
+	if msg.Channel == LobbyChannel {
+		h.lobbyChannelLastUpdated = time.Now()
+	}
 
 	// Do we send a reply to this?
 	var (
@@ -227,14 +253,35 @@ func (h *BotHandlers) OnReact(msg messages.Message) {
 		return
 	}
 
+	// Sanity check that we can actually see the message being reacted to: so we don't
+	// upvote reactions posted to messageIDs in other peoples' DM threads.
+	if _, ok := h.getMessageByID(msg.MessageID); !ok {
+		return
+	}
+
+	// If we have already reacted to it, don't react again.
+	h.reactionsMu.Lock()
+	defer h.reactionsMu.Unlock()
+	if _, ok := h.reactions[msg.MessageID]; !ok {
+		h.reactions[msg.MessageID] = map[string]interface{}{}
+	}
+	if _, ok := h.reactions[msg.MessageID][msg.Message]; ok {
+		log.Info("I already reacted %s on message %d", msg.Message, msg.MessageID)
+		return // already upvoted it
+	} else {
+		h.reactions[msg.MessageID][msg.Message] = nil
+	}
+
 	// Half the time, agree with the reaction.
 	if rand.Intn(100) > 50 {
-		time.Sleep(2500 * time.Millisecond)
-		h.client.Send(messages.Message{
-			Action:    messages.ActionReact,
-			MessageID: msg.MessageID,
-			Message:   msg.Message,
-		})
+		go func() {
+			time.Sleep(2500 * time.Millisecond)
+			h.client.Send(messages.Message{
+				Action:    messages.ActionReact,
+				MessageID: msg.MessageID,
+				Message:   msg.Message,
+			})
+		}()
 	}
 }
 
@@ -249,6 +296,9 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 
 	// A join message?
 	if strings.Contains(msg.Message, "has joined the room") {
+		// Do we force a greeting? (if lobby channel has been quiet)
+		var forceGreeting = time.Now().Sub(h.lobbyChannelLastUpdated) > LobbyDeadThreshold
+
 		// Global auto-greet cooldown.
 		if time.Now().Before(h.autoGreetCooldown) {
 			return
@@ -258,7 +308,7 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 		// Don't greet the same user too often in case of bouncing.
 		h.autoGreetMu.Lock()
 		if timeout, ok := h.autoGreet[msg.Username]; ok {
-			if time.Now().Before(timeout) {
+			if time.Now().Before(timeout) && !forceGreeting {
 				// Do not greet again.
 				log.Info("Do not auto-greet again: too soon")
 				h.autoGreetMu.Unlock()
@@ -279,11 +329,14 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 
 		// Set their user variables.
 		h.SetUserVariables(msg)
+		if forceGreeting {
+			h.rs.SetGlobal("numUsersOnline", "0")
+		}
 		reply, err := h.rs.Reply(msg.Username, "/greet")
 		if err == nil && !NoReply(reply) {
 			h.client.Send(messages.Message{
 				Action:   messages.ActionMessage,
-				Channel:  "lobby",
+				Channel:  LobbyChannel,
 				Username: msg.Username,
 				Message:  reply,
 			})
