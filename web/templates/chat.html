@@ -137,6 +137,27 @@
                             </div>
                         </div>
 
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
+                                <label class="label">Images</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select v-model="imageDisplaySetting">
+                                                <option v-for="s in config.imageDisplaySettings"
+                                                    v-bind:key="s[0]"
+                                                    :value="s[0]">
+                                                    [[ s[1] ]]
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="field">
                             <label class="label">Scrollback buffer</label>
                             <div class="control">
@@ -153,35 +174,6 @@
                             </p>
                         </div>
 
-                        <h3 class="subtitle mb-2" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
-                            Webcam Devices
-                        </h3>
-                        <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
-
-                            <div class="column">
-                                <label class="label">Video source</label>
-                                <div class="select is-fullwidth">
-                                    <select v-model="webcam.videoDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                        <option v-for="(d, i) in webcam.videoDevices"
-                                            :value="d.id">
-                                            [[ d.label || `Camera ${i}` ]]
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="column">
-                                <label class="label">Audio source</label>
-                                <div class="select is-fullwidth">
-                                    <select v-model="webcam.audioDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                        <option v-for="(d, i) in webcam.audioDevices"
-                                            :value="d.id">
-                                            [[ d.label || `Microphone ${i}` ]]
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Sound settings -->

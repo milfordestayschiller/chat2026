@@ -59,6 +59,11 @@ const app = Vue.createApp({
                     [ "x3", "3x larger chat room text" ],
                     [ "x4", "4x larger chat room text" ],
                 ],
+                imageDisplaySettings: [
+                    [ "", "Always show images in chat (default)" ],
+                    [ "collapse", "Collapse images in chat (clicking to expand)" ],
+                    [ "hide", "Never show images shared in chat" ],
+                ],
                 reportClassifications: [
                     "It's spam",
                     "It's abusive (racist, homophobic, etc.)",
@@ -197,6 +202,7 @@ const app = Vue.createApp({
             historyScrollbox: null,
             autoscroll: true, // scroll to bottom on new messages
             fontSizeClass: "", // font size magnification
+            imageDisplaySetting: "", // image show/hide setting
             scrollback: 1000,  // scrollback buffer (messages to keep per channel)
             DMs: {},
             messageReactions: {
@@ -324,6 +330,9 @@ const app = Vue.createApp({
         fontSizeClass() {
             // Store the setting persistently.
             localStorage.fontSizeClass = this.fontSizeClass;
+        },
+        imageDisplaySetting() {
+            localStorage.imageDisplaySetting = this.imageDisplaySetting;
         },
         scrollback() {
             localStorage.scrollback = this.scrollback;
@@ -512,6 +521,10 @@ const app = Vue.createApp({
 
             if (localStorage.videoScale != undefined) {
                 this.webcam.videoScale = localStorage.videoScale;
+            }
+
+            if (localStorage.imageDisplaySetting != undefined) {
+                this.imageDisplaySetting = localStorage.imageDisplaySetting;
             }
 
             if (localStorage.scrollback != undefined) {
@@ -1917,6 +1930,27 @@ const app = Vue.createApp({
 
             // Initialize this channel's history?
             this.initHistory(channel);
+
+            // Image handling per the user's preference.
+            if (message.indexOf("<img") > -1) {
+                if (this.imageDisplaySetting === "hide") {
+                    return;
+                } else if (this.imageDisplaySetting === "collapse") {
+                    // Put a collapser link.
+                    let collapseID = `collapse-${messageID}`;
+                    message = `
+                        <a href="#" id="img-show-${collapseID}"
+                            class="button is-outlined is-small is-info"
+                            onclick="document.querySelector('#img-${collapseID}').style.display = 'block';
+                                     document.querySelector('#img-show-${collapseID}').style.display = 'none';
+                                     return false">
+                            <i class="fa fa-image mr-1"></i>
+                            Image attachment - click to expand
+                        </a>
+                        <div id="img-${collapseID}" style="display: none">${message}</div>`;
+                }
+            }
+
 
             // Append the message.
             this.channels[channel].updated = new Date().getTime();
