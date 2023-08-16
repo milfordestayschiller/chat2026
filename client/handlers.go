@@ -65,7 +65,8 @@ func (c *Client) SetupChatbot() error {
 	var handler = &BotHandlers{
 		client: c,
 		rs: rivescript.New(&rivescript.Config{
-			UTF8: true,
+			UTF8:          true,
+			CaseSensitive: true,
 		}),
 		autoGreet:  map[string]time.Time{},
 		messageBuf: []messages.Message{},
