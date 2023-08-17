@@ -60,8 +60,8 @@ const app = Vue.createApp({
                     [ "x4", "4x larger chat room text" ],
                 ],
                 imageDisplaySettings: [
-                    [ "", "Always show images in chat (default)" ],
-                    [ "collapse", "Collapse images in chat (clicking to expand)" ],
+                    [ "show", "Always show images in chat" ],
+                    [ "collapse", "Collapse images in chat, clicking to expand (default)" ],
                     [ "hide", "Never show images shared in chat" ],
                 ],
                 reportClassifications: [
@@ -202,7 +202,7 @@ const app = Vue.createApp({
             historyScrollbox: null,
             autoscroll: true, // scroll to bottom on new messages
             fontSizeClass: "", // font size magnification
-            imageDisplaySetting: "", // image show/hide setting
+            imageDisplaySetting: "collapse", // image show/hide setting
             scrollback: 1000,  // scrollback buffer (messages to keep per channel)
             DMs: {},
             messageReactions: {
