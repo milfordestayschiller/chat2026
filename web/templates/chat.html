@@ -1119,7 +1119,8 @@
                     <div class="columns is-mobile">
                         <div class="column pr-1 is-narrow" v-if="canUploadFile">
                             <button type="button" class="button"
-                                @click="uploadFile()">
+                                @click="uploadFile()"
+                                title="Upload a picture to share in chat">
                                 <i class="fa fa-image"></i>
                             </button>
                         </div>
@@ -1136,6 +1137,7 @@
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button"
                                 :disabled="message.length === 0"
+                                title="Click to send your message"
                                 @click="sendMessage()">
                                 <i class="fa fa-paper-plane"></i>
                             </button>
