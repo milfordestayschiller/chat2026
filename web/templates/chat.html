@@ -1117,20 +1117,27 @@
                 <div class="card-content p-2">
 
                     <div class="columns is-mobile">
-                        <div class="column"
-                            :class="{'pr-1': canUploadFile}">
+                        <div class="column pr-1 is-narrow" v-if="canUploadFile">
+                            <button type="button" class="button"
+                                @click="uploadFile()">
+                                <i class="fa fa-image"></i>
+                            </button>
+                        </div>
+                        <div class="column pr-1"
+                            :class="{'pl-1': canUploadFile}">
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
                                     v-model="message"
-                                    placeholder="Message"
+                                    placeholder="Write a message"
                                     @keydown="sendTypingNotification()"
                                     :disabled="!ws.connected">
                             </form>
                         </div>
-                        <div class="column pl-1 is-narrow" v-if="canUploadFile">
+                        <div class="column pl-1 is-narrow">
                             <button type="button" class="button"
-                                @click="uploadFile()">
-                                <i class="fa fa-image"></i>
+                                :disabled="message.length === 0"
+                                @click="sendMessage()">
+                                <i class="fa fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
