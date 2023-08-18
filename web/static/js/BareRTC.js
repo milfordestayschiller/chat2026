@@ -1413,6 +1413,16 @@ const app = Vue.createApp({
         startVideo({force=false, changeCamera=false}) {
             if (this.webcam.busy) return;
 
+            // Before they go on cam the first time, ATTEMPT to get their device names.
+            // - If they had never granted permission, we won't get the names of
+            //   the devices and no big deal.
+            // - If they had given permission before, we can present a nicer experience
+            //   for them and enumerate their devices before they go on originally.
+            if (!changeCamera) {
+                // Initial broadcast: did they select device IDs?
+                this.getDevices();
+            }
+
             // If we are running in PermitNSFW mode, show the user the modal.
             if (this.config.permitNSFW && !force) {
                 this.nsfwModalCast.visible = true;
@@ -1427,9 +1437,11 @@ const app = Vue.createApp({
                 },
             };
 
-            if (changeCamera) {
-                // Name the specific devices chosen by the user.
+            // Name the specific devices chosen by the user.
+            if (this.webcam.videoDeviceID) {
                 mediaParams.video.deviceId = { exact: this.webcam.videoDeviceID };
+            }
+            if (this.webcam.audioDeviceID) {
                 mediaParams.audio = {
                     deviceId: { exact: this.webcam.audioDeviceID },
                 };
@@ -1496,6 +1508,10 @@ const app = Vue.createApp({
                 this.webcam.videoDevices = [];
                 this.webcam.audioDevices = [];
                 devices.forEach(device => {
+                    // If we can't get the device label, disregard it.
+                    // It can happen if the user has not yet granted permission.
+                    if (!device.label) return;
+
                     if (device.kind === 'videoinput') {
                         // console.log(`Video device ${device.deviceId} ${device.label}`);
                         this.webcam.videoDevices.push({
