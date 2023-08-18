@@ -18,7 +18,15 @@ const (
 
 	// How long for the lobby room to be quiet before you'll greet the
 	// next person who joins the room.
-	LobbyDeadThreshold = 30 * time.Minute
+	LobbyDeadThreshold = 20 * time.Minute
+
+	// Minimum time between greeting users who enter chat, IF we will
+	// do so. When the rush hour picks up, don't spam too much and
+	// greet everybody who enters.
+	AutoGreetGlobalCooldown = 8 * time.Minute
+
+	// Minimum time between re-greeting the same user.
+	AutoGreetUserCooldown = 45 * time.Minute
 
 	// Default (lobby) channel.
 	LobbyChannel = "lobby"
@@ -108,7 +116,7 @@ func (h *BotHandlers) OnWho(msg messages.Message) {
 	h.whoList = msg.WhoList
 }
 
-// OnMe handles Who List updates in chat.
+// OnMe handles user status updates pushed by the server (renamed username, nsfw flag added)
 func (h *BotHandlers) OnMe(msg messages.Message) {
 	// Has the server changed our name?
 	if h.client.Username() != msg.Username {
@@ -142,7 +150,7 @@ func (h *BotHandlers) getMessageByID(msgID int) (messages.Message, bool) {
 	return messages.Message{}, false
 }
 
-// OnMessage handles Who List updates in chat.
+// OnMessage handles chat messages.
 func (h *BotHandlers) OnMessage(msg messages.Message) {
 	// Strip HTML.
 	msg.Message = StripHTML(msg.Message)
@@ -239,12 +247,12 @@ func (h *BotHandlers) OnMessage(msg messages.Message) {
 	}
 }
 
-// OnTakeback handles Who List updates in chat.
+// OnTakeback handles users requesting to take back messages they had sent.
 func (h *BotHandlers) OnTakeback(msg messages.Message) {
 	log.Info("Takeback: user %s takes back msgID %d", msg.Username, msg.MessageID)
 }
 
-// OnReact handles Who List updates in chat.
+// OnReact handles emoji reactions to messages.
 func (h *BotHandlers) OnReact(msg messages.Message) {
 	log.Info("React: user %s reacts with %s on msgID %d", msg.Username, msg.Message, msg.MessageID)
 
@@ -285,7 +293,7 @@ func (h *BotHandlers) OnReact(msg messages.Message) {
 	}
 }
 
-// OnPresence handles Who List updates in chat.
+// OnPresence handles join/exit room events as well as kicked/banned messages.
 func (h *BotHandlers) OnPresence(msg messages.Message) {
 	log.Info("Presence: [%s] %s", msg.Username, msg.Message)
 
@@ -297,13 +305,13 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 	// A join message?
 	if strings.Contains(msg.Message, "has joined the room") {
 		// Do we force a greeting? (if lobby channel has been quiet)
-		var forceGreeting = time.Now().Sub(h.lobbyChannelLastUpdated) > LobbyDeadThreshold
+		var forceGreeting = time.Since(h.lobbyChannelLastUpdated) > LobbyDeadThreshold
 
 		// Global auto-greet cooldown.
 		if time.Now().Before(h.autoGreetCooldown) {
 			return
 		}
-		h.autoGreetCooldown = time.Now().Add(15 * time.Minute)
+		h.autoGreetCooldown = time.Now().Add(AutoGreetGlobalCooldown)
 
 		// Don't greet the same user too often in case of bouncing.
 		h.autoGreetMu.Lock()
@@ -315,7 +323,7 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 				return
 			}
 		}
-		h.autoGreet[msg.Username] = time.Now().Add(time.Hour)
+		h.autoGreet[msg.Username] = time.Now().Add(AutoGreetUserCooldown)
 		h.autoGreetMu.Unlock()
 
 		// Send a message to the lobby. TODO: configurable channel name.
@@ -344,37 +352,37 @@ func (h *BotHandlers) OnPresence(msg messages.Message) {
 	}
 }
 
-// OnRing handles Who List updates in chat.
+// OnRing handles somebody requesting to open our webcam.
 func (h *BotHandlers) OnRing(msg messages.Message) {
 
 }
 
-// OnOpen handles Who List updates in chat.
+// OnOpen handles the server echo to us wanting to open another user's webcam.
 func (h *BotHandlers) OnOpen(msg messages.Message) {
 
 }
 
-// OnWatch handles Who List updates in chat.
+// OnWatch handles somebody adding themselves to our Watching list.
 func (h *BotHandlers) OnWatch(msg messages.Message) {
 
 }
 
-// OnUnwatch handles Who List updates in chat.
+// OnUnwatch handles somebody removing themselves from our Watching list.
 func (h *BotHandlers) OnUnwatch(msg messages.Message) {
 
 }
 
-// OnError handles Who List updates in chat.
+// OnError handles ChatServer messages from the backend.
 func (h *BotHandlers) OnError(msg messages.Message) {
 	log.Error("[%s] %s", msg.Username, msg.Message)
 }
 
-// OnDisconnect handles Who List updates in chat.
+// OnDisconnect handles kick messages from the backend (told: do not reconnect).
 func (h *BotHandlers) OnDisconnect(msg messages.Message) {
 
 }
 
-// OnPing handles Who List updates in chat.
+// OnPing handles server keepalive pings.
 func (h *BotHandlers) OnPing(msg messages.Message) {
 
 }
