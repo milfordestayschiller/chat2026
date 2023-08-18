@@ -296,6 +296,13 @@
 
                         <h3 class="subtitle mb-2" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
                             Webcam Devices
+                            <button type="button" class="button is-primary is-small is-outlined ml-2"
+                                @click="getDevices()"
+                                title="Refresh list of devices">
+                                <i class="fa fa-arrows-rotate"
+                                    :class="{'fa-spin': webcam.gettingDevices}">
+                                </i>
+                            </button>
                         </h3>
                         <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 

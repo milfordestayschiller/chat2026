@@ -150,6 +150,7 @@ const app = Vue.createApp({
                 ],
 
                 // Available cameras and microphones for the Settings modal.
+                gettingDevices: false, // busy indicator for refreshing devices
                 videoDevices: [],
                 videoDeviceID: null,
                 audioDevices: [],
@@ -1488,6 +1489,9 @@ const app = Vue.createApp({
                 return;
             }
 
+            if (this.webcam.gettingDevices) return;
+            this.webcam.gettingDevices = true;
+
             navigator.mediaDevices.enumerateDevices().then(devices => {
                 this.webcam.videoDevices = [];
                 this.webcam.audioDevices = [];
@@ -1508,6 +1512,11 @@ const app = Vue.createApp({
                 })
             }).catch(err => {
                 this.ChatClient(`Error listing your cameras and microphones: ${err.name}: ${err.message}`);
+            }).finally(() => {
+                // In the settings modal, let the spinner spin for a moment.
+                setTimeout(() => {
+                    this.webcam.gettingDevices = false;
+                }, 500);
             })
         },
 
