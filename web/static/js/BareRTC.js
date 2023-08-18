@@ -1418,7 +1418,7 @@ const app = Vue.createApp({
             //   the devices and no big deal.
             // - If they had given permission before, we can present a nicer experience
             //   for them and enumerate their devices before they go on originally.
-            if (!changeCamera) {
+            if (!changeCamera && !force) {
                 // Initial broadcast: did they select device IDs?
                 this.getDevices();
             }
@@ -1501,7 +1501,6 @@ const app = Vue.createApp({
                 return;
             }
 
-            if (this.webcam.gettingDevices) return;
             this.webcam.gettingDevices = true;
 
             navigator.mediaDevices.enumerateDevices().then(devices => {
@@ -1510,7 +1509,9 @@ const app = Vue.createApp({
                 devices.forEach(device => {
                     // If we can't get the device label, disregard it.
                     // It can happen if the user has not yet granted permission.
-                    if (!device.label) return;
+                    if (!device.label) {
+                        return;
+                    };
 
                     if (device.kind === 'videoinput') {
                         // console.log(`Video device ${device.deviceId} ${device.label}`);
