@@ -155,6 +155,14 @@ const app = Vue.createApp({
                 videoDeviceID: null,
                 audioDevices: [],
                 audioDeviceID: null,
+
+                // After we get a device selected, remember it (by name) so that we
+                // might hopefully re-select it by default IF we are able to enumerate
+                // devices before they go on camera the first time.
+                preferredDeviceNames: {
+                    video: null,
+                    audio: null,
+                },
             },
 
             // Video flag constants (sync with values in messages.go)
@@ -530,6 +538,13 @@ const app = Vue.createApp({
 
             if (localStorage.scrollback != undefined) {
                 this.scrollback = parseInt(localStorage.scrollback);
+            }
+
+            // Stored user preferred device names for webcam/audio.
+            if (localStorage.preferredDeviceNames != undefined) {
+                let dev = JSON.parse(localStorage.preferredDeviceNames);
+                this.webcam.preferredDeviceNames.video = dev.video;
+                this.webcam.preferredDeviceNames.audio = dev.audio;
             }
 
             // Webcam mutality preferences from last broadcast.
@@ -1482,7 +1497,11 @@ const app = Vue.createApp({
                 console.log("device IDs:", this.webcam.videoDeviceID, this.webcam.audioDeviceID);
 
                 // Collect video and audio devices to let the user change them in their settings.
-                this.getDevices();
+                this.getDevices().then(() => {
+                    // Store their names on localStorage in case we can reselect them by name
+                    // on the user's next visit.
+                    this.storePreferredDeviceNames();
+                });
 
                 // If we have changed devices, reconnect everybody's WebRTC channels for your existing watchers.
                 if (changeCamera) {
@@ -1503,7 +1522,7 @@ const app = Vue.createApp({
 
             this.webcam.gettingDevices = true;
 
-            navigator.mediaDevices.enumerateDevices().then(devices => {
+            return navigator.mediaDevices.enumerateDevices().then(devices => {
                 this.webcam.videoDevices = [];
                 this.webcam.audioDevices = [];
                 devices.forEach(device => {
@@ -1526,7 +1545,25 @@ const app = Vue.createApp({
                             label: device.label,
                         });
                     }
-                })
+                });
+
+                // If we don't have the user's current active device IDs (e.g., they have
+                // not yet started their video the first time), see if we can pre-select
+                // by their preferred device names.
+                if (!this.webcam.videoDeviceID && this.webcam.preferredDeviceNames.video) {
+                    for (let dev of this.webcam.videoDevices) {
+                        if (dev.label === this.webcam.preferredDeviceNames.video) {
+                            this.webcam.videoDeviceID = dev.id;
+                        }
+                    }
+                }
+                if (!this.webcam.audioDeviceID && this.webcam.preferredDeviceNames.audio) {
+                    for (let dev of this.webcam.audioDevices) {
+                        if (dev.label === this.webcam.preferredDeviceNames.audio) {
+                            this.webcam.audioDeviceID = dev.id;
+                        }
+                    }
+                }
             }).catch(err => {
                 this.ChatClient(`Error listing your cameras and microphones: ${err.name}: ${err.message}`);
             }).finally(() => {
@@ -1535,6 +1572,31 @@ const app = Vue.createApp({
                     this.webcam.gettingDevices = false;
                 }, 500);
             })
+        },
+        storePreferredDeviceNames() {
+            // This function looks up the names of the user's selected video/audio device.
+            // When they come back later, IF we are able to enumerate devices before they
+            // go on for the first time, we might pre-select their last device by name.
+            // NOTE: on iOS apparently device IDs shuffle every single time so only names
+            // may be reliable!
+            if (this.webcam.videoDeviceID) {
+                for (let dev of this.webcam.videoDevices) {
+                    if (dev.id === this.webcam.videoDeviceID && dev.label) {
+                        this.webcam.preferredDeviceNames.video = dev.label;
+                    }
+                }
+            }
+
+            if (this.webcam.audioDeviceID) {
+                for (let dev of this.webcam.audioDevices) {
+                    if (dev.id === this.webcam.audioDeviceID && dev.label) {
+                        this.webcam.preferredDeviceNames.audio = dev.label;
+                    }
+                }
+            }
+
+            // Put them on localStorage.
+            localStorage.preferredDeviceNames = JSON.stringify(this.webcam.preferredDeviceNames);
         },
 
         // Replace your video/audio streams for your watchers (on camera changes)
