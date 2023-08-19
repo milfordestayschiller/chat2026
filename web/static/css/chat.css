@@ -42,6 +42,14 @@ body {
     overflow: auto;
 }
 
+/* Style fix to center wider icons on the Who's Online status icons */
+.who-status-wide-icon-2 {
+    margin: -2px;
+}
+.who-status-wide-icon-1 {
+    margin: -1px;
+}
+
 /************************
  * Main CSS Grid Layout *
  ************************/

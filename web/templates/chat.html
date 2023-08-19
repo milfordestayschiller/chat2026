@@ -1218,6 +1218,8 @@
                                         <option value="lunch">🍴 Out to lunch</option>
                                         <option value="call">📞 On the phone</option>
                                         <option value="busy">💼 Working</option>
+                                        <option value="book">📖 Studying</option>
+                                        <option value="gaming">🎮 Gaming</option>
                                         <option value="idle" v-show="status==='idle'">🕒 Idle</option>
                                         <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
                                     </optgroup>
@@ -1292,11 +1294,13 @@
                                             <i v-else-if="u.status === 'call'" class="fa fa-phone-volume has-text-light" title="Status: On the phone"></i>
                                             <i v-else-if="u.status === 'brb'" class="fa fa-stopwatch-20 has-text-light" title="Status: Be right back"></i>
                                             <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light" title="Status: Working"></i>
+                                            <i v-else-if="u.status === 'book'" class="fa fa-book has-text-light" title="Status: Studying"></i>
+                                            <i v-else-if="u.status === 'gaming'" class="fa fa-gamepad who-status-wide-icon-2 has-text-light" title="Status: Gaming"></i>
                                             <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light" title="Status: Idle"></i>
                                             <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light" title="Status: Horny"></i>
                                             <i v-else-if="u.status === 'chatty'" class="fa fa-comment has-text-light" title="Status: Chatty and sociable"></i>
                                             <i v-else-if="u.status === 'introverted'" class="fa fa-spoon has-text-light" title="Status: Introverted and quiet"></i>
-                                            <i v-else-if="u.status === 'exhibitionist'" class="fa-regular fa-eye has-text-light" title="Status: Watch me"></i>
+                                            <i v-else-if="u.status === 'exhibitionist'" class="fa-regular fa-eye who-status-wide-icon-1 has-text-light" title="Status: Watch me"></i>
                                             <i v-else class="fa fa-clock has-text-light" :title="'Status: '+u.status"></i>
                                         </div>
                                     </a>
