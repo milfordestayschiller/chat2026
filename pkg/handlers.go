@@ -89,6 +89,7 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 	// Use their username.
 	sub.Username = msg.Username
 	sub.authenticated = true
+	sub.DND = msg.DND
 	sub.loginAt = time.Now()
 	log.Debug("OnLogin: %s joins the room", sub.Username)
 
@@ -144,9 +145,8 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 	markdown = s.ExpandMedia(markdown)
 
 	// Assign a message ID and own it to the sender.
-	messages.MessageID++
-	var mid = messages.MessageID
 	sub.midMu.Lock()
+	var mid = messages.NextMessageID()
 	sub.messageIDs[mid] = struct{}{}
 	sub.midMu.Unlock()
 
@@ -194,8 +194,9 @@ func (s *Server) OnTakeback(sub *Subscriber, msg messages.Message) {
 	// Permission check.
 	if sub.JWTClaims == nil || !sub.JWTClaims.IsAdmin {
 		sub.midMu.Lock()
-		defer sub.midMu.Unlock()
-		if _, ok := sub.messageIDs[msg.MessageID]; !ok {
+		_, ok := sub.messageIDs[msg.MessageID]
+		sub.midMu.Unlock()
+		if !ok {
 			sub.ChatServer("That is not your message to take back.")
 			return
 		}
@@ -249,9 +250,8 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 	var dataURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
 
 	// Assign a message ID and own it to the sender.
-	messages.MessageID++
-	var mid = messages.MessageID
 	sub.midMu.Lock()
+	var mid = messages.NextMessageID()
 	sub.messageIDs[mid] = struct{}{}
 	sub.midMu.Unlock()
 
@@ -329,6 +329,7 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 
 	sub.VideoStatus = msg.VideoStatus
 	sub.ChatStatus = msg.ChatStatus
+	sub.DND = msg.DND
 
 	// Sync the WhoList to everybody.
 	s.SendWhoList()

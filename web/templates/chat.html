@@ -373,7 +373,7 @@
                     <div v-if="settingsModal.tab==='misc'">
 
                         <div class="field">
-                            <label class="label">Presence messages in public channels</label>
+                            <label class="label">Presence messages <small>('has joined the room')</small> in public channels</label>
                             <div class="columns is-mobile mb-0">
                                 <div class="column py-1">
                                     <label class="checkbox" title="Show 'has joined the room' messages in public channels">
@@ -393,9 +393,16 @@
                                     </label>
                                 </div>
                             </div>
-                            <p class="help mt-0">
-                                Whether to show <em>'has joined the room'</em> style messages in public channels.
-                            </p>
+                        </div>
+
+                        <div class="field">
+                            <label class="label mb-0">Server notification messages</label>
+                            <label class="checkbox" title="Show 'has joined the room' messages in public channels">
+                                <input type="checkbox"
+                                    v-model="prefs.watchNotif"
+                                    :value="true">
+                                Notify when somebody opens my camera
+                            </label>
                         </div>
 
                         <div class="field">
@@ -1114,7 +1121,8 @@
                                                     v-if="!(msg.username === username || isDM)"
                                                     class="button is-grey is-outlined is-small px-2"
                                                     @click="openDMs({username: msg.username})"
-                                                    title="Open a Direct Message (DM) thread">
+                                                    :title="isUsernameDND(msg.username) ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
+                                                    :disabled="isUsernameDND(msg.username)">
                                                     <i class="fa fa-message"></i>
                                                 </button>
 
@@ -1250,6 +1258,7 @@
                             :class="{'pl-1': canUploadFile}">
                             <form @submit.prevent="sendMessage()">
                                 <input type="text" class="input"
+                                    id="messageBox"
                                     v-model="message"
                                     placeholder="Write a message"
                                     @keydown="sendTypingNotification()"
@@ -1424,8 +1433,8 @@
                                     <button type="button" v-else
                                         class="button is-small px-2 py-1"
                                         @click="openDMs(u)"
-                                        title="Start direct message thread"
-                                        :disabled="u.username === username">
+                                        :disabled="u.username === username || u.dnd"
+                                        :title="u.dnd ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
                                         <i class="fa fa-message"></i>
                                     </button>
 

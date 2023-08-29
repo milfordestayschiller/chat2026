@@ -1,7 +1,21 @@
 package messages
 
+import "sync"
+
 // Auto incrementing Message ID for anything pushed out by the server.
-var MessageID int
+var (
+	messageID int
+	mu        sync.Mutex
+)
+
+// NextMessageID atomically increments and returns a new MessageID.
+func NextMessageID() int {
+	mu.Lock()
+	defer mu.Unlock()
+	messageID++
+	var mid = messageID
+	return mid
+}
 
 /*
 Message is the basic carrier of WebSocket chat protocol actions.
@@ -25,6 +39,7 @@ type Message struct {
 	// Sent on `me` actions along with Username
 	VideoStatus int    `json:"video,omitempty"`  // user video flags
 	ChatStatus  string `json:"status,omitempty"` // online vs. away
+	DND         bool   `json:"dnd,omitempty"`    // Do Not Disturb, e.g. DMs are closed
 
 	// Message ID to support takebacks/local deletions
 	MessageID int `json:"msgID,omitempty"`
@@ -87,6 +102,7 @@ type WhoList struct {
 	Nickname string `json:"nickname,omitempty"`
 	Status   string `json:"status"`
 	Video    int    `json:"video"`
+	DND      bool   `json:"dnd,omitempty"`
 	LoginAt  int64  `json:"loginAt"`
 
 	// JWT auth extra settings.

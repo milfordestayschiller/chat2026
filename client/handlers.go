@@ -62,6 +62,10 @@ type BotHandlers struct {
 	// so we don't accidentally take back our own reactions.
 	reactions   map[int]map[string]interface{}
 	reactionsMu sync.Mutex
+
+	// Deadlock detection (deadlock_watch.go): record time of last successful
+	// ping to self, to detect when the server is deadlocked.
+	deadlockLastOK time.Time
 }
 
 // SetupChatbot configures a sensible set of default handlers for the BareBot application.
@@ -104,6 +108,9 @@ func (c *Client) SetupChatbot() error {
 	c.OnError = handler.OnError
 	c.OnDisconnect = handler.OnDisconnect
 	c.OnPing = handler.OnPing
+
+	// Watch for deadlocks.
+	go handler.watchForDeadlock()
 
 	return nil
 }
@@ -157,6 +164,7 @@ func (h *BotHandlers) OnMessage(msg messages.Message) {
 
 	// Ignore echoed message from ourself.
 	if msg.Username == h.client.Username() {
+		h.onMessageFromSelf(msg)
 		return
 	}
 

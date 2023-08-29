@@ -3,8 +3,10 @@ package barertc
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
@@ -171,6 +173,101 @@ func (s *Server) Authenticate() http.HandlerFunc {
 			OK:  true,
 			JWT: token,
 		})
+	})
+}
+
+// Shutdown (/api/shutdown) the chat server, hopefully to reboot it.
+//
+// This endpoint is equivalent to the operator '/shutdown' command but may be
+// invoked by your website, or your chatbot. It requires the AdminAPIKey.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"APIKey": "from settings.toml",
+//	}
+//
+// The return schema looks like:
+//
+//	{
+//		"OK": true,
+//		"Error": "error string, omitted if none",
+//	}
+func (s *Server) ShutdownAPI() http.HandlerFunc {
+	type request struct {
+		APIKey string
+		Claims jwt.Claims
+	}
+
+	type result struct {
+		OK    bool
+		Error string `json:",omitempty"`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Validate the API key.
+		if params.APIKey != config.Current.AdminAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Authentication denied.",
+			})
+			return
+		}
+
+		// Send the response.
+		enc.Encode(result{
+			OK: true,
+		})
+
+		// Defer a shutdown a moment later.
+		go func() {
+			time.Sleep(2 * time.Second)
+			os.Exit(1)
+		}()
+
+		// Attempt to broadcast, but if deadlocked this might not go out.
+		go func() {
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionError,
+				Username: "ChatServer",
+				Message:  "The chat server is going down for a reboot NOW!",
+			})
+		}()
 	})
 }
 

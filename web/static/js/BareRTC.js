@@ -103,6 +103,7 @@ const app = Vue.createApp({
             username: "", //"test",
             autoLogin: false,  // e.g. from JWT auth
             message: "",
+            messageBox: null, // HTML element for message entry box
             typingNotifDebounce: null,
             status: "online", // away/idle status
 
@@ -127,6 +128,7 @@ const app = Vue.createApp({
             prefs: {
                 joinMessages: true,  // show "has entered the room" in public channels
                 exitMessages: false, // hide exit messages by default in public channels
+                watchNotif: true,    // notify in chat about cameras being watched
                 closeDMs: false,     // ignore unsolicited DMs
             },
 
@@ -290,6 +292,7 @@ const app = Vue.createApp({
             $center: document.querySelector(".chat-column"),
             $right: document.querySelector(".right-column"),
         };
+        this.messageBox = document.getElementById("messageBox");
 
         // Reset CSS overrides for responsive display on any window size change. In effect,
         // making the chat panel the current screen again on phone rotation.
@@ -387,8 +390,14 @@ const app = Vue.createApp({
         "prefs.exitMessages": function() {
             localStorage.exitMessages = this.prefs.exitMessages;
         },
+        "prefs.watchNotif": function() {
+            localStorage.watchNotif = this.prefs.watchNotif;
+        },
         "prefs.closeDMs": function() {
             localStorage.closeDMs = this.prefs.closeDMs;
+
+            // Tell ChatServer if we have gone to/from DND.
+            this.sendMe();
         },
     },
     computed: {
@@ -588,6 +597,9 @@ const app = Vue.createApp({
             if (localStorage.exitMessages != undefined) {
                 this.prefs.exitMessages = localStorage.exitMessages === "true";
             }
+            if (localStorage.watchNotif != undefined) {
+                this.prefs.watchNotif = localStorage.watchNotif === "true";
+            }
             if (localStorage.closeDMs != undefined) {
                 this.prefs.closeDMs = localStorage.closeDMs === "true";
             }
@@ -686,10 +698,12 @@ const app = Vue.createApp({
         // Sync the current user state (such as video broadcasting status) to
         // the backend, which will reload everybody's Who List.
         sendMe() {
+            if (!this.ws.connected) return;
             this.ws.conn.send(JSON.stringify({
                 action: "me",
                 video: this.myVideoFlag,
                 status: this.status,
+                dnd: this.prefs.closeDMs,
             }));
         },
         onMe(msg) {
@@ -974,7 +988,13 @@ const app = Vue.createApp({
                     action: "login",
                     username: this.username,
                     jwt: this.jwt.token,
+                    dnd: this.prefs.closeDMs,
                 }));
+
+                // Focus the message entry box.
+                window.requestAnimationFrame(() => {
+                    this.messageBox.focus();
+                });
             });
 
             conn.addEventListener("message", ev => {
@@ -1252,6 +1272,14 @@ const app = Vue.createApp({
         onWatch(msg) {
             // The user has our video feed open now.
             if (this.isBootedAdmin(msg.username)) return;
+
+            // Notify in chat if this was the first watch (viewer may send multiple per each track they received)
+            if (this.prefs.watchNotif && this.webcam.watching[msg.username] != true) {
+                this.ChatServer(
+                    `<strong>${msg.username}</strong> is now watching your camera.`,
+                );
+            }
+
             this.webcam.watching[msg.username] = true;
             this.playSound("Watch");
         },
@@ -1295,6 +1323,9 @@ const app = Vue.createApp({
 
             // Edit hyperlinks to open in a new window.
             this.makeLinksExternal();
+
+            // Focus the message entry box.
+            this.messageBox.focus();
         },
         hasUnread(channel) {
             if (this.channels[channel] == undefined) {
@@ -1381,6 +1412,10 @@ const app = Vue.createApp({
                 username += " (offline)";
             }
             return username;
+        },
+        isUsernameDND(username) {
+            if (!username) return false;
+            return this.whoMap[username] != undefined && this.whoMap[username].dnd;
         },
         isUsernameCamNSFW(username) {
             // returns true if the username is broadcasting and NSFW, false otherwise.
@@ -1490,8 +1525,8 @@ const app = Vue.createApp({
             let mediaParams = {
                 audio: true,
                 video: {
-                    width: { max: 1280 },
-                    height: { max: 720 },
+                    width: { max: 640 },
+                    height: { max: 480 },
                 },
             };
 

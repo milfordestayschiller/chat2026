@@ -50,6 +50,31 @@ The return schema looks like:
 }
 ```
 
+## POST /api/shutdown
+
+Shut down (and hopefully, reboot) the chat server. It is equivalent to the `/shutdown` operator command issued in chat, but callable from your web application. It is also used as part of deadlock detection on the BareBot chatbot.
+
+It requires the AdminAPIKey to post:
+
+```json
+{
+	"APIKey": "from settings.toml"
+}
+```
+
+The return schema looks like:
+
+```json
+{
+	"OK": true,
+	"Error": "error string, omitted if none"
+}
+```
+
+The HTTP server will respond OK, and then shut down a couple of seconds later, attempting to send a ChatServer broadcast first (as in the `/shutdown` command). If the chat server is deadlocked, this broadcast won't go out but the program will still exit.
+
+It is up to your process supervisor to automatically restart BareRTC when it exits.
+
 ## POST /api/blocklist
 
 Your server may pre-cache the user's blocklist for them **before** they

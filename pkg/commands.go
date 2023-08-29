@@ -83,6 +83,19 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 		case "/deop":
 			s.DeopCommand(words, sub)
 			return true
+		case "/debug-dangerous-force-deadlock":
+			// TEMPORARY debug command to willfully force a deadlock.
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionError,
+				Username: "ChatServer",
+				Message:  "NOTICE: The admin is testing a force deadlock of the chat server; things may become unresponsive soon.",
+			})
+			go func() {
+				time.Sleep(2 * time.Second)
+				s.subscribersMu.Lock()
+				s.subscribersMu.Lock()
+			}()
+			return true
 		}
 
 	}

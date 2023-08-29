@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"git.kirsle.net/apps/barertc/client"
 	"git.kirsle.net/apps/barertc/client/config"
@@ -74,6 +75,11 @@ func init() {
 
 			// Run!
 			log.Info("Connecting to ChatServer")
+			err = client.Run()
+			if err != nil {
+				log.Error("Error: %s (and sleeping 5 seconds before exit)", err)
+				time.Sleep(5 * time.Second)
+			}
 			return cli.Exit(client.Run(), 1)
 		},
 	}

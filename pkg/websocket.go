@@ -26,6 +26,7 @@ type Subscriber struct {
 	Username      string
 	ChatStatus    string
 	VideoStatus   int
+	DND           bool // Do Not Disturb status (DMs are closed)
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
 	loginAt       time.Time
@@ -266,20 +267,16 @@ func (s *Server) DeleteSubscriber(sub *Subscriber) {
 	s.subscribersMu.Unlock()
 }
 
-// IterSubscribers loops over the subscriber list with a read lock. If the
-// caller already holds a lock, pass the optional `true` parameter for isLocked.
-func (s *Server) IterSubscribers(isLocked ...bool) []*Subscriber {
+// IterSubscribers loops over the subscriber list with a read lock.
+func (s *Server) IterSubscribers() []*Subscriber {
 	var result = []*Subscriber{}
 
-	// Has the caller already taken the read lock or do we get it?
-	if locked := len(isLocked) > 0 && isLocked[0]; !locked {
-		s.subscribersMu.RLock()
-		defer s.subscribersMu.RUnlock()
-	}
-
+	// Lock for reads.
+	s.subscribersMu.RLock()
 	for sub := range s.subscribers {
 		result = append(result, sub)
 	}
+	s.subscribersMu.RUnlock()
 
 	return result
 }
@@ -399,6 +396,7 @@ func (s *Server) SendWhoList() {
 				Username: user.Username,
 				Status:   user.ChatStatus,
 				Video:    user.VideoStatus,
+				DND:      user.DND,
 				LoginAt:  user.loginAt.Unix(),
 			}
 
