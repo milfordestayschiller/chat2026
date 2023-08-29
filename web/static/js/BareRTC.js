@@ -123,6 +123,13 @@ const app = Vue.createApp({
             whoMap: {}, // map username to wholist entry
             muted: {},  // muted usernames for client side state
 
+            // Misc. user preferences (TODO: move all of them here)
+            prefs: {
+                joinMessages: true,  // show "has entered the room" in public channels
+                exitMessages: false, // hide exit messages by default in public channels
+                closeDMs: false,     // ignore unsolicited DMs
+            },
+
             // My video feed.
             webcam: {
                 busy: false,
@@ -192,6 +199,11 @@ const app = Vue.createApp({
 
                 // Debounce connection attempts since now every click = try to connect.
                 debounceOpens: {}, // map usernames to bools
+
+                // Timeouts for open camera attempts. e.g.: when you click to view
+                // a camera, the icon changes to a spinner for a few seconds to see
+                // whether the video goes on to open.
+                openTimeouts: {}, // map usernames to timeouts
             },
 
             // Chat history.
@@ -366,6 +378,17 @@ const app = Vue.createApp({
             if (this.webcam.active) {
                 this.sendMe();
             }
+        },
+
+        // Misc preference watches
+        "prefs.joinMessages": function() {
+            localStorage.joinMessages = this.prefs.joinMessages;
+        },
+        "prefs.exitMessages": function() {
+            localStorage.exitMessages = this.prefs.exitMessages;
+        },
+        "prefs.closeDMs": function() {
+            localStorage.closeDMs = this.prefs.closeDMs;
         },
     },
     computed: {
@@ -556,6 +579,17 @@ const app = Vue.createApp({
             }
             if (localStorage.videoAutoMute === "true") {
                 this.webcam.autoMute = true;
+            }
+
+            // Misc preferences
+            if (localStorage.joinMessages != undefined) {
+                this.prefs.joinMessages = localStorage.joinMessages === "true";
+            }
+            if (localStorage.exitMessages != undefined) {
+                this.prefs.exitMessages = localStorage.exitMessages === "true";
+            }
+            if (localStorage.closeDMs != undefined) {
+                this.prefs.closeDMs = localStorage.closeDMs === "true";
             }
         },
 
@@ -815,14 +849,7 @@ const app = Vue.createApp({
             this.startWebRTC(msg.username, true);
         },
         onRing(msg) {
-            // Admin moderation feature: if the user has booted an admin off their camera, do not
-            // notify if the admin re-opens their camera.
-            if (this.isBootedAdmin(msg.username)) {
-                this.startWebRTC(msg.username, false);
-                return;
-            }
-
-            this.ChatServer(`${msg.username} has opened your camera.`);
+            // Request from a viewer to see our broadcast.
             this.startWebRTC(msg.username, false);
         },
         onUserExited(msg) {
@@ -835,7 +862,12 @@ const app = Vue.createApp({
             // Play sound effects if this is not the active channel or the window is not focused.
             if (msg.channel.indexOf("@") === 0) {
                 if (msg.channel !== this.channel || !this.windowFocused) {
-                    this.playSound("DM");
+                    // If we are ignoring unsolicited DMs, don't play the sound effect here.
+                    if (this.prefs.closeDMs && this.channels[msg.channel] == undefined) {
+                        console.log("Unsolicited DM received");
+                    } else {
+                        this.playSound("DM");
+                    }
                 }
             } else if (msg.channel !== this.channel || !this.windowFocused) {
                 this.playSound("Chat");
@@ -868,18 +900,20 @@ const app = Vue.createApp({
         // User logged in or out.
         onPresence(msg) {
             // TODO: make a dedicated leave event
-            let isLeave = false;
+            let isLeave = false,
+                isJoin = false;
             if (msg.message.indexOf("has exited the room!") > -1) {
                 // Clean up data about this user.
                 this.onUserExited(msg);
                 this.playSound("Leave");
                 isLeave = true;
-            } else {
+            } else if (msg.message.indexOf("has joined the room!") > -1) {
                 this.playSound("Enter");
+                isJoin = true;
             }
 
-            // Push it to the history of all public channels (not leaves).
-            if (!isLeave) {
+            // Push it to the history of all public channels (depending on user preference).
+            if ((isJoin && this.prefs.joinMessages) || (isLeave && this.prefs.exitMessages)) {
                 for (let channel of this.config.channels) {
                     this.pushHistory({
                         channel: channel.ID,
@@ -1078,6 +1112,13 @@ const app = Vue.createApp({
             pc.ontrack = event => {
                 const stream = event.streams[0];
 
+                // We've received a video! If we had an "open camera spinner timeout",
+                // clear it before it expires.
+                if (this.WebRTC.openTimeouts[username] != undefined) {
+                    clearTimeout(this.WebRTC.openTimeouts[username]);
+                    delete(this.WebRTC.openTimeouts[username]);
+                }
+
                 // Do we already have it?
                 // this.ChatClient(`Received a video stream from ${username}.`);
                 if (this.WebRTC.streams[username] == undefined ||
@@ -1212,10 +1253,12 @@ const app = Vue.createApp({
             // The user has our video feed open now.
             if (this.isBootedAdmin(msg.username)) return;
             this.webcam.watching[msg.username] = true;
+            this.playSound("Watch");
         },
         onUnwatch(msg) {
             // The user has closed our video feed.
             delete(this.webcam.watching[msg.username]);
+            this.playSound("Unwatch");
         },
         sendWatch(username, watching) {
             // Send the watch or unwatch message to backend.
@@ -1681,15 +1724,26 @@ const app = Vue.createApp({
                 return;
             }
 
+            // Set a timeout: the video icon becomes a spinner and we wait a while
+            // to see if the connection went thru. This gives the user feedback and we
+            // can avoid a spammy 'ChatClient' notification message.
+            if (this.WebRTC.openTimeouts[user.username] != undefined) {
+                clearTimeout(this.WebRTC.openTimeouts[user.username]);
+                delete(this.WebRTC.openTimeouts[user.username]);
+            }
+            this.WebRTC.openTimeouts[user.username] = setTimeout(() => {
+                // It timed out.
+                this.ChatClient(
+                    `There was an error opening <strong>${user.username}</strong>'s camera.`,
+                );
+                delete(this.WebRTC.openTimeouts[user.username]);
+            }, 10000);
+
+            // Send the ChatServer 'open' command.
             this.sendOpen(user.username);
 
             // Responsive CSS -> go to chat panel to see the camera
             this.openChatPanel();
-
-            // Send some feedback to the chat window.
-            this.ChatClient(
-                `A request was sent to open <strong>${user.username}</strong>'s camera which should (hopefully) appear on your screen soon.`,
-            );
         },
         closeVideo(username, name) {
             // Clean up any lingering camera freeze states.
@@ -1762,8 +1816,14 @@ const app = Vue.createApp({
             // - Usually a video icon
             // - May be a crossed-out video if isVideoNotAllowed
             // - Or an eyeball for cameras already opened
+            // - Or a spinner if we are actively trying to open the video
             if (user.username === this.username && this.webcam.active) {
                 return 'fa-eye'; // user sees their own self camera always
+            }
+
+            // In spinner mode? (Trying to open the video)
+            if (this.WebRTC.openTimeouts[user.username] != undefined) {
+                return 'fa-spinner fa-spin';
             }
 
             // Already opened?
@@ -2014,6 +2074,12 @@ const app = Vue.createApp({
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
+            }
+
+            // Are we ignoring DMs?
+            if (this.prefs.closeDMs && channel.indexOf('@') === 0) {
+                // Don't allow an (incoming) DM to initialize a new chat room for us.
+                if (username !== this.username && this.channels[channel] == undefined) return;
             }
 
             // Initialize this channel's history?

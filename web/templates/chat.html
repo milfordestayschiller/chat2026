@@ -90,6 +90,11 @@
                                     Camera
                                 </a>
                             </li>
+                            <li :class="{'is-active': settingsModal.tab==='misc'}">
+                                <a href="#" @click.prevent="settingsModal.tab='misc'">
+                                    Misc
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
@@ -181,7 +186,7 @@
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label">DM chat</label>
+                                <label class="label is-size-7">DM chat</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -196,7 +201,7 @@
                             </div>
 
                             <div class="column is-2 pr-1">
-                                <label class="label">Public chat</label>
+                                <label class="label is-size-7">Public chat</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -213,7 +218,7 @@
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label">Room enter</label>
+                                <label class="label is-size-7">Room enter</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -228,11 +233,43 @@
                             </div>
 
                             <div class="column is-2 pr-1">
-                                <label class="label">Room leave</label>
+                                <label class="label is-size-7">Room leave</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="columns is-mobile">
+                            <div class="column is-2 pr-1">
+                                <label class="label is-size-7">Watched</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.Watch" @change="setSoundPref('Watch')">
+                                        <option v-for="s in config.sounds.available"
+                                            v-bind:key="s.name"
+                                            :value="s.name">
+                                            [[s.name]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="column is-2 pr-1">
+                                <label class="label is-size-7">Unwatched</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth">
+                                    <select v-model="config.sounds.settings.Unwatch" @change="setSoundPref('Unwatch')">
                                         <option v-for="s in config.sounds.available"
                                             v-bind:key="s.name"
                                             :value="s.name">
@@ -330,6 +367,52 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Misc preferences -->
+                    <div v-if="settingsModal.tab==='misc'">
+
+                        <div class="field">
+                            <label class="label">Presence messages in public channels</label>
+                            <div class="columns is-mobile mb-0">
+                                <div class="column py-1">
+                                    <label class="checkbox" title="Show 'has joined the room' messages in public channels">
+                                        <input type="checkbox"
+                                            v-model="prefs.joinMessages"
+                                            :value="true">
+                                        Join room
+                                    </label>
+                                </div>
+
+                                <div class="column py-1">
+                                    <label class="checkbox" title="Show 'has exited the room' messages in public channels">
+                                        <input type="checkbox"
+                                            v-model="prefs.exitMessages"
+                                            :value="true">
+                                        Exit room
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="help mt-0">
+                                Whether to show <em>'has joined the room'</em> style messages in public channels.
+                            </p>
+                        </div>
+
+                        <div class="field">
+                            <label class="label mb-0">Direct Messages</label>
+                            <label class="checkbox">
+                                <input type="checkbox"
+                                    v-model="prefs.closeDMs"
+                                    :value="true">
+                                Ignore unsolicited DMs from others
+                            </label>
+                            <p class="help">
+                                If you check this box, other chatters may not initiate DMs with you: their messages
+                                will be (silently) ignored. You may still initiate DM chats with others, unless they
+                                also have closed their DMs with this setting.
+                            </p>
+                        </div>
+
                     </div>
 
                 </div>
@@ -538,7 +621,7 @@
                         <div class="select is-fullwidth">
                             <select id="classification"
                                 v-model="reportModal.classification"
-                                :disabled="busy">
+                                :disabled="reportModal.busy">
                                 <option v-for="i in config.reportClassifications"
                                     :value="i">[[i]]</option>
                             </select>
@@ -549,7 +632,7 @@
                         <label class="label" for="reportComment">Comment:</label>
                         <textarea class="textarea"
                             v-model="reportModal.comment"
-                            :disabled="busy"
+                            :disabled="reportModal.busy"
                             cols="80" rows="2"
                             placeholder="Optional: describe the issue"></textarea>
                     </div>
@@ -558,7 +641,7 @@
                         <div class="control has-text-centered">
                             <button type="button"
                                 class="button is-link mr-4"
-                                :disabled="busy"
+                                :disabled="reportModal.busy"
                                 @click="doReport()">Submit report</button>
                             <button type="button"
                                 class="button"

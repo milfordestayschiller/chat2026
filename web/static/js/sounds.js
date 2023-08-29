@@ -23,7 +23,15 @@ const SoundEffects = [
     {
         name: "Sonar",
         filename: "sonar-ping-95840.mp3"
-    }
+    },
+    {
+        name: "Up Chime",
+        filename: "notification-6175-up.mp3"
+    },
+    {
+        name: "Down Chime",
+        filename: "notification-6175-down.mp3"
+    },
 ];
 
 // Defaults
@@ -32,4 +40,6 @@ var DefaultSounds = {
     DM: "Trill",
     Enter: "Quiet",
     Leave: "Quiet",
+    Watch: "Up Chime",
+    Unwatch: "Quiet",
 };
