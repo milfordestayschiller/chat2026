@@ -40,6 +40,6 @@ var DefaultSounds = {
     DM: "Trill",
     Enter: "Quiet",
     Leave: "Quiet",
-    Watch: "Up Chime",
+    Watch: "Quiet",
     Unwatch: "Quiet",
 };

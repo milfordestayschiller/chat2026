@@ -1123,7 +1123,7 @@
                                                     @click="openDMs({username: msg.username})"
                                                     :title="isUsernameDND(msg.username) ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
                                                     :disabled="isUsernameDND(msg.username)">
-                                                    <i class="fa fa-message"></i>
+                                                    <i class="fa fa-comment"></i>
                                                 </button>
 
                                                 <!-- Mute button -->
@@ -1433,9 +1433,10 @@
                                     <button type="button" v-else
                                         class="button is-small px-2 py-1"
                                         @click="openDMs(u)"
-                                        :disabled="u.username === username || u.dnd"
+                                        :disabled="u.username === username || (u.dnd && !isOp)"
                                         :title="u.dnd ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
-                                        <i class="fa fa-message"></i>
+                                        <i class="fa"
+                                            :class="{'fa-comment': !u.dnd, 'fa-comment-slash': u.dnd}"></i>
                                     </button>
 
                                     <!-- Video button -->

@@ -2114,7 +2114,9 @@ const app = Vue.createApp({
             // Are we ignoring DMs?
             if (this.prefs.closeDMs && channel.indexOf('@') === 0) {
                 // Don't allow an (incoming) DM to initialize a new chat room for us.
-                if (username !== this.username && this.channels[channel] == undefined) return;
+                // Unless the user is an operator.
+                let isSenderOp = this.whoMap[username] != undefined && this.whoMap[username].op;
+                if (username !== this.username && this.channels[channel] == undefined && !isSenderOp) return;
             }
 
             // Initialize this channel's history?
