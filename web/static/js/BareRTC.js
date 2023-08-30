@@ -1105,6 +1105,7 @@ const app = Vue.createApp({
 
             // Create a data channel so we have something to connect over even if
             // the local user is not broadcasting their own camera.
+            // TODO: adding a dummy data channel might allow iPad to open single directional video
             let dataChannel = pc.createDataChannel("data");
             dataChannel.addEventListener("open", event => {
                 // beginTransmission(dataChannel);
@@ -1184,7 +1185,18 @@ const app = Vue.createApp({
             // to succeed - if offerer doesn't addTrack it won't request a video channel
             // and so the answerer (who has video) won't actually send its
             if (!isOfferer && this.webcam.active) {
-                // this.ChatClient(`Sharing our video stream to ${username}.`);
+                this.ChatClient(`Sharing our video stream to ${username}.`);
+                let stream = this.webcam.stream;
+                stream.getTracks().forEach(track => {
+                    pc.addTrack(track, stream)
+                });
+            }
+
+            // iPad test: if we are the offerer and are already broadcasting, add our cam.
+            // TODO: only do this if the answerer has auto-open videos enabled, because adding
+            // our video on the offer will force open our video on their side
+            if (isOfferer && this.webcam.active) {
+                this.ChatClient("Adding my camera pre-emptively to the call now");
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     pc.addTrack(track, stream)
@@ -1211,10 +1223,23 @@ const app = Vue.createApp({
 
         // Common handler function for
         localDescCreated(pc, username) {
+			this.ChatClient("localDescCreated called: " + username);
             return (desc) => {
-                // this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
-                pc.setLocalDescription(
-                    new RTCSessionDescription(desc),
+                this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
+                pc.setLocalDescription(desc).then(() => {
+                    this.ChatClient(`Sending SDP message to server!`);
+                    this.ws.conn.send(JSON.stringify({
+                        action: "sdp",
+                        username: username,
+                        //description: JSON.stringify(desc),
+                        description: JSON.stringify(pc.localDescription),
+                    }));
+                    this.ChatClient(`(pc.localDescription was: ${pc.localDescription})`);
+                }).catch(e => {
+                    this.ChatClient(`Error sending sdp: ${e}`);
+                });
+                /*pc.setLocalDescription(
+                    desc, // new RTCSessionDescription(desc),
                     () => {
                         this.ws.conn.send(JSON.stringify({
                             action: "sdp",
@@ -1223,7 +1248,7 @@ const app = Vue.createApp({
                         }));
                     },
                     console.error,
-                )
+                )*/
             };
         },
 
@@ -1241,13 +1266,17 @@ const app = Vue.createApp({
             let candidate = JSON.parse(msg.candidate);
 
             // Add the new ICE candidate.
-            pc.addIceCandidate(
+            /*pc.addIceCandidate(
                 new RTCIceCandidate(
                     candidate,
                     () => { },
                     console.error,
                 )
             );
+            */
+            pc.addIceCandidate(candidate).catch(e => {
+                this.ChatClient(`addIceCandidate: ${e}`);
+            });
         },
         onSDP(msg) {
             if (this.WebRTC.pc[msg.username] == undefined || !this.WebRTC.pc[msg.username].connecting) {
