@@ -927,7 +927,8 @@ const app = Vue.createApp({
             }
 
             // Push it to the history of all public channels (depending on user preference).
-            if ((isJoin && this.prefs.joinMessages) || (isLeave && this.prefs.exitMessages)) {
+            if ((isJoin && this.prefs.joinMessages) || (isLeave && this.prefs.exitMessages)
+                || (!isJoin && !isLeave)) {
                 for (let channel of this.config.channels) {
                     this.pushHistory({
                         channel: channel.ID,
