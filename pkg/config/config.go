@@ -97,7 +97,6 @@ func DefaultConfig() Config {
 			{
 				ID:   "lobby",
 				Name: "Lobby",
-				Icon: "fa fa-gavel",
 				WelcomeMessages: []string{
 					"Welcome to the chat server!",
 					"Please follow the basic rules:\n\n1. Have fun\n2. Be kind",
