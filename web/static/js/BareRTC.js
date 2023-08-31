@@ -44,6 +44,9 @@ const app = Vue.createApp({
             disconnectLimit: 3,
             disconnectCount: 0,
 
+            // Temp: spam counting for OF links
+            spamWarningCount: 0,
+
             // Website configuration provided by chat.html template.
             config: {
                 channels: PublicChannels,
@@ -626,6 +629,51 @@ const app = Vue.createApp({
 
             if (!this.ws.connected) {
                 this.ChatClient("You are not connected to the server.");
+                return;
+            }
+
+            // Spammy links.
+            if (this.message.toLowerCase().indexOf("onlyfans.com") > -1 ||
+                this.message.toLowerCase().indexOf("justfor.fans") > -1 ||
+                this.message.toLowerCase().indexOf("justforfans") > -1 ||
+                this.message.toLowerCase().match(/fans[^A-Za-z0-9]+dot/)) {
+
+                // If they do it twice, kick them from the room.
+                if (this.spamWarningCount >= 1) {
+                    // Walk of shame.
+                    this.ws.conn.send(JSON.stringify({
+                        action: "message",
+                        channel: "lobby",
+                        message: "**(Message of Shame)** I have been naughty and posted spam in chat despite being warned, "+
+                            "and I am now being kicked from the room in shame. ☹️",
+                    }));
+
+                    this.ChatServer(
+                        "It is <strong>not allowed</strong> to promote your Onlyfans (or similar) "+
+                        "site on the chat room. You have been removed from the chat room, and this "+
+                        "incident has been reported to the site admin.",
+                    );
+                    this.pushHistory({
+                        channel: this.channel,
+                        username: this.username,
+                        message: "has been kicked from the room!",
+                        action: "presence",
+                    });
+                    this.disconnect = true;
+                    this.ws.connected = false;
+                    setTimeout(() => {
+                        this.ws.conn.close();
+                    }, 1000);
+                    return;
+                }
+                this.spamWarningCount++;
+
+                this.ChatClient(
+                    "Please <strong>do not</strong> send links to your Onlyfans (or similar sites) in the chat room. "+
+                    "Those links are widely regarded to be spam and make a lot of people uncomfortable. "+
+                    "If you violate this again, your account will be suspended.",
+                );
+                this.message = "";
                 return;
             }
 
