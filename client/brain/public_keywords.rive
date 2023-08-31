@@ -22,6 +22,12 @@
     - <call>react <get messageID> 👀</call>{weight=1}
     - <noreply>{weight=3}
 
+    // Report messages of shame to the site admin.
+    + * am now being kicked from the room in shame *
+    - <call>react <get messageID> 🫡</call>
+    ^ <call>report <get messageID> "User has invoked the message of shame and said:" <star1> <star2></call>
+    ^ Later, loser!
+
     // Catch-all: do not reply.
     + *
     - <noreply>
