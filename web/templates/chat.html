@@ -1262,6 +1262,7 @@
                                     v-model="message"
                                     placeholder="Write a message"
                                     @keydown="sendTypingNotification()"
+                                    autocomplete="off"
                                     :disabled="!ws.connected">
                             </form>
                         </div>
