@@ -687,6 +687,17 @@ const app = Vue.createApp({
                 return;
             }
 
+            // DEBUGGING: test whether the page thinks you're Apple Webkit.
+            if (this.message.toLowerCase().indexOf("/ipad") === 0) {
+                if (this.isAppleWebkit()) {
+                    this.ChatClient("I have detected that you are probably an iPad or iPhone browser.");
+                } else {
+                    this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
+                }
+                this.message = "";
+                return;
+            }
+
             // console.debug("Send message: %s", this.message);
             this.ws.conn.send(JSON.stringify({
                 action: "message",
@@ -1016,7 +1027,7 @@ const app = Vue.createApp({
 
                 this.disconnectCount++;
                 if (this.disconnectCount > this.disconnectLimit) {
-                    this.ChatClient(`It seems there's a problem connecting to the server. Please try some other time. Note that iPhones and iPads currently have issues connecting to the chat room in general.`);
+                    this.ChatClient(`It seems there's a problem connecting to the server. Please try some other time.`);
                     return;
                 }
 
@@ -1227,32 +1238,23 @@ const app = Vue.createApp({
                 })
             };
 
-            // If we were already broadcasting video, send our stream to
-            // the connecting user.
-            // TODO: currently both users need to have video on for the connection
-            // to succeed - if offerer doesn't addTrack it won't request a video channel
-            // and so the answerer (who has video) won't actually send its
+            // ANSWERER: add our video to the connection so that the offerer (the one who
+            // clicked on our video icon to watch us) can receive it.
             if (!isOfferer && this.webcam.active) {
-                this.ChatClient(`Sharing our video stream to ${username}.`);
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     pc.addTrack(track, stream)
                 });
             }
 
-            // iPad test: if we are the offerer and are already broadcasting, add our cam.
-            // TODO: only do this if the answerer has auto-open videos enabled, because adding
-            // our video on the offer will force open our video on their side
-            if (isOfferer && this.webcam.active) {
-                this.ChatClient("Adding my camera pre-emptively to the call now");
-                let stream = this.webcam.stream;
-                stream.getTracks().forEach(track => {
-                    pc.addTrack(track, stream)
-                });
-            }
-
-            // If we are the offerer, and this member wants to auto-open our camera
-            // then add our own stream to the connection.
+            // OFFERER: If we were already broadcasting our own video, and the answerer
+            // has the "auto-open your video" setting enabled, attach our video to the initial
+            // offer right now.
+            //
+            // NOTE: this will force open our video on the answerer's side, and this workflow
+            // is also the only way that iPads/iPhones/Safari browsers can make a call
+            // (two-way video is the only option for them; send-only/receive-only channels seem
+            // not to work in Safari).
             if (isOfferer && (this.whoMap[username].video & this.VideoFlag.MutualOpen) && this.webcam.active) {
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
@@ -1271,32 +1273,16 @@ const app = Vue.createApp({
 
         // Common handler function for
         localDescCreated(pc, username) {
-			this.ChatClient("localDescCreated called: " + username);
             return (desc) => {
-                this.ChatClient(`setLocalDescription ${JSON.stringify(desc)}`);
                 pc.setLocalDescription(desc).then(() => {
-                    this.ChatClient(`Sending SDP message to server!`);
                     this.ws.conn.send(JSON.stringify({
                         action: "sdp",
                         username: username,
-                        //description: JSON.stringify(desc),
                         description: JSON.stringify(pc.localDescription),
                     }));
-                    this.ChatClient(`(pc.localDescription was: ${pc.localDescription})`);
                 }).catch(e => {
-                    this.ChatClient(`Error sending sdp: ${e}`);
+                    this.ChatClient(`Error sending WebRTC negotiation message (SDP): ${e}`);
                 });
-                /*pc.setLocalDescription(
-                    desc, // new RTCSessionDescription(desc),
-                    () => {
-                        this.ws.conn.send(JSON.stringify({
-                            action: "sdp",
-                            username: username,
-                            description: JSON.stringify(pc.localDescription),
-                        }));
-                    },
-                    console.error,
-                )*/
             };
         },
 
@@ -1314,14 +1300,6 @@ const app = Vue.createApp({
             let candidate = JSON.parse(msg.candidate);
 
             // Add the new ICE candidate.
-            /*pc.addIceCandidate(
-                new RTCIceCandidate(
-                    candidate,
-                    () => { },
-                    console.error,
-                )
-            );
-            */
             pc.addIceCandidate(candidate).catch(e => {
                 this.ChatClient(`addIceCandidate: ${e}`);
             });
@@ -1845,10 +1823,20 @@ const app = Vue.createApp({
                 delete(this.WebRTC.openTimeouts[user.username]);
             }
             this.WebRTC.openTimeouts[user.username] = setTimeout(() => {
-                // It timed out.
-                this.ChatClient(
-                    `There was an error opening <strong>${user.username}</strong>'s camera.`,
-                );
+                // It timed out. If they are on an iPad, offer additional hints on
+                // how to have better luck connecting their cameras.
+                if (this.isAppleWebkit()) {
+                    this.ChatClient(
+                        `There was an error opening <strong>${user.username}</strong>'s camera.<br><br>` +
+                        "<strong>Advice:</strong> You appear to be on an iPad-style browser. Webcam sharing " +
+                        "may be limited and only work if:<br>A) You are sharing your own camera first, and<br>B) "+
+                        "The person you view has the setting to auto-open your camera in return.<br>Best of luck!",
+                    );
+                } else {
+                    this.ChatClient(
+                        `There was an error opening <strong>${user.username}</strong>'s camera.`,
+                    );
+                }
                 delete(this.WebRTC.openTimeouts[user.username]);
             }, 10000);
 
@@ -1930,8 +1918,10 @@ const app = Vue.createApp({
             // - May be a crossed-out video if isVideoNotAllowed
             // - Or an eyeball for cameras already opened
             // - Or a spinner if we are actively trying to open the video
+
+            // Current user sees their own self camera always.
             if (user.username === this.username && this.webcam.active) {
-                return 'fa-eye'; // user sees their own self camera always
+                return 'fa-eye';
             }
 
             // In spinner mode? (Trying to open the video)
@@ -1942,6 +1932,21 @@ const app = Vue.createApp({
             // Already opened?
             if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.streams[user.username] != undefined) {
                 return 'fa-eye';
+            }
+
+            // iPad test: they will have very limited luck opening videos unless
+            // A) the iPad camera is already on, and
+            // B) the person they want to watch has mutual auto-open enabled.
+            if (this.isAppleWebkit()) {
+                if (!this.webcam.active) {
+                    return 'fa-video-slash';  // can not open any cam w/o local video on
+                }
+                if (!(this.whoMap[user.username].video & this.VideoFlag.MutualOpen)) {
+                    // the user must have mutual auto-open on: the iPad has to offer
+                    // their video which will force open their cam on the other side,
+                    // and this is only if the user expects it.
+                    return 'fa-video-slash';
+                }
             }
 
             if (this.isVideoNotAllowed(user)) return 'fa-video-slash';
@@ -2554,6 +2559,25 @@ const app = Vue.createApp({
 
             // Set the "reported" flag.
             this.reportModal.origMessage.reported = true;
+        },
+
+        // Miscellaneous utility methods.
+        isAppleWebkit() {
+            // Try and detect whether the user is on an Apple Safari browser, which has
+            // special nuances in their WebRTC video sharing support. This is intended to
+            // detect: iPads, iPhones, and Safari on macOS.
+
+            // By User-Agent.
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                return true;
+            }
+
+            // By (deprecated) navigator.platform.
+            if (navigator.platform === 'iPad' || navigator.platform === 'iPhone' || navigator.platform === 'iPod') {
+                return true;
+            }
+
+            return false;
         },
     }
 });
