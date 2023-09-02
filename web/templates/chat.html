@@ -184,6 +184,15 @@
                     <!-- Sound settings -->
                     <div v-else-if="settingsModal.tab==='sounds'">
 
+                        <div class="mb-4">
+                            <label class="checkbox">
+                                <input type="checkbox"
+                                    v-model="prefs.muteSounds"
+                                    :value="true">
+                                    Mute all sound effects
+                            </label>
+                        </div>
+
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
                                 <label class="label is-size-7">DM chat</label>

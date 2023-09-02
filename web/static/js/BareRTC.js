@@ -133,6 +133,7 @@ const app = Vue.createApp({
                 exitMessages: false, // hide exit messages by default in public channels
                 watchNotif: true,    // notify in chat about cameras being watched
                 closeDMs: false,     // ignore unsolicited DMs
+                muteSounds: false,   // mute all sound effects
             },
 
             // My video feed.
@@ -396,6 +397,9 @@ const app = Vue.createApp({
         "prefs.watchNotif": function() {
             localStorage.watchNotif = this.prefs.watchNotif;
         },
+        "prefs.muteSounds": function() {
+            localStorage.muteSounds = this.prefs.muteSounds;
+        },
         "prefs.closeDMs": function() {
             localStorage.closeDMs = this.prefs.closeDMs;
 
@@ -602,6 +606,9 @@ const app = Vue.createApp({
             }
             if (localStorage.watchNotif != undefined) {
                 this.prefs.watchNotif = localStorage.watchNotif === "true";
+            }
+            if (localStorage.muteSounds != undefined) {
+                this.prefs.muteSounds = localStorage.muteSounds === "true";
             }
             if (localStorage.closeDMs != undefined) {
                 this.prefs.closeDMs = localStorage.closeDMs === "true";
@@ -1281,7 +1288,7 @@ const app = Vue.createApp({
                         description: JSON.stringify(pc.localDescription),
                     }));
                 }).catch(e => {
-                    this.ChatClient(`Error sending WebRTC negotiation message (SDP): ${e}`);
+                    console.error(`Error sending WebRTC negotiation message (SDP): ${e}`);
                 });
             };
         },
@@ -2450,6 +2457,8 @@ const app = Vue.createApp({
         },
 
         playSound(event) {
+            // Muting all SFX?
+            if (this.prefs.muteSounds) return;
             let filename = this.config.sounds.settings[event];
             // Do we have an audio track?
             if (this.config.sounds.audioTracks[filename] != undefined) {
