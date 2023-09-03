@@ -393,6 +393,15 @@ const app = Vue.createApp({
             if (this.webcam.active) {
                 this.sendMe();
             }
+
+            // If we have toggled this while already connected to people:
+            // Hang up on any that have a mutual viewership requirement, if
+            // they can not see our VIP-only camera.
+            for (username of Object.keys(this.WebRTC.pc)) {
+                if (this.whoMap[username] != undefined && this.isVideoNotAllowed(this.whoMap[username])) {
+                    this.closeVideo(username);
+                }
+            }
         },
 
         // Misc preference watches
@@ -1832,7 +1841,7 @@ const app = Vue.createApp({
             }
 
             // If this user requests mutual viewership...
-            if ((user.video & this.VideoFlag.MutualRequired) && !this.webcam.active) {
+            if (this.isVideoNotAllowed(user)) {
                 this.ChatClient(
                     `<strong>${user.username}</strong> has requested that you should share your own camera too before opening theirs.`
                 );
@@ -1980,8 +1989,19 @@ const app = Vue.createApp({
             // Returns whether the video button to open a user's cam will be not allowed (crossed out)
 
             // Mutual video sharing is required on this camera, and ours is not active
-            if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.MutualRequired) && !this.webcam.active) {
-                return true;
+            if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.MutualRequired)) {
+                // A nuance to the mutual video required: if we DO have our cam on, but ours is VIP only, and the
+                // user we want to watch can't see that our cam is on, then honor their wishes.
+                if (this.webcam.active && this.isVIP && this.webcam.vipOnly && this.whoMap[user.username] != undefined && !this.whoMap[user.username].vip) {
+                    // Our cam is active, but the non-VIP user won't see it on, so they won't expect
+                    // us to be able to open their camera.
+                    return true;
+                }
+
+                if (!this.webcam.active) {
+                    // Our cam is not broadcasting, but they requested it should be: not allowed.
+                    return true;
+                }
             }
 
             // We have muted them and it wouldn't be appropriate to still watch their video but not get their messages.
