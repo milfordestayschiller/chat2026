@@ -126,6 +126,11 @@ func (sub *Subscriber) IsAdmin() bool {
 	return sub.JWTClaims != nil && sub.JWTClaims.IsAdmin
 }
 
+// IsVIP safely checks if the subscriber has VIP status.
+func (sub *Subscriber) IsVIP() bool {
+	return sub.JWTClaims != nil && sub.JWTClaims.VIP
+}
+
 // SendJSON sends a JSON message to the websocket client.
 func (sub *Subscriber) SendJSON(v interface{}) error {
 	data, err := json.Marshal(v)
@@ -400,9 +405,19 @@ func (s *Server) SendWhoList() {
 				LoginAt:  user.loginAt.Unix(),
 			}
 
-			// If this person had booted us, force their camera to "off"
-			if (user.Boots(sub.Username) || user.Mutes(sub.Username)) && !sub.IsAdmin() {
-				who.Video = 0
+			// Hide video flags of other users (never for the current user).
+			if user.Username != sub.Username {
+
+				// If this person had booted us, force their camera to "off"
+				if (user.Boots(sub.Username) || user.Mutes(sub.Username)) && !sub.IsAdmin() {
+					who.Video = 0
+				}
+
+				// If this person's VideoFlag is set to VIP Only, force their camera to "off"
+				// except when the person looking has the VIP status.
+				if (user.VideoStatus&messages.VideoFlagOnlyVIP == messages.VideoFlagOnlyVIP) && (!sub.IsVIP() && !sub.IsAdmin()) {
+					who.Video = 0
+				}
 			}
 
 			if user.JWTClaims != nil {
@@ -412,6 +427,16 @@ func (s *Server) SendWhoList() {
 				who.Nickname = user.JWTClaims.Nick
 				who.Emoji = user.JWTClaims.Emoji
 				who.Gender = user.JWTClaims.Gender
+
+				// VIP flags: if we are in MutuallySecret mode, only VIPs can see
+				// other VIP flags on the Who List.
+				if config.Current.VIP.MutuallySecret {
+					if sub.IsVIP() || sub.IsAdmin() {
+						who.VIP = user.JWTClaims.VIP
+					}
+				} else {
+					who.VIP = user.JWTClaims.VIP
+				}
 			}
 			users = append(users, who)
 		}

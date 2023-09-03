@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 6
+var currentVersion = 7
 
 // Config for your BareRTC app.
 type Config struct {
@@ -45,12 +45,21 @@ type Config struct {
 	PublicChannels []Channel
 
 	WebhookURLs []WebhookURL
+
+	VIP VIP
 }
 
 type TurnConfig struct {
 	URLs       []string
 	Username   string
 	Credential string
+}
+
+type VIP struct {
+	Name           string
+	Branding       string
+	Icon           string
+	MutuallySecret bool
 }
 
 // GetChannels returns a JavaScript safe array of the default PublicChannels.
@@ -120,6 +129,11 @@ func DefaultConfig() Config {
 				Name: "report",
 				URL:  "https://example.com/barertc/report",
 			},
+		},
+		VIP: VIP{
+			Name:     "VIP",
+			Branding: "<em>VIP Members</em>",
+			Icon:     "fa fa-circle",
 		},
 	}
 	c.JWT.Strict = true

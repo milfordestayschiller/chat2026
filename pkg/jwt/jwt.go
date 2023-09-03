@@ -14,6 +14,7 @@ import (
 type Claims struct {
 	// Custom claims.
 	IsAdmin    bool   `json:"op,omitempty"`
+	VIP        bool   `json:"vip,omitempty"`
 	Avatar     string `json:"img,omitempty"`
 	ProfileURL string `json:"url,omitempty"`
 	Nick       string `json:"nick,omitempty"`

@@ -330,13 +330,24 @@
                             </label>
                         </div>
 
-                        <div class="field">
+                        <div class="field mb-1">
                             <label class="checkbox"
                                 :class="{'cursor-notallowed': !webcam.active}">
                                 <input type="checkbox"
                                     v-model="webcam.mutualOpen"
                                     :disabled="!webcam.active">
                                 When someone opens my camera, I also open their camera automatically
+                            </label>
+                        </div>
+
+                        <div class="field" v-if="isVIP">
+                            <label class="checkbox"
+                                :class="{'cursor-notallowed': !webcam.active}">
+                                <input type="checkbox"
+                                    v-model="webcam.vipOnly"
+                                    :disabled="!webcam.active">
+                                Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7" :class="config.VIP.Icon"></sup>
+                                members can see that my camera is broadcasting
                             </label>
                         </div>
 
@@ -498,6 +509,16 @@
                             <input type="checkbox"
                                 v-model="webcam.mutualOpen">
                             When someone opens my camera, I also open their camera automatically
+                        </label>
+                    </div>
+
+                    <div class="field" v-if="isVIP">
+                        <label class="checkbox"
+                            :class="{'cursor-notallowed': !webcam.active}">
+                            <input type="checkbox"
+                                v-model="webcam.vipOnly">
+                            Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7" :class="config.VIP.Icon"></sup>
+                            members can see that my camera is broadcasting
                         </label>
                     </div>
 
@@ -1413,6 +1434,10 @@
                                     <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1"
                                         v-if="u.op"
                                         title="Operator"></sup>
+                                    <sup class="is-size-7 ml-1"
+                                        :class="config.VIP.Icon"
+                                        v-else-if="u.vip"
+                                        :title="config.VIP.Name"></sup>
                                 </div>
                                 <div class="column is-narrow pl-0">
                                     <!-- Emoji icon -->
@@ -1427,7 +1452,7 @@
                                         class="button is-small px-2 py-1"
                                         :class="profileButtonClass(u)"
                                         @click="openProfile(u)"
-                                        :title="'Open profile page' + (u.gender ? ` (gender: ${u.gender})` : '')">
+                                        :title="'Open profile page' + (u.gender ? ` (gender: ${u.gender})` : '') + (u.vip ? ` (${config.VIP.Name})` : '')">
                                         <i class="fa fa-user"></i>
                                     </button>
 
@@ -1507,6 +1532,7 @@ const WebsiteURL = "{{.Config.WebsiteURL}}";
 const PermitNSFW = {{AsJS .Config.PermitNSFW}};
 const TURN = {{.Config.TURN}};
 const WebhookURLs = {{.Config.WebhookURLs}};
+const VIP = {{.Config.VIP}};
 const UserJWTToken = {{.JWTTokenString}};
 const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
 const UserJWTClaims = {{.JWTClaims.ToJSON}};

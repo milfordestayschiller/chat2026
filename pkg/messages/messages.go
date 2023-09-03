@@ -107,6 +107,7 @@ type WhoList struct {
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`
+	VIP        bool   `json:"vip,omitempty"`
 	Avatar     string `json:"avatar,omitempty"`
 	ProfileURL string `json:"profileURL,omitempty"`
 	Emoji      string `json:"emoji,omitempty"`
@@ -122,4 +123,5 @@ const (
 	VideoFlagIsTalking                      // broadcaster seems to be talking
 	VideoFlagMutualRequired                 // video wants viewers to share their camera too
 	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
+	VideoFlagOnlyVIP                        // can only shows as active to VIP members
 )

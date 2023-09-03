@@ -53,6 +53,7 @@ const app = Vue.createApp({
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
                 webhookURLs: WebhookURLs,
+                VIP: VIP,
                 fontSizeClasses: [
                     [ "x-2", "Very small chat room text" ],
                     [ "x-1", "50% smaller chat room text" ],
@@ -147,6 +148,7 @@ const app = Vue.createApp({
                 nsfw: false,  // user has flagged their camera to be NSFW
                 mutual: false, // user wants viewers to share their own videos
                 mutualOpen: false, // user wants to open video mutually
+                vipOnly: false, // only show camera to fellow VIP users
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -186,6 +188,7 @@ const app = Vue.createApp({
                 IsTalking:      1 << 3,
                 MutualRequired: 1 << 4,
                 MutualOpen:     1 << 5,
+                VipOnly:        1 << 6,
             },
 
             // WebRTC sessions with other users.
@@ -386,6 +389,11 @@ const app = Vue.createApp({
                 this.sendMe();
             }
         },
+        "webcam.vipOnly": function() {
+            if (this.webcam.active) {
+                this.sendMe();
+            }
+        },
 
         // Misc preference watches
         "prefs.joinMessages": function() {
@@ -495,6 +503,10 @@ const app = Vue.createApp({
             // Returns if the current user has operator rights
             return this.jwt.claims.op;
         },
+        isVIP() {
+            // Returns if the current user has VIP rights.
+            return this.jwt.claims.vip;
+        },
         myVideoFlag() {
             // Compute the current user's video status flags.
             let status = 0;
@@ -504,6 +516,7 @@ const app = Vue.createApp({
             if (this.webcam.nsfw) status |= this.VideoFlag.NSFW;
             if (this.webcam.mutual) status |= this.VideoFlag.MutualRequired;
             if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
+            if (this.webcam.vipOnly && this.isVIP) status |= this.VideoFlag.VipOnly;
             return status;
         },
         sortedWhoList() {
@@ -595,6 +608,9 @@ const app = Vue.createApp({
             }
             if (localStorage.videoAutoMute === "true") {
                 this.webcam.autoMute = true;
+            }
+            if (localStorage.videoVipOnly === "true") {
+                this.webcam.vipOnly = true;
             }
 
             // Misc preferences
@@ -1613,6 +1629,7 @@ const app = Vue.createApp({
                 localStorage.videoMutual = this.webcam.mutual;
                 localStorage.videoMutualOpen = this.webcam.mutualOpen;
                 localStorage.videoAutoMute = this.webcam.autoMute;
+                localStorage.videoVipOnly = this.webcam.vipOnly;
 
                 // Auto-mute our camera? Two use cases:
                 // 1. The user marked their cam as muted but then changed video device,
@@ -2349,13 +2366,19 @@ const app = Vue.createApp({
 
         // CSS classes for the profile button (color coded genders)
         profileButtonClass(user) {
+            // VIP background.
+            let result = "";
+            if (user.vip) {
+                result = "has-background-vip ";
+            }
+
             let gender = (user.gender || "").toLowerCase();
             if (gender.indexOf("m") === 0) {
-                return "has-text-gender-male";
+                return result+"has-text-gender-male";
             } else if (gender.indexOf("f") === 0) {
-                return "has-text-gender-female";
+                return result+"has-text-gender-female";
             } else if (gender.length > 0) {
-                return "has-text-gender-other";
+                return result+"has-text-gender-other";
             }
             return "";
         },
