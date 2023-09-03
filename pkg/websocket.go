@@ -336,6 +336,12 @@ func (s *Server) Broadcast(msg messages.Message) {
 			continue
 		}
 
+		// VIP channels: only deliver to subscribed VIP users.
+		if ch, ok := config.Current.GetChannel(msg.Channel); ok && ch.VIP && !sub.IsVIP() {
+			log.Debug("Do not broadcast message to %s: VIP channel and they are not VIP", sub.Username)
+			continue
+		}
+
 		sub.SendJSON(msg)
 	}
 }

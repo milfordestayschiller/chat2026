@@ -1575,6 +1575,9 @@ const app = Vue.createApp({
             // List of current channels, unread indicators etc.
             let result = [];
             for (let channel of this.config.channels) {
+                // VIP room we can't see?
+                if (channel.VIP && !this.isVIP) continue;
+
                 let data = {
                     ID: channel.ID,
                     Name: channel.Name,

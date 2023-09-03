@@ -68,11 +68,22 @@ func (c Config) GetChannels() template.JS {
 	return template.JS(data)
 }
 
+// GetChannel looks up and returns a channel by ID.
+func (c Config) GetChannel(id string) (Channel, bool) {
+	for _, ch := range c.PublicChannels {
+		if ch.ID == id {
+			return ch, true
+		}
+	}
+	return Channel{}, false
+}
+
 // Channel config for a default public room.
 type Channel struct {
 	ID   string // Like "lobby"
 	Name string // Like "Main Chat Room"
 	Icon string `toml:",omitempty"` // CSS class names for room icon (optional)
+	VIP  bool   // For VIP users only
 
 	// ChatServer messages to send to the user immediately upon connecting.
 	WelcomeMessages []string
@@ -116,6 +127,14 @@ func DefaultConfig() Config {
 				Name: "Off Topic",
 				WelcomeMessages: []string{
 					"Welcome to the Off Topic channel!",
+				},
+			},
+			{
+				ID:   "vip",
+				Name: "VIPs Only",
+				VIP:  true,
+				WelcomeMessages: []string{
+					"This channel is only for operators and VIPs.",
 				},
 			},
 		},
