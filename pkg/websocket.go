@@ -36,9 +36,10 @@ type Subscriber struct {
 	messages      chan []byte
 	closeSlow     func()
 
-	muteMu sync.RWMutex
-	booted map[string]struct{} // usernames booted off your camera
-	muted  map[string]struct{} // usernames you muted
+	muteMu  sync.RWMutex
+	booted  map[string]struct{} // usernames booted off your camera
+	blocked map[string]struct{} // usernames you have blocked
+	muted   map[string]struct{} // usernames you muted
 
 	// Record which message IDs belong to this user.
 	midMu      sync.Mutex
@@ -98,6 +99,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				s.OnBoot(sub, msg)
 			case messages.ActionMute, messages.ActionUnmute:
 				s.OnMute(sub, msg, msg.Action == messages.ActionMute)
+			case messages.ActionBlock:
+				s.OnBlock(sub, msg)
 			case messages.ActionBlocklist:
 				s.OnBlocklist(sub, msg)
 			case messages.ActionCandidate:
@@ -193,6 +196,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 			},
 			booted:     make(map[string]struct{}),
 			muted:      make(map[string]struct{}),
+			blocked:    make(map[string]struct{}),
 			messageIDs: make(map[int]struct{}),
 			ChatStatus: "online",
 		}
@@ -321,6 +325,13 @@ func (s *Server) Broadcast(msg messages.Message) {
 		log.Debug("Broadcast: %+v", msg)
 	}
 
+	// Get the sender of this message.
+	sender, err := s.GetSubscriber(msg.Username)
+	if err != nil {
+		log.Error("Broadcast: sender name %s not found as a current subscriber!", msg.Username)
+		sender = nil
+	}
+
 	// Get the list of users who are online NOW, so we don't hold the mutex lock too long.
 	// Example: sending a fat GIF to a large audience could hang up the server for a long
 	// time until every copy of the GIF has been sent.
@@ -333,6 +344,12 @@ func (s *Server) Broadcast(msg messages.Message) {
 		// Don't deliver it if the receiver has muted us.
 		if sub.Mutes(msg.Username) {
 			log.Debug("Do not broadcast message to %s: they have muted or booted %s", sub.Username, msg.Username)
+			continue
+		}
+
+		// Don't deliver it if there is any blocking between sender and receiver.
+		if sender != nil && sender.Blocks(sub) {
+			log.Debug("Do not broadcast message to %s: blocking between them and %s", msg.Username, sub.Username)
 			continue
 		}
 
@@ -403,6 +420,12 @@ func (s *Server) SendWhoList() {
 				continue
 			}
 
+			// Blocking: hide the presence of both people from the Who List.
+			if user.Blocks(sub) {
+				log.Debug("WhoList: hide %s from %s (blocking)", user.Username, sub.Username)
+				continue
+			}
+
 			who := messages.WhoList{
 				Username: user.Username,
 				Status:   user.ChatStatus,
@@ -467,6 +490,23 @@ func (s *Subscriber) Mutes(username string) bool {
 	s.muteMu.RLock()
 	defer s.muteMu.RUnlock()
 	_, ok := s.muted[username]
+	return ok
+}
+
+// Blocks checks whether the subscriber blocks the username, or vice versa (blocking goes both directions).
+func (s *Subscriber) Blocks(other *Subscriber) bool {
+	s.muteMu.RLock()
+	defer s.muteMu.RUnlock()
+
+	// Forward block?
+	if _, ok := s.blocked[other.Username]; ok {
+		return true
+	}
+
+	// Reverse block?
+	other.muteMu.RLock()
+	defer other.muteMu.RUnlock()
+	_, ok := other.blocked[s.Username]
 	return ok
 }
 

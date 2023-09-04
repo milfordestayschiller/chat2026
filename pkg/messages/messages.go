@@ -70,6 +70,7 @@ const (
 	ActionBoot      = "boot"  // boot a user off your video feed
 	ActionMute      = "mute"  // mute a user's chat messages
 	ActionUnmute    = "unmute"
+	ActionBlock     = "block"     // hard block another user
 	ActionBlocklist = "blocklist" // mute in bulk for usernames
 	ActionReport    = "report"    // user reports a message
 

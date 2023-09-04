@@ -343,11 +343,32 @@ The `unmute` action does the opposite and removes the mute status:
 }
 ```
 
+## Block
+
+Sent by: Client.
+
+The block command places a hard block between the current user and the target.
+
+When either user blocks the other:
+
+* They do not see each other in the Who's Online list at all.
+* They can not see each other's messages, including presence messages.
+
+**Note:** the chat page currently does not have a front-end button to block a user. This feature is currently used by the Blocklist feature to apply a block to a set of users at once upon join.
+
+```javascript
+// Client Block
+{
+    "action": "block",
+    "username": "target"
+}
+```
+
 ## Blocklist
 
 Sent by: Client.
 
-The blocklist command is basically a bulk mute for (potentially) many usernames at once.
+The blocklist command is basically a bulk block for (potentially) many usernames at once.
 
 ```javascript
 // Client blocklist
@@ -359,7 +380,7 @@ The blocklist command is basically a bulk mute for (potentially) many usernames 
 
 How this works: if you have an existing website and use JWT authentication to sign users into chat, your site can pre-emptively sync the user's block list **before** the user enters the room, using the `/api/blocklist` endpoint (see the README.md for BareRTC).
 
-The chat server holds onto blocklists temporarily in memory: when that user loads the chat room (with a JWT token!), the front-end page receives the cached blocklist. As part of the "on connected" handler, the chat page sends the `blocklist` command over WebSocket to perform a mass mute on these users in one go.
+The chat server holds onto blocklists temporarily in memory: when that user loads the chat room (with a JWT token!), the front-end page receives the cached blocklist. As part of the "on connected" handler, the chat page sends the `blocklist` command over WebSocket to perform a mass block on these users in one go.
 
 The reason for this workflow is in case the chat server is rebooted _while_ the user is in the room. The cached blocklist pushed by your website is forgotten by the chat server back-end, but the client's page was still open with the cached blocklist already, and it will send the `blocklist` command to the server when it reconnects, eliminating any gaps.
 

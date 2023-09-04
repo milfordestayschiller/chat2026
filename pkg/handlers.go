@@ -179,6 +179,11 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 			return
 		}
 
+		// If there is blocking happening, do not send.
+		if sub.Blocks(rcpt) {
+			return
+		}
+
 		if err := s.SendTo(msg.Channel, message); err != nil {
 			sub.ChatServer("Your message could not be delivered: %s", err)
 		}
@@ -286,6 +291,11 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 		// If the sender already mutes the recipient, reply back with the error.
 		if sub.Mutes(rcpt.Username) {
 			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
+			return
+		}
+
+		// If there is blocking happening, do not send.
+		if sub.Blocks(rcpt) {
 			return
 		}
 
@@ -417,13 +427,33 @@ func (s *Server) OnMute(sub *Subscriber, msg messages.Message, mute bool) {
 	s.SendWhoList()
 }
 
+// OnBlock is a user placing a hard block (hide from) another user.
+func (s *Server) OnBlock(sub *Subscriber, msg messages.Message) {
+	log.Info("%s blocks %s: %v", sub.Username, msg.Username)
+
+	// If the subject of the block is an admin, return an error.
+	if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
+		sub.ChatServer(
+			"You are not allowed to block a chat operator.",
+		)
+		return
+	}
+
+	sub.muteMu.Lock()
+	sub.blocked[msg.Username] = struct{}{}
+	sub.muteMu.Unlock()
+
+	// Send the Who List so the blocker/blockee can disappear from each other's list.
+	s.SendWhoList()
+}
+
 // OnBlocklist is a bulk user mute from the CachedBlocklist sent by the website.
 func (s *Server) OnBlocklist(sub *Subscriber, msg messages.Message) {
 	log.Info("%s syncs their blocklist: %s", sub.Username, msg.Usernames)
 
 	sub.muteMu.Lock()
 	for _, username := range msg.Usernames {
-		sub.muted[username] = struct{}{}
+		sub.blocked[username] = struct{}{}
 	}
 
 	sub.muteMu.Unlock()
