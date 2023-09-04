@@ -495,6 +495,10 @@ func (s *Subscriber) Mutes(username string) bool {
 
 // Blocks checks whether the subscriber blocks the username, or vice versa (blocking goes both directions).
 func (s *Subscriber) Blocks(other *Subscriber) bool {
+	if s == nil || other == nil {
+		return false
+	}
+
 	s.muteMu.RLock()
 	defer s.muteMu.RUnlock()
 
