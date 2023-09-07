@@ -12,6 +12,18 @@
     <title>{{.Config.Title}}</title>
   </head>
   <body>
+
+    <!-- Photo Detail Modal -->
+    <div class="modal" id="photo-modal">
+      <div class="modal-background" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></div>
+      <div class="modal-content photo-modal">
+          <div class="image is-fullwidth">
+              <img id="modalImage">
+          </div>
+      </div>
+      <button class="modal-close is-large" aria-label="close" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></button>
+    </div>
+
     <div id="app"></div>
 
     <!-- BareRTC constants injected by IndexPage route -->
@@ -27,6 +39,15 @@
       const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
       const UserJWTClaims = {{.JWTClaims.ToJSON}};
       const CachedBlocklist = {{.CachedBlocklist}};
+
+      // Show the photo detail modal.
+      function setModalImage(url) {
+          let $modalImg = document.querySelector("#modalImage"),
+              $modal = document.querySelector("#photo-modal");
+          $modalImg.src = url;
+          $modal.classList.add("is-active");
+          return false;
+      }
     </script>
 
     <script type="module" src="/src/main.js"></script>

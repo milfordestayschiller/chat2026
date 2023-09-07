@@ -1,10 +1,13 @@
-<script setup>
+<script>
 import HelloWorld from './components/HelloWorld.vue'
 import TheWelcome from './components/TheWelcome.vue'
-</script>
+import LoginModal from './components/LoginModal.vue';
+import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
+import ReportModal from './components/ReportModal.vue';
 
-<script>
+import LocalStorage from './lib/LocalStorage';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
+import { isAppleWebkit } from './lib/browsers';
 
 // WebRTC configuration.
 const configuration = {
@@ -24,17 +27,13 @@ const configuration = {
 
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 
-
-function setModalImage(url) {
-    let $modalImg = document.querySelector("#modalImage"),
-        $modal = document.querySelector("#photo-modal");
-    $modalImg.src = url;
-    $modal.classList.add("is-active");
-    return false;
-}
-
 export default {
     name: 'BareRTC',
+    components: {
+        LoginModal,
+        ExplicitOpenModal,
+        ReportModal,
+    },
     data() {
         return {
             // busy: false, // TODO: not used
@@ -58,26 +57,18 @@ export default {
                 webhookURLs: WebhookURLs,
                 VIP: VIP,
                 fontSizeClasses: [
-                    [ "x-2", "Very small chat room text" ],
-                    [ "x-1", "50% smaller chat room text" ],
-                    [ "", "Default size" ],
-                    [ "x1", "50% larger chat room text" ],
-                    [ "x2", "2x larger chat room text" ],
-                    [ "x3", "3x larger chat room text" ],
-                    [ "x4", "4x larger chat room text" ],
+                    ["x-2", "Very small chat room text"],
+                    ["x-1", "50% smaller chat room text"],
+                    ["", "Default size"],
+                    ["x1", "50% larger chat room text"],
+                    ["x2", "2x larger chat room text"],
+                    ["x3", "3x larger chat room text"],
+                    ["x4", "4x larger chat room text"],
                 ],
                 imageDisplaySettings: [
-                    [ "show", "Always show images in chat" ],
-                    [ "collapse", "Collapse images in chat, clicking to expand (default)" ],
-                    [ "hide", "Never show images shared in chat" ],
-                ],
-                reportClassifications: [
-                    "It's spam",
-                    "It's abusive (racist, homophobic, etc.)",
-                    "It's malicious (e.g. link to a malware website, phishing)",
-                    "It's illegal (e.g. controlled substances, violence)",
-                    "It's child abuse (CP, CSAM, pedophilia, etc.)",
-                    "Other (please describe)",
+                    ["show", "Always show images in chat"],
+                    ["collapse", "Collapse images in chat, clicking to expand (default)"],
+                    ["hide", "Never show images shared in chat"],
                 ],
                 sounds: {
                     available: SoundEffects,
@@ -160,11 +151,11 @@ export default {
                 // embiggen the webcam sizes so a suitable size.
                 videoScale: "",
                 videoScaleOptions: [
-                    [ "", "Default size" ],
-                    [ "x1", "50% larger videos" ],
-                    [ "x2", "2x larger videos" ],
-                    [ "x3", "3x larger videos" ],
-                    [ "x4", "4x larger videos (not recommended)" ],
+                    ["", "Default size"],
+                    ["x1", "50% larger videos"],
+                    ["x2", "2x larger videos"],
+                    ["x3", "3x larger videos"],
+                    ["x4", "4x larger videos (not recommended)"],
                 ],
 
                 // Available cameras and microphones for the Settings modal.
@@ -185,13 +176,13 @@ export default {
 
             // Video flag constants (sync with values in messages.go)
             VideoFlag: {
-                Active:         1 << 0,
-                NSFW:           1 << 1,
-                Muted:          1 << 2,
-                IsTalking:      1 << 3,
+                Active: 1 << 0,
+                NSFW: 1 << 1,
+                Muted: 1 << 2,
+                IsTalking: 1 << 3,
                 MutualRequired: 1 << 4,
-                MutualOpen:     1 << 5,
-                VipOnly:        1 << 6,
+                MutualOpen: 1 << 5,
+                VipOnly: 1 << 6,
             },
 
             // WebRTC sessions with other users.
@@ -282,10 +273,9 @@ export default {
             reportModal: {
                 visible: false,
                 busy: false,
+                user: {},  // full copy of the user for the modal component
                 message: {},
                 origMessage: {}, // pointer, so we can set the "reported" flag
-                classification: "It's spam",
-                comment: "",
             },
         }
     },
@@ -350,26 +340,26 @@ export default {
         if (!this.username) {
             this.loginModal.visible = true;
         } else {
-            this.signIn();
+            this.signIn(this.username);
         }
     },
     watch: {
-        "webcam.videoScale": function() {
+        "webcam.videoScale": function () {
             document.querySelectorAll(".video-feeds > .feed").forEach(node => {
                 node.style.width = null;
                 node.style.height = null;
             });
-            localStorage.videoScale = this.webcam.videoScale;
+            LocalStorage.set('videoScale', this.webcam.videoScale);
         },
         fontSizeClass() {
             // Store the setting persistently.
-            localStorage.fontSizeClass = this.fontSizeClass;
+            LocalStorage.set('fontSizeClass', this.fontSizeClass);
         },
         imageDisplaySetting() {
-            localStorage.imageDisplaySetting = this.imageDisplaySetting;
+            LocalStorage.set('imageDisplaySetting', this.imageDisplaySetting);
         },
         scrollback() {
-            localStorage.scrollback = this.scrollback;
+            LocalStorage.set('scrollback', this.scrollback);
         },
         status() {
             // Send presence updates to the server.
@@ -377,22 +367,22 @@ export default {
         },
 
         // Webcam preferences that the user can edit while live.
-        "webcam.nsfw": function() {
+        "webcam.nsfw": function () {
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
-        "webcam.mutual": function() {
+        "webcam.mutual": function () {
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
-        "webcam.mutualOpen": function() {
+        "webcam.mutualOpen": function () {
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
-        "webcam.vipOnly": function() {
+        "webcam.vipOnly": function () {
             if (this.webcam.active) {
                 this.sendMe();
             }
@@ -408,20 +398,20 @@ export default {
         },
 
         // Misc preference watches
-        "prefs.joinMessages": function() {
-            localStorage.joinMessages = this.prefs.joinMessages;
+        "prefs.joinMessages": function () {
+            LocalStorage.set('joinMessages', this.prefs.joinMessages);
         },
-        "prefs.exitMessages": function() {
-            localStorage.exitMessages = this.prefs.exitMessages;
+        "prefs.exitMessages": function () {
+            LocalStorage.set('exitMessages', this.prefs.exitMessages);
         },
-        "prefs.watchNotif": function() {
-            localStorage.watchNotif = this.prefs.watchNotif;
+        "prefs.watchNotif": function () {
+            LocalStorage.set('watchNotif', this.prefs.watchNotif);
         },
-        "prefs.muteSounds": function() {
-            localStorage.muteSounds = this.prefs.muteSounds;
+        "prefs.muteSounds": function () {
+            LocalStorage.set('muteSounds', this.prefs.muteSounds);
         },
-        "prefs.closeDMs": function() {
-            localStorage.closeDMs = this.prefs.closeDMs;
+        "prefs.closeDMs": function () {
+            LocalStorage.set('closeDMs', this.prefs.closeDMs);
 
             // Tell ChatServer if we have gone to/from DND.
             this.sendMe();
@@ -588,62 +578,65 @@ export default {
     methods: {
         // Load user prefs from localStorage, called on startup
         setupConfig() {
-            if (localStorage.fontSizeClass != undefined) {
-                this.fontSizeClass = localStorage.fontSizeClass;
+            const settings = LocalStorage.getSettings();
+
+            if (settings.fontSizeClass != undefined) {
+                this.fontSizeClass = settings.fontSizeClass;
             }
 
-            if (localStorage.videoScale != undefined) {
-                this.webcam.videoScale = localStorage.videoScale;
+            if (settings.videoScale != undefined) {
+                this.webcam.videoScale = settings.videoScale;
             }
 
-            if (localStorage.imageDisplaySetting != undefined) {
-                this.imageDisplaySetting = localStorage.imageDisplaySetting;
+            if (settings.imageDisplaySetting != undefined) {
+                this.imageDisplaySetting = settings.imageDisplaySetting;
             }
 
-            if (localStorage.scrollback != undefined) {
-                this.scrollback = parseInt(localStorage.scrollback);
+            if (settings.scrollback != undefined) {
+                this.scrollback = parseInt(settings.scrollback);
             }
 
             // Stored user preferred device names for webcam/audio.
-            if (localStorage.preferredDeviceNames != undefined) {
-                let dev = JSON.parse(localStorage.preferredDeviceNames);
+            if (settings.preferredDeviceNames != undefined) {
+                let dev = settings.preferredDeviceNames;
                 this.webcam.preferredDeviceNames.video = dev.video;
                 this.webcam.preferredDeviceNames.audio = dev.audio;
             }
 
             // Webcam mutality preferences from last broadcast.
-            if (localStorage.videoMutual === "true") {
+            if (settings.videoMutual === "true") {
                 this.webcam.mutual = true;
             }
-            if (localStorage.videoMutualOpen === "true") {
+            if (settings.videoMutualOpen === "true") {
                 this.webcam.mutualOpen = true;
             }
-            if (localStorage.videoAutoMute === "true") {
+            if (settings.videoAutoMute === "true") {
                 this.webcam.autoMute = true;
             }
-            if (localStorage.videoVipOnly === "true") {
+            if (settings.videoVipOnly === "true") {
                 this.webcam.vipOnly = true;
             }
 
             // Misc preferences
-            if (localStorage.joinMessages != undefined) {
-                this.prefs.joinMessages = localStorage.joinMessages === "true";
+            if (settings.joinMessages != undefined) {
+                this.prefs.joinMessages = settings.joinMessages === "true";
             }
-            if (localStorage.exitMessages != undefined) {
-                this.prefs.exitMessages = localStorage.exitMessages === "true";
+            if (settings.exitMessages != undefined) {
+                this.prefs.exitMessages = settings.exitMessages === "true";
             }
-            if (localStorage.watchNotif != undefined) {
-                this.prefs.watchNotif = localStorage.watchNotif === "true";
+            if (settings.watchNotif != undefined) {
+                this.prefs.watchNotif = settings.watchNotif === "true";
             }
-            if (localStorage.muteSounds != undefined) {
-                this.prefs.muteSounds = localStorage.muteSounds === "true";
+            if (settings.muteSounds != undefined) {
+                this.prefs.muteSounds = settings.muteSounds === "true";
             }
-            if (localStorage.closeDMs != undefined) {
-                this.prefs.closeDMs = localStorage.closeDMs === "true";
+            if (settings.closeDMs != undefined) {
+                this.prefs.closeDMs = settings.closeDMs === "true";
             }
         },
 
-        signIn() {
+        signIn(username) {
+            this.username = username;
             this.loginModal.visible = false;
             this.dial();
         },
@@ -679,13 +672,13 @@ export default {
                     this.ws.conn.send(JSON.stringify({
                         action: "message",
                         channel: "lobby",
-                        message: "**(Message of Shame)** I have been naughty and posted spam in chat despite being warned, "+
+                        message: "**(Message of Shame)** I have been naughty and posted spam in chat despite being warned, " +
                             "and I am now being kicked from the room in shame. ☹️",
                     }));
 
                     this.ChatServer(
-                        "It is <strong>not allowed</strong> to promote your Onlyfans (or similar) "+
-                        "site on the chat room. You have been removed from the chat room, and this "+
+                        "It is <strong>not allowed</strong> to promote your Onlyfans (or similar) " +
+                        "site on the chat room. You have been removed from the chat room, and this " +
                         "incident has been reported to the site admin.",
                     );
                     this.pushHistory({
@@ -704,8 +697,8 @@ export default {
                 this.spamWarningCount++;
 
                 this.ChatClient(
-                    "Please <strong>do not</strong> send links to your Onlyfans (or similar sites) in the chat room. "+
-                    "Those links are widely regarded to be spam and make a lot of people uncomfortable. "+
+                    "Please <strong>do not</strong> send links to your Onlyfans (or similar sites) in the chat room. " +
+                    "Those links are widely regarded to be spam and make a lot of people uncomfortable. " +
                     "If you violate this again, your account will be suspended.",
                 );
                 this.message = "";
@@ -724,7 +717,7 @@ export default {
 
             // DEBUGGING: test whether the page thinks you're Apple Webkit.
             if (this.message.toLowerCase().indexOf("/ipad") === 0) {
-                if (this.isAppleWebkit()) {
+                if (isAppleWebkit()) {
                     this.ChatClient("I have detected that you are probably an iPad or iPhone browser.");
                 } else {
                     this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
@@ -781,7 +774,7 @@ export default {
             // if this emoji reaction is empty, clean it up
             if (unreact) {
                 if (this.messageReactions[msgID][emoji].length === 0) {
-                    delete(this.messageReactions[msgID][emoji]);
+                    delete (this.messageReactions[msgID][emoji]);
                 }
                 return;
             }
@@ -862,7 +855,7 @@ export default {
                 for (let user of this.config.CachedBlocklist) {
                     if (user === username) {
                         this.ChatClient(
-                            `You can not unmute <strong>${username}</strong> because you have blocked them on the main website. `+
+                            `You can not unmute <strong>${username}</strong> because you have blocked them on the main website. ` +
                             `To unmute them, you will need to unblock them on the website and then reload the chat room.`
                         );
                         return;
@@ -872,8 +865,8 @@ export default {
 
             if (mute) {
                 if (!window.confirm(
-                    `Do you want to mute ${username}? If muted, you will no longer see their `+
-                    `chat messages or any DMs they send you going forward. Also, ${username} will `+
+                    `Do you want to mute ${username}? If muted, you will no longer see their ` +
+                    `chat messages or any DMs they send you going forward. Also, ${username} will ` +
                     `not be able to see whether your webcam is active until you unmute them.`
                 )) {
                     return;
@@ -881,12 +874,12 @@ export default {
                 this.muted[username] = true;
             } else {
                 if (!window.confirm(
-                    `Do you want to remove your mute on ${username}? If you un-mute them, you `+
-                    `will be able to see their chat messages or DMs going forward, but most importantly, `+
-                    `they may be able to watch your webcam now if you are broadcasting!\n\n`+
-                    `Note: currently you can only re-mute them the next time you see one of their `+
-                    `chat messages, or you can only boot them off your cam after they have already `+
-                    `opened it. If you are concerned about this, click Cancel and do not remove `+
+                    `Do you want to remove your mute on ${username}? If you un-mute them, you ` +
+                    `will be able to see their chat messages or DMs going forward, but most importantly, ` +
+                    `they may be able to watch your webcam now if you are broadcasting!\n\n` +
+                    `Note: currently you can only re-mute them the next time you see one of their ` +
+                    `chat messages, or you can only boot them off your cam after they have already ` +
+                    `opened it. If you are concerned about this, click Cancel and do not remove ` +
                     `the mute on ${username}.`
                 )) {
                     return;
@@ -900,7 +893,7 @@ export default {
             this.sendMute(username, mute);
             if (mute) {
                 this.ChatClient(
-                    `You have muted <strong>${username}</strong> and will no longer see their chat messages, `+
+                    `You have muted <strong>${username}</strong> and will no longer see their chat messages, ` +
                     `and they will not see whether your webcam is active. You may unmute them via the Who Is Online list.`);
             } else {
                 this.ChatClient(
@@ -1054,7 +1047,7 @@ export default {
 
             conn.addEventListener("close", ev => {
                 // Lost connection to server - scrub who list.
-                this.onWho({whoList: []});
+                this.onWho({ whoList: [] });
                 this.muted = {};
 
                 this.ws.connected = false;
@@ -1102,7 +1095,7 @@ export default {
                 try {
                     // Cast timestamp to date.
                     msg.at = new Date(msg.at);
-                } catch(e) {
+                } catch (e) {
                     console.error("Parsing timestamp '%s' on msg: %s", msg.at, e);
                 }
 
@@ -1232,7 +1225,7 @@ export default {
                 // clear it before it expires.
                 if (this.WebRTC.openTimeouts[username] != undefined) {
                     clearTimeout(this.WebRTC.openTimeouts[username]);
-                    delete(this.WebRTC.openTimeouts[username]);
+                    delete (this.WebRTC.openTimeouts[username]);
                 }
 
                 // Do we already have it?
@@ -1376,7 +1369,7 @@ export default {
         },
         onUnwatch(msg) {
             // The user has closed our video feed.
-            delete(this.webcam.watching[msg.username]);
+            delete (this.webcam.watching[msg.username]);
             this.playSound("Unwatch");
         },
         sendWatch(username, watching) {
@@ -1405,7 +1398,7 @@ export default {
 
         // Set active chat room.
         setChannel(channel) {
-            this.channel = typeof(channel) === "string" ? channel : channel.ID;
+            this.channel = typeof (channel) === "string" ? channel : channel.ID;
             this.scrollHistory(this.channel, true);
             this.channels[this.channel].unread = 0;
 
@@ -1530,7 +1523,7 @@ export default {
 
             let channel = this.channel;
             this.setChannel(this.config.channels[0].ID);
-            delete(this.channels[channel]);
+            delete (this.channels[channel]);
         },
 
         /* Take back messages (for everyone) or remove locally */
@@ -1551,7 +1544,7 @@ export default {
 
             this.onTakeback({
                 msgID: msg.msgID,
-            })
+            });
         },
 
         /* message reaction emojis */
@@ -1597,7 +1590,7 @@ export default {
         // Start broadcasting my webcam.
         // - force=true to skip the NSFW modal prompt (this param is passed by the button in that modal)
         // - changeCamera=true to re-negotiate WebRTC connections with a new camera device (invoked by the Settings modal)
-        startVideo({force=false, changeCamera=false}) {
+        startVideo({ force = false, changeCamera = false }) {
             if (this.webcam.busy) return;
 
             // Before they go on cam the first time, ATTEMPT to get their device names.
@@ -1641,10 +1634,10 @@ export default {
                 this.webcam.stream = stream;
 
                 // Save our mutuality prefs.
-                localStorage.videoMutual = this.webcam.mutual;
-                localStorage.videoMutualOpen = this.webcam.mutualOpen;
-                localStorage.videoAutoMute = this.webcam.autoMute;
-                localStorage.videoVipOnly = this.webcam.vipOnly;
+                LocalStorage.set('videoMutual', this.webcam.mutual);
+                LocalStorage.set('videoMutualOpen', this.webcam.mutualOpen);
+                LocalStorage.set('videoAutoMute', this.webcam.autoMute);
+                LocalStorage.set('videoVipOnly', this.webcam.vipOnly);
 
                 // Auto-mute our camera? Two use cases:
                 // 1. The user marked their cam as muted but then changed video device,
@@ -1667,7 +1660,6 @@ export default {
                 // Record the selected device IDs.
                 this.webcam.videoDeviceID = stream.getVideoTracks()[0].getSettings().deviceId;
                 this.webcam.audioDeviceID = stream.getAudioTracks()[0].getSettings().deviceId;
-                console.log("device IDs:", this.webcam.videoDeviceID, this.webcam.audioDeviceID);
 
                 // Collect video and audio devices to let the user change them in their settings.
                 this.getDevices().then(() => {
@@ -1769,7 +1761,7 @@ export default {
             }
 
             // Put them on localStorage.
-            localStorage.preferredDeviceNames = JSON.stringify(this.webcam.preferredDeviceNames);
+            LocalStorage.set('preferredDeviceNames', this.webcam.preferredDeviceNames);
         },
 
         // Replace your video/audio streams for your watchers (on camera changes)
@@ -1810,7 +1802,14 @@ export default {
             }
             this.ChatClient("Couldn't open video by username: not found.");
         },
+        setSkipNSFWModal() {
+            // Set the "don't show again" on NSFW modal.
+            LocalStorage.set("skip-nsfw-modal", true);
+        },
         openVideo(user, force) {
+            // Close the NSFW warning modal if it was open.
+            this.nsfwModalView.visible = false;
+
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
                 return;
@@ -1823,22 +1822,18 @@ export default {
             }
 
             // Is the target user NSFW? Go thru the modal.
-            let dontShowAgain = localStorage["skip-nsfw-modal"] == "true";
+            let dontShowAgain = LocalStorage.get("skip-nsfw-modal") === true;
             if ((user.video & this.VideoFlag.NSFW) && !dontShowAgain && !force) {
                 this.nsfwModalView.user = user;
                 this.nsfwModalView.visible = true;
                 return;
-            }
-            if (this.nsfwModalView.dontShowAgain) {
-                // user doesn't want to see the modal again.
-                localStorage["skip-nsfw-modal"] = "true";
             }
 
             // Debounce so we don't spam too much for the same user.
             if (this.WebRTC.debounceOpens[user.username]) return;
             this.WebRTC.debounceOpens[user.username] = true;
             setTimeout(() => {
-                delete(this.WebRTC.debounceOpens[user.username]);
+                delete (this.WebRTC.debounceOpens[user.username]);
             }, 5000);
 
             // Camera is already open? Then disconnect the connection.
@@ -1859,16 +1854,16 @@ export default {
             // can avoid a spammy 'ChatClient' notification message.
             if (this.WebRTC.openTimeouts[user.username] != undefined) {
                 clearTimeout(this.WebRTC.openTimeouts[user.username]);
-                delete(this.WebRTC.openTimeouts[user.username]);
+                delete (this.WebRTC.openTimeouts[user.username]);
             }
             this.WebRTC.openTimeouts[user.username] = setTimeout(() => {
                 // It timed out. If they are on an iPad, offer additional hints on
                 // how to have better luck connecting their cameras.
-                if (this.isAppleWebkit()) {
+                if (isAppleWebkit()) {
                     this.ChatClient(
                         `There was an error opening <strong>${user.username}</strong>'s camera.<br><br>` +
                         "<strong>Advice:</strong> You appear to be on an iPad-style browser. Webcam sharing " +
-                        "may be limited and only work if:<br>A) You are sharing your own camera first, and<br>B) "+
+                        "may be limited and only work if:<br>A) You are sharing your own camera first, and<br>B) " +
                         "The person you view has the setting to auto-open your camera in return.<br>Best of luck!",
                     );
                 } else {
@@ -1876,7 +1871,7 @@ export default {
                         `There was an error opening <strong>${user.username}</strong>'s camera.`,
                     );
                 }
-                delete(this.WebRTC.openTimeouts[user.username]);
+                delete (this.WebRTC.openTimeouts[user.username]);
             }, 10000);
 
             // Send the ChatServer 'open' command.
@@ -1890,7 +1885,7 @@ export default {
             delete (this.WebRTC.frozenStreamDetected[username]);
             if (this.WebRTC.frozenStreamInterval[username]) {
                 clearInterval(this.WebRTC.frozenStreamInterval);
-                delete(this.WebRTC.frozenStreamInterval[username]);
+                delete (this.WebRTC.frozenStreamInterval[username]);
             }
 
             if (name === "offerer") {
@@ -1934,7 +1929,7 @@ export default {
             delete (this.WebRTC.frozenStreamDetected[username]);
             if (this.WebRTC.frozenStreamInterval[username]) {
                 clearInterval(this.WebRTC.frozenStreamInterval);
-                delete(this.WebRTC.frozenStreamInterval[username]);
+                delete (this.WebRTC.frozenStreamInterval[username]);
             }
 
             // Inform backend we have closed it.
@@ -1976,7 +1971,7 @@ export default {
             // iPad test: they will have very limited luck opening videos unless
             // A) the iPad camera is already on, and
             // B) the person they want to watch has mutual auto-open enabled.
-            if (this.isAppleWebkit()) {
+            if (isAppleWebkit()) {
                 if (!this.webcam.active) {
                     return 'fa-video-slash';  // can not open any cam w/o local video on
                 }
@@ -2041,8 +2036,8 @@ export default {
         // Boot someone off your video.
         bootUser(username) {
             if (!window.confirm(
-                `Kick ${username} off your camera? This will also prevent them `+
-                `from seeing that your camera is active for the remainder of your `+
+                `Kick ${username} off your camera? This will also prevent them ` +
+                `from seeing that your camera is active for the remainder of your ` +
                 `chat session.`)) {
                 return;
             }
@@ -2056,9 +2051,9 @@ export default {
             }
 
             this.ChatClient(
-                `You have booted ${username} off your camera. They will no longer be able `+
-                `to connect to your camera, or even see that your camera is active at all -- `+
-                `to them it appears as though you had turned yours off.<br><br>This will be `+
+                `You have booted ${username} off your camera. They will no longer be able ` +
+                `to connect to your camera, or even see that your camera is active at all -- ` +
+                `to them it appears as though you had turned yours off.<br><br>This will be ` +
                 `in place for the remainder of your current chat session.`
             );
         },
@@ -2161,71 +2156,71 @@ export default {
                 inertia: true,
                 // keep the element within the area of it's parent
                 modifiers: [
-                interact.modifiers.restrictRect({
-                    restriction: 'parent',
-                    endOnly: true
-                })
+                    interact.modifiers.restrictRect({
+                        restriction: 'parent',
+                        endOnly: true
+                    })
                 ],
 
                 listeners: {
-                // call this function on every dragmove event
-                move(event) {
-                    let target = event.target;
-                    let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
-                    let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
+                    // call this function on every dragmove event
+                    move(event) {
+                        let target = event.target;
+                        let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+                        let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
 
-                    target.style.top = `${y}px`;
-                    target.style.left = `${x}px`;
+                        target.style.top = `${y}px`;
+                        target.style.left = `${x}px`;
 
-                    target.setAttribute('data-x', x);
-                    target.setAttribute('data-y', y);
-                },
+                        target.setAttribute('data-x', x);
+                        target.setAttribute('data-y', y);
+                    },
 
-                // call this function on every dragend event
-                end (event) {
-                    console.log(
-                    'moved a distance of ' +
-                    (Math.sqrt(Math.pow(event.pageX - event.x0, 2) +
+                    // call this function on every dragend event
+                    end(event) {
+                        console.log(
+                            'moved a distance of ' +
+                            (Math.sqrt(Math.pow(event.pageX - event.x0, 2) +
                                 Math.pow(event.pageY - event.y0, 2) | 0))
-                        .toFixed(2) + 'px')
-                }
+                                .toFixed(2) + 'px')
+                    }
                 }
             }).resizable({
                 edges: { left: true, right: true, bottom: true, right: true },
                 listeners: {
-                    move (event) {
-                      var target = event.target
-                      var x = (parseFloat(target.getAttribute('data-x')) || 0)
-                      var y = (parseFloat(target.getAttribute('data-y')) || 0)
+                    move(event) {
+                        var target = event.target
+                        var x = (parseFloat(target.getAttribute('data-x')) || 0)
+                        var y = (parseFloat(target.getAttribute('data-y')) || 0)
 
-                      // update the element's style
-                      target.style.width = event.rect.width + 'px'
-                      target.style.height = event.rect.height + 'px'
+                        // update the element's style
+                        target.style.width = event.rect.width + 'px'
+                        target.style.height = event.rect.height + 'px'
 
-                      // translate when resizing from top or left edges
-                      x += event.deltaRect.left
-                      y += event.deltaRect.top
+                        // translate when resizing from top or left edges
+                        x += event.deltaRect.left
+                        y += event.deltaRect.top
 
-                      target.style.top = `${y}px`;
-                      target.style.left = `${x}px`;
+                        target.style.top = `${y}px`;
+                        target.style.left = `${x}px`;
 
-                      target.setAttribute('data-x', x)
-                      target.setAttribute('data-y', y)
+                        target.setAttribute('data-x', x)
+                        target.setAttribute('data-y', y)
                     }
-                  },
-                  modifiers: [
+                },
+                modifiers: [
                     // keep the edges inside the parent
                     interact.modifiers.restrictEdges({
-                      outer: 'parent'
+                        outer: 'parent'
                     }),
 
                     // minimum size
                     interact.modifiers.restrictSize({
-                      min: { width: 100, height: 50 }
+                        min: { width: 100, height: 50 }
                     })
-                  ],
+                ],
 
-                  inertia: true
+                inertia: true
             })
         },
 
@@ -2293,7 +2288,7 @@ export default {
             if (this.scrollback > 0 && this.channels[channel].history.length > this.scrollback) {
                 this.channels[channel].history = this.channels[channel].history.slice(
                     -this.scrollback,
-                    this.channels[channel].history.length+1,
+                    this.channels[channel].history.length + 1,
                 );
             }
 
@@ -2387,7 +2382,7 @@ export default {
                 minutes = String(date.getMinutes()).padStart(2, '0'),
                 ampm = hours >= 11 ? "pm" : "am";
 
-            let hour = hours%12 || 12;
+            let hour = hours % 12 || 12;
             return `${(hour)}:${minutes} ${ampm}`;
         },
 
@@ -2401,11 +2396,11 @@ export default {
 
             let gender = (user.gender || "").toLowerCase();
             if (gender.indexOf("m") === 0) {
-                return result+"has-text-gender-male";
+                return result + "has-text-gender-male";
             } else if (gender.indexOf("f") === 0) {
-                return result+"has-text-gender-female";
+                return result + "has-text-gender-female";
             } else if (gender.length > 0) {
-                return result+"has-text-gender-other";
+                return result + "has-text-gender-other";
             }
             return "";
         },
@@ -2477,7 +2472,7 @@ export default {
                 } else {
                     this.config.sounds.audioContext = window.AudioContext || window.webkitAudioContext;
                 }
-            } catch {}
+            } catch { }
 
             if (!this.config.sounds.audioContext) {
                 console.error("Couldn't set up AudioContext! No sound effects will be supported.");
@@ -2586,6 +2581,12 @@ export default {
                 if (!window.confirm("You have already reported this message. Do you want to report it again?")) return;
             }
 
+            // Clone the user object.
+            let user = {
+                avatar: this.avatarForUsername(message.username),
+                nickname: this.nicknameForUsername(message.username),
+            }
+
             // Clone the message.
             let clone = Object.assign({}, message);
 
@@ -2593,12 +2594,11 @@ export default {
             clone.message = clone.message.replace(/<img .+?>/g, "[inline image]");
 
             this.reportModal.message = clone;
+            this.reportModal.user = user;
             this.reportModal.origMessage = message;
-            this.reportModal.classification = this.config.reportClassifications[0];
-            this.reportModal.comment = "";
             this.reportModal.visible = true;
         },
-        doReport() {
+        doReport({ classification, comment }) {
             // Submit the queued up report.
             if (this.reportModal.busy) return;
             this.reportModal.busy = true;
@@ -2609,10 +2609,10 @@ export default {
                 action: "report",
                 channel: msg.channel,
                 username: msg.username,
-                timestamp: ""+msg.at,
-                reason: this.reportModal.classification,
+                timestamp: "" + msg.at,
+                reason: classification,
                 message: msg.message,
-                comment: this.reportModal.comment,
+                comment: comment,
             }));
 
             this.reportModal.busy = false;
@@ -2621,81 +2621,16 @@ export default {
             // Set the "reported" flag.
             this.reportModal.origMessage.reported = true;
         },
-
-        // Miscellaneous utility methods.
-        isAppleWebkit() {
-            // Try and detect whether the user is on an Apple Safari browser, which has
-            // special nuances in their WebRTC video sharing support. This is intended to
-            // detect: iPads, iPhones, and Safari on macOS.
-
-            // By User-Agent.
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                return true;
-            }
-
-            // By (deprecated) navigator.platform.
-            if (navigator.platform === 'iPad' || navigator.platform === 'iPhone' || navigator.platform === 'iPod') {
-                return true;
-            }
-
-            return false;
-        },
     }
 };
 </script>
 
 <template>
-  <!-- Sign In modal -->
-  <div class="modal" :class="{'is-active': loginModal.visible}">
-        <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="card">
-                <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">Sign In</p>
-                </header>
-                <div class="card-content">
-                    <form @submit.prevent="signIn()">
-
-                        <div v-if="autoLogin" class="content">
-                            <p>
-                            Welcome to <span v-html="config.branding"></span>! Please just click on the "Enter Chat"
-                            button below to log on. Your username has been pre-filled from the website that
-                            sent you here.
-                            </p>
-
-                            <p>
-                            This dialog box is added as an experiment to see whether it
-                            helps iOS devices (iPads and iPhones) to log in to the chat more reliably, by
-                            having you interact with the page before it connects to the server. Let us
-                            know in chat if your iPhone or iPad is able to log in this way!
-                            </p>
-                        </div>
-
-                        <div class="field">
-                            <label class="label">Username</label>
-                            <input class="input"
-                                v-model="username"
-                                placeholder="Username"
-                                autocomplete="off"
-                                autofocus
-                                :disabled="autoLogin"
-                                required>
-                        </div>
-
-                        <div class="field">
-                            <div class="control">
-                                <button class="button is-link">Enter Chat</button>
-                            </div>
-                        </div>
-
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Sign In modal -->
+    <LoginModal :visible="loginModal.visible" @sign-in="signIn"></LoginModal>
 
     <!-- Settings modal -->
-    <div class="modal" :class="{'is-active': settingsModal.visible}">
+    <div class="modal" :class="{ 'is-active': settingsModal.visible }">
         <div class="modal-background"></div>
         <div class="modal-content">
             <div class="card">
@@ -2707,23 +2642,23 @@ export default {
                     <!-- Tab bar for the settings -->
                     <div class="tabs">
                         <ul>
-                            <li :class="{'is-active': settingsModal.tab==='prefs'}">
-                                <a href="#" @click.prevent="settingsModal.tab='prefs'">
+                            <li :class="{ 'is-active': settingsModal.tab === 'prefs' }">
+                                <a href="#" @click.prevent="settingsModal.tab = 'prefs'">
                                     Display
                                 </a>
                             </li>
-                            <li :class="{'is-active': settingsModal.tab==='sounds'}">
-                                <a href="#" @click.prevent="settingsModal.tab='sounds'">
+                            <li :class="{ 'is-active': settingsModal.tab === 'sounds' }">
+                                <a href="#" @click.prevent="settingsModal.tab = 'sounds'">
                                     Sounds
                                 </a>
                             </li>
-                            <li :class="{'is-active': settingsModal.tab==='webcam'}">
-                                <a href="#" @click.prevent="settingsModal.tab='webcam'">
+                            <li :class="{ 'is-active': settingsModal.tab === 'webcam' }">
+                                <a href="#" @click.prevent="settingsModal.tab = 'webcam'">
                                     Camera
                                 </a>
                             </li>
-                            <li :class="{'is-active': settingsModal.tab==='misc'}">
-                                <a href="#" @click.prevent="settingsModal.tab='misc'">
+                            <li :class="{ 'is-active': settingsModal.tab === 'misc' }">
+                                <a href="#" @click.prevent="settingsModal.tab = 'misc'">
                                     Misc
                                 </a>
                             </li>
@@ -2731,7 +2666,7 @@ export default {
                     </div>
 
                     <!-- Display preferences -->
-                    <div v-if="settingsModal.tab==='prefs'">
+                    <div v-if="settingsModal.tab === 'prefs'">
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
                                 <label class="label">Video size</label>
@@ -2741,8 +2676,7 @@ export default {
                                     <div class="control">
                                         <div class="select is-fullwidth">
                                             <select v-model="webcam.videoScale">
-                                                <option v-for="s in webcam.videoScaleOptions"
-                                                    v-bind:key="s[0]"
+                                                <option v-for="s in webcam.videoScaleOptions" v-bind:key="s[0]"
                                                     :value="s[0]">
                                                     {{ s[1] }}
                                                 </option>
@@ -2762,9 +2696,7 @@ export default {
                                     <div class="control">
                                         <div class="select is-fullwidth">
                                             <select v-model="fontSizeClass">
-                                                <option v-for="s in config.fontSizeClasses"
-                                                    v-bind:key="s[0]"
-                                                    :value="s[0]">
+                                                <option v-for="s in config.fontSizeClasses" v-bind:key="s[0]" :value="s[0]">
                                                     {{ s[1] }}
                                                 </option>
                                             </select>
@@ -2783,8 +2715,7 @@ export default {
                                     <div class="control">
                                         <div class="select is-fullwidth">
                                             <select v-model="imageDisplaySetting">
-                                                <option v-for="s in config.imageDisplaySettings"
-                                                    v-bind:key="s[0]"
+                                                <option v-for="s in config.imageDisplaySettings" v-bind:key="s[0]"
                                                     :value="s[0]">
                                                     {{ s[1] }}
                                                 </option>
@@ -2798,11 +2729,7 @@ export default {
                         <div class="field">
                             <label class="label">Scrollback buffer</label>
                             <div class="control">
-                                <input type="number"
-                                    class="input"
-                                    v-model="scrollback"
-                                    min="0"
-                                    inputmode="numeric">
+                                <input type="number" class="input" v-model="scrollback" min="0" inputmode="numeric">
                             </div>
                             <p class="help">
                                 How many chat history messages to keep at once (per channel/DM thread).
@@ -2814,14 +2741,12 @@ export default {
                     </div>
 
                     <!-- Sound settings -->
-                    <div v-else-if="settingsModal.tab==='sounds'">
+                    <div v-else-if="settingsModal.tab === 'sounds'">
 
                         <div class="mb-4">
                             <label class="checkbox">
-                                <input type="checkbox"
-                                    v-model="prefs.muteSounds"
-                                    :value="true">
-                                    Mute all sound effects
+                                <input type="checkbox" v-model="prefs.muteSounds" :value="true">
+                                Mute all sound effects
                             </label>
                         </div>
 
@@ -2832,10 +2757,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.DM" @change="setSoundPref('DM')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2847,10 +2770,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Chat" @change="setSoundPref('Chat')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2864,10 +2785,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Enter" @change="setSoundPref('Enter')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2879,10 +2798,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Leave" @change="setSoundPref('Leave')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2896,10 +2813,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Watch" @change="setSoundPref('Watch')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2911,10 +2826,8 @@ export default {
                             <div class="column">
                                 <div class="select is-fullwidth">
                                     <select v-model="config.sounds.settings.Unwatch" @change="setSoundPref('Unwatch')">
-                                        <option v-for="s in config.sounds.available"
-                                            v-bind:key="s.name"
-                                            :value="s.name">
-                                            {{s.name}}
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -2923,7 +2836,7 @@ export default {
                     </div>
 
                     <!-- Webcam preferences -->
-                    <div v-if="settingsModal.tab==='webcam'">
+                    <div v-if="settingsModal.tab === 'webcam'">
                         <h3 class="subtitle mb-2">
                             Camera Settings
                         </h3>
@@ -2939,11 +2852,8 @@ export default {
                             <label class="label">Explicit</label>
                         </p>
                         <div class="field" v-if="config.permitNSFW">
-                            <label class="checkbox"
-                                :class="{'cursor-notallowed': !webcam.active}">
-                                <input type="checkbox"
-                                    v-model="webcam.nsfw"
-                                    :disabled="!webcam.active">
+                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                                <input type="checkbox" v-model="webcam.nsfw" :disabled="!webcam.active">
                                 Mark my camera as featuring explicit content
                             </label>
                         </div>
@@ -2953,54 +2863,45 @@ export default {
                         </p>
 
                         <div class="field mb-1">
-                            <label class="checkbox"
-                                :class="{'cursor-notallowed': !webcam.active}">
-                                <input type="checkbox"
-                                    v-model="webcam.mutual"
-                                    :disabled="!webcam.active">
+                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                                <input type="checkbox" v-model="webcam.mutual" :disabled="!webcam.active">
                                 People must be sharing their own camera before they can open mine
                             </label>
                         </div>
 
                         <div class="field mb-1">
-                            <label class="checkbox"
-                                :class="{'cursor-notallowed': !webcam.active}">
-                                <input type="checkbox"
-                                    v-model="webcam.mutualOpen"
-                                    :disabled="!webcam.active">
+                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                                <input type="checkbox" v-model="webcam.mutualOpen" :disabled="!webcam.active">
                                 When someone opens my camera, I also open their camera automatically
                             </label>
                         </div>
 
                         <div class="field" v-if="isVIP">
-                            <label class="checkbox"
-                                :class="{'cursor-notallowed': !webcam.active}">
-                                <input type="checkbox"
-                                    v-model="webcam.vipOnly"
-                                    :disabled="!webcam.active">
-                                Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7" :class="config.VIP.Icon"></sup>
+                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                                <input type="checkbox" v-model="webcam.vipOnly" :disabled="!webcam.active">
+                                Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
+                                    :class="config.VIP.Icon"></sup>
                                 members can see that my camera is broadcasting
                             </label>
                         </div>
 
                         <h3 class="subtitle mb-2" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
                             Webcam Devices
-                            <button type="button" class="button is-primary is-small is-outlined ml-2"
-                                @click="getDevices()"
+                            <button type="button" class="button is-primary is-small is-outlined ml-2" @click="getDevices()"
                                 title="Refresh list of devices">
-                                <i class="fa fa-arrows-rotate"
-                                    :class="{'fa-spin': webcam.gettingDevices}">
+                                <i class="fa fa-arrows-rotate" :class="{ 'fa-spin': webcam.gettingDevices }">
                                 </i>
                             </button>
                         </h3>
-                        <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
+                        <div class="columns is-mobile"
+                            v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                             <div class="column">
                                 <label class="label">Video source</label>
                                 <div class="select is-fullwidth">
-                                    <select v-model="webcam.videoDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                        <option v-for="(d, i) in webcam.videoDevices"
-                                            :value="d.id">
+                                    <select v-model="webcam.videoDeviceID"
+                                        @change="startVideo({ changeCamera: true, force: true })">
+                                        <option v-for="(d, i) in webcam.videoDevices" :value="d.id">
                                             {{ d.label || `Camera ${i}` }}
                                         </option>
                                     </select>
@@ -3010,9 +2911,9 @@ export default {
                             <div class="column">
                                 <label class="label">Audio source</label>
                                 <div class="select is-fullwidth">
-                                    <select v-model="webcam.audioDeviceID" @change="startVideo({changeCamera: true, force: true})">
-                                        <option v-for="(d, i) in webcam.audioDevices"
-                                            :value="d.id">
+                                    <select v-model="webcam.audioDeviceID"
+                                        @change="startVideo({ changeCamera: true, force: true })">
+                                        <option v-for="(d, i) in webcam.audioDevices" :value="d.id">
                                             {{ d.label || `Microphone ${i}` }}
                                         </option>
                                     </select>
@@ -3022,25 +2923,22 @@ export default {
                     </div>
 
                     <!-- Misc preferences -->
-                    <div v-if="settingsModal.tab==='misc'">
+                    <div v-if="settingsModal.tab === 'misc'">
 
                         <div class="field">
-                            <label class="label">Presence messages <small>('has joined the room')</small> in public channels</label>
+                            <label class="label">Presence messages <small>('has joined the room')</small> in public
+                                channels</label>
                             <div class="columns is-mobile mb-0">
                                 <div class="column py-1">
                                     <label class="checkbox" title="Show 'has joined the room' messages in public channels">
-                                        <input type="checkbox"
-                                            v-model="prefs.joinMessages"
-                                            :value="true">
+                                        <input type="checkbox" v-model="prefs.joinMessages" :value="true">
                                         Join room
                                     </label>
                                 </div>
 
                                 <div class="column py-1">
                                     <label class="checkbox" title="Show 'has exited the room' messages in public channels">
-                                        <input type="checkbox"
-                                            v-model="prefs.exitMessages"
-                                            :value="true">
+                                        <input type="checkbox" v-model="prefs.exitMessages" :value="true">
                                         Exit room
                                     </label>
                                 </div>
@@ -3050,9 +2948,7 @@ export default {
                         <div class="field">
                             <label class="label mb-0">Server notification messages</label>
                             <label class="checkbox" title="Show 'has joined the room' messages in public channels">
-                                <input type="checkbox"
-                                    v-model="prefs.watchNotif"
-                                    :value="true">
+                                <input type="checkbox" v-model="prefs.watchNotif" :value="true">
                                 Notify when somebody opens my camera
                             </label>
                         </div>
@@ -3060,9 +2956,7 @@ export default {
                         <div class="field">
                             <label class="label mb-0">Direct Messages</label>
                             <label class="checkbox">
-                                <input type="checkbox"
-                                    v-model="prefs.closeDMs"
-                                    :value="true">
+                                <input type="checkbox" v-model="prefs.closeDMs" :value="true">
                                 Ignore unsolicited DMs from others
                             </label>
                             <p class="help">
@@ -3077,8 +2971,7 @@ export default {
                 </div>
                 <footer class="card-footer">
                     <div class="card-footer-item">
-                        <button type="button" class="button is-primary"
-                            @click="hideSettings()">
+                        <button type="button" class="button is-primary" @click="hideSettings()">
                             Close
                         </button>
                     </div>
@@ -3088,7 +2981,7 @@ export default {
     </div>
 
     <!-- NSFW Modal: before user activates their webcam -->
-    <div class="modal" :class="{'is-active': nsfwModalCast.visible}">
+    <div class="modal" :class="{ 'is-active': nsfwModalCast.visible }">
         <div class="modal-background"></div>
         <div class="modal-content">
             <div class="card">
@@ -3097,29 +2990,30 @@ export default {
                 </header>
                 <div class="card-content">
                     <p class="block mb-1">
-                    You can turn on your webcam and enable others in the room to connect to yours.
-                    The controls to <i class="fa fa-stop has-text-danger"></i> stop and <i class="fa fa-microphone-slash has-text-danger"></i> mute audio
-                    will be at the top of the page.
+                        You can turn on your webcam and enable others in the room to connect to yours.
+                        The controls to <i class="fa fa-stop has-text-danger"></i> stop and <i
+                            class="fa fa-microphone-slash has-text-danger"></i> mute audio
+                        will be at the top of the page.
                     </p>
 
                     <div class="field">
                         <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="webcam.autoMute">
+                            <input type="checkbox" v-model="webcam.autoMute">
                             Start with my microphone on mute by default
                         </label>
                     </div>
 
                     <p class="block mb-1">
-                    If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual content, please
-                    mark it as such by clicking on the "<small><i class="fa fa-fire mr-1 has-text-danger"></i> Explicit</small>"
-                    button at the top of the page, or check the box below to start with it enabled.
+                        If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual
+                        content, please
+                        mark it as such by clicking on the "<small><i class="fa fa-fire mr-1 has-text-danger"></i>
+                            Explicit</small>"
+                        button at the top of the page, or check the box below to start with it enabled.
                     </p>
 
                     <div class="field">
                         <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="webcam.nsfw">
+                            <input type="checkbox" v-model="webcam.nsfw">
                             Check this box if your webcam will <em>definitely</em> be Explicit. 😈
                         </label>
                     </div>
@@ -3130,26 +3024,23 @@ export default {
 
                     <div class="field mb-1">
                         <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="webcam.mutual">
+                            <input type="checkbox" v-model="webcam.mutual">
                             People must be sharing their own camera before they can open mine
                         </label>
                     </div>
 
                     <div class="field">
                         <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="webcam.mutualOpen">
+                            <input type="checkbox" v-model="webcam.mutualOpen">
                             When someone opens my camera, I also open their camera automatically
                         </label>
                     </div>
 
                     <div class="field" v-if="isVIP">
-                        <label class="checkbox"
-                            :class="{'cursor-notallowed': !webcam.active}">
-                            <input type="checkbox"
-                                v-model="webcam.vipOnly">
-                            Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7" :class="config.VIP.Icon"></sup>
+                        <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                            <input type="checkbox" v-model="webcam.vipOnly">
+                            Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
+                                :class="config.VIP.Icon"></sup>
                             members can see that my camera is broadcasting
                         </label>
                     </div>
@@ -3164,8 +3055,7 @@ export default {
                             <div class="select is-fullwidth">
                                 <select v-model="webcam.videoDeviceID">
                                     <option :value="null" disabled selected>Select default camera</option>
-                                    <option v-for="(d, i) in webcam.videoDevices"
-                                        :value="d.id">
+                                    <option v-for="(d, i) in webcam.videoDevices" :value="d.id">
                                         {{ d.label || `Camera ${i}` }}
                                     </option>
                                 </select>
@@ -3177,8 +3067,7 @@ export default {
                             <div class="select is-fullwidth">
                                 <select v-model="webcam.audioDeviceID">
                                     <option :value="null" disabled selected>Select default microphone</option>
-                                    <option v-for="(d, i) in webcam.audioDevices"
-                                        :value="d.id">
+                                    <option v-for="(d, i) in webcam.audioDevices" :value="d.id">
                                         {{ d.label || `Microphone ${i}` }}
                                     </option>
                                 </select>
@@ -3188,12 +3077,9 @@ export default {
 
                     <div class="field">
                         <div class="control has-text-centered">
-                            <button type="button"
-                                class="button is-link mr-4"
-                                @click="startVideo({force: true}); nsfwModalCast.visible=false">Start webcam</button>
-                            <button type="button"
-                                class="button"
-                                @click="nsfwModalCast.visible=false">Cancel</button>
+                            <button type="button" class="button is-link mr-4"
+                                @click="startVideo({ force: true }); nsfwModalCast.visible = false">Start webcam</button>
+                            <button type="button" class="button" @click="nsfwModalCast.visible = false">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -3202,136 +3088,19 @@ export default {
     </div>
 
     <!-- NSFW Modal: before user views a NSFW camera the first time -->
-    <div class="modal" :class="{'is-active': nsfwModalView.visible}">
-        <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="card">
-                <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">This camera may contain NSFW content</p>
-                </header>
-                <div class="card-content">
-                    <p class="block">
-                    This camera has been marked as "<abbr title="Not Safe For Work">NSFW</abbr>" and may
-                    contain displays of sexuality. If you do not want to see this, look for cameras with
-                    a <span class="button is-small is-info is-outlined px-1"><i class="fa fa-video"></i></span>
-                    blue icon rather than the <span class="button is-small is-danger is-outlined px-1"><i class="fa fa-video"></i></span>
-                    red ones.
-                    </p>
-
-                    <div class="field">
-                        <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="nsfwModalView.dontShowAgain">
-                            Don't show this message again
-                        </label>
-                    </div>
-
-                    <div class="field">
-                        <div class="control has-text-centered">
-                            <button type="button"
-                                class="button is-link mr-4"
-                                @click="openVideo(nsfwModalView.user, true); nsfwModalView.visible=false">Open webcam</button>
-                            <button type="button"
-                                class="button"
-                                @click="nsfwModalView.visible=false">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <ExplicitOpenModal :visible="nsfwModalView.visible"
+        :user="nsfwModalView.user"
+        @accept="openVideo(nsfwModalView.user, true)"
+        @cancel="nsfwModalView.visible=false"
+        @dont-show-again="setSkipNSFWModal()"></ExplicitOpenModal>
 
     <!-- Report Modal -->
-    <div class="modal" :class="{'is-active': reportModal.visible}">
-        <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="card">
-                <header class="card-header has-background-warning">
-                    <p class="card-header-title has-text-dark">Report a message</p>
-                </header>
-                <div class="card-content">
-
-                    <!-- Message preview we are reporting on
-                         TODO: make it DRY: style copied/referenced from chat history cards -->
-                    <div class="box mb-2 px-4 pt-3 pb-1 position-relative">
-                        <div class="media mb-0">
-                            <div class="media-left">
-                                <figure class="image is-48x48">
-                                    <img v-if="avatarForUsername(reportModal.message.username)"
-                                        :src="avatarForUsername(reportModal.message.username)">
-                                    <img v-else src="/static/img/shy.png">
-                                </figure>
-                            </div>
-                            <div class="media-content">
-                                <div>
-                                    <strong>
-                                        <!-- User nickname/display name -->
-                                        {{nicknameForUsername(reportModal.message.username)}}
-                                    </strong>
-                                </div>
-
-                                <!-- User @username below it which may link to a profile URL if JWT -->
-                                <div>
-                                    <small class="has-text-grey">
-                                        @{{reportModal.message.username}}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Message copy -->
-                        <div class="content pl-5 py-3 mb-5 report-modal-message"
-                            v-html="reportModal.message.message">
-                        </div>
-                    </div>
-
-                    <div class="field mb-1">
-                        <label class="label" for="classification">Report classification:</label>
-                        <div class="select is-fullwidth">
-                            <select id="classification"
-                                v-model="reportModal.classification"
-                                :disabled="reportModal.busy">
-                                <option v-for="i in config.reportClassifications"
-                                    :value="i">{{ i }}</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label class="label" for="reportComment">Comment:</label>
-                        <textarea class="textarea"
-                            v-model="reportModal.comment"
-                            :disabled="reportModal.busy"
-                            cols="80" rows="2"
-                            placeholder="Optional: describe the issue"></textarea>
-                    </div>
-
-                    <div class="field">
-                        <div class="control has-text-centered">
-                            <button type="button"
-                                class="button is-link mr-4"
-                                :disabled="reportModal.busy"
-                                @click="doReport()">Submit report</button>
-                            <button type="button"
-                                class="button"
-                                @click="reportModal.visible=false">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Photo Detail Modal -->
-    <div class="modal" id="photo-modal">
-        <div class="modal-background" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></div>
-        <div class="modal-content photo-modal">
-            <div class="image is-fullwidth">
-                <img id="modalImage">
-            </div>
-        </div>
-        <button class="modal-close is-large" aria-label="close" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></button>
-    </div>
+    <ReportModal :visible="reportModal.visible"
+        :busy="reportModal.busy"
+        :user="reportModal.user"
+        :message="reportModal.message"
+        @accept="doReport"
+        @cancel="reportModal.visible=false"></ReportModal>
 
     <div class="chat-container">
 
@@ -3343,66 +3112,50 @@ export default {
                 </div>
                 <div class="column px-1">
                     <!-- Stop/Start video buttons -->
-                    <button type="button"
-                        v-if="webcam.active"
-                        class="button is-small is-danger px-1"
-                        @click="stopVideo()">
+                    <button type="button" v-if="webcam.active" class="button is-small is-danger px-1" @click="stopVideo()">
                         <i class="fa fa-stop mr-2"></i>
                         Stop
                     </button>
-                    <button type="button"
-                        v-else
-                        class="button is-small is-success px-1"
-                        @click="startVideo({})"
+                    <button type="button" v-else class="button is-small is-success px-1" @click="startVideo({})"
                         :disabled="webcam.busy">
                         <i class="fa fa-video mr-2"></i>
                         Share webcam
                     </button>
 
                     <!-- Mute/Unmute my mic buttons (if streaming)-->
-                    <button type="button"
-                        v-if="webcam.active && !webcam.muted"
-                        class="button is-small is-success ml-1 px-1"
+                    <button type="button" v-if="webcam.active && !webcam.muted" class="button is-small is-success ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone mr-2"></i>
                         Mute
                     </button>
-                    <button type="button"
-                        v-if="webcam.active && webcam.muted"
-                        class="button is-small is-danger ml-1 px-1"
+                    <button type="button" v-if="webcam.active && webcam.muted" class="button is-small is-danger ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone-slash mr-2"></i>
                         Unmute
                     </button>
 
                     <!-- Watchers button -->
-                    <button type="button"
-                        v-if="webcam.active"
-                        class="button is-small is-info is-outlined ml-1 px-1"
+                    <button type="button" v-if="webcam.active" class="button is-small is-info is-outlined ml-1 px-1"
                         @click="showViewers()">
                         <i class="fa fa-eye mr-2"></i>
-                        {{Object.keys(webcam.watching).length}}
+                        {{ Object.keys(webcam.watching).length }}
                     </button>
 
                     <!-- NSFW toggle button -->
-                    <button type="button"
-                        v-if="webcam.active && config.permitNSFW"
-                        class="button is-small px-1 ml-1"
-                        :class="{'is-outlined is-dark': !webcam.nsfw,
-                                 'is-danger': webcam.nsfw}"
-                        @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
+                    <button type="button" v-if="webcam.active && config.permitNSFW" class="button is-small px-1 ml-1"
+                        :class="{
+                            'is-outlined is-dark': !webcam.nsfw,
+                            'is-danger': webcam.nsfw
+                        }" @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
                         title="Toggle the NSFW setting for your camera broadcast">
-                        <i class="fa fa-fire mr-1"
-                            :class="{'has-text-danger': !webcam.nsfw}"></i> Explicit
+                        <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>
                 </div>
                 <div class="column is-narrow pl-1">
                     <a href="/about" target="_blank" class="button is-small is-link px-2">
                         <i class="fa fa-info-circle"></i>
                     </a>
-                    <button type="button"
-                        class="button is-small is-light ml-1 px-2"
-                        @click="showSettings()"
+                    <button type="button" class="button is-small is-light ml-1 px-2" @click="showSettings()"
                         title="Chat Settings">
                         <i class="fa fa-gear"></i>
                     </button>
@@ -3416,9 +3169,7 @@ export default {
                 <header class="card-header has-background-success-dark">
                     <div class="columns is-mobile card-header-title has-text-light">
                         <div class="column is-narrow mobile-only">
-                            <button type="button"
-                                class="button is-success px-2"
-                                @click="openChatPanel">
+                            <button type="button" class="button is-success px-2" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>
                         </div>
@@ -3432,15 +3183,11 @@ export default {
                         </p>
 
                         <ul class="menu-list">
-                            <li v-for="c in activeChannels()"
-                                v-bind:key="c.ID">
-                                <a :href="'#'+c.ID"
-                                    @click.prevent="setChannel(c)"
-                                    :class="{'is-active': c.ID == channel}">
-                                    {{c.Name}}
-                                    <span v-if="hasUnread(c.ID)"
-                                        class="tag is-success">
-                                        {{hasUnread(c.ID)}}
+                            <li v-for="c in activeChannels()" v-bind:key="c.ID">
+                                <a :href="'#' + c.ID" @click.prevent="setChannel(c)" :class="{ 'is-active': c.ID == channel }">
+                                    {{ c.Name }}
+                                    <span v-if="hasUnread(c.ID)" class="tag is-success">
+                                        {{ hasUnread(c.ID) }}
                                     </span>
                                 </a>
                             </li>
@@ -3451,27 +3198,24 @@ export default {
                         </p>
 
                         <ul class="menu-list">
-                            <li v-for="c in activeDMs"
-                                v-bind:key="c.channel">
-                                <a :href="'#'+c.channel"
-                                    @click.prevent="setChannel(c.channel)"
-                                    :class="{'is-active': c.channel == channel}">
+                            <li v-for="c in activeDMs" v-bind:key="c.channel">
+                                <a :href="'#' + c.channel" @click.prevent="setChannel(c.channel)"
+                                    :class="{ 'is-active': c.channel == channel }">
 
                                     <div class="columns is-mobile">
                                         <!-- Avatar URL if available (copied from Who List) -->
                                         <div class="column is-narrow pr-0" style="position: relative">
-                                            <img v-if="avatarForUsername(normalizeUsername(c.channel))" :src="avatarForUsername(normalizeUsername(c.channel))"
-                                                width="24" height="24" alt="">
-                                            <img v-else src="/static/img/shy.png"
-                                                width="24" height="24">
+                                            <img v-if="avatarForUsername(normalizeUsername(c.channel))"
+                                                :src="avatarForUsername(normalizeUsername(c.channel))" width="24"
+                                                height="24" alt="">
+                                            <img v-else src="/static/img/shy.png" width="24" height="24">
                                         </div>
 
                                         <div class="column">
-                                            {{c.name}}
+                                            {{ c.name }}
 
-                                            <span v-if="hasUnread(c.channel)"
-                                                class="tag is-danger">
-                                                {{hasUnread(c.channel)}}
+                                            <span v-if="hasUnread(c.channel)" class="tag is-danger">
+                                                {{ hasUnread(c.channel) }}
                                             </span>
                                         </div>
                                     </div>
@@ -3489,41 +3233,33 @@ export default {
         <div class="chat-column">
 
             <div class="card grid-card">
-                <header class="card-header"
-                    :class="{'has-background-private': isDM, 'has-background-link': !isDM}">
+                <header class="card-header" :class="{ 'has-background-private': isDM, 'has-background-link': !isDM }">
                     <div class="columns is-mobile card-header-title has-text-light">
                         <div class="column is-narrow mobile-only pr-0">
                             <!-- Responsive mobile button to pan to Left Column -->
-                            <button type="button"
-                                class="button is-success px-2"
-                                @click="openChannelsPanel">
+                            <button type="button" class="button is-success px-2" @click="openChannelsPanel">
                                 <i v-if="isDM" class="fa fa-arrow-left"></i>
                                 <i v-else class="fa fa-comments"></i>
 
                                 <!-- Indicator badge for unread messages -->
-                                <span v-if="hasAnyUnread() > 0"
-                                    class="tag ml-1" :class="{'is-danger': anyUnreadDMs()}">
-                                    {{hasAnyUnread()}}
+                                <span v-if="hasAnyUnread() > 0" class="tag ml-1" :class="{ 'is-danger': anyUnreadDMs() }">
+                                    {{ hasAnyUnread() }}
                                 </span>
                             </button>
                         </div>
                         <div class="column">
-                            {{channelName}}
+                            {{ channelName }}
                         </div>
                         <div class="column is-narrow">
                             <!-- If a DM thread and the user has a profile URL -->
-                            <button type="button"
-                                v-if="channel.indexOf('@') === 0 && profileURLForUsername(channel)"
-                                class="button is-small is-outlined is-light mr-1"
-                                @click="openProfile({username: channel})">
+                            <button type="button" v-if="channel.indexOf('@') === 0 && profileURLForUsername(channel)"
+                                class="button is-small is-outlined is-light mr-1" @click="openProfile({ username: channel })">
                                 <i class="fa fa-user"></i>
                             </button>
 
                             <!-- DMs: Leave convo button -->
-                            <button type="button"
-                                v-if="channel.indexOf('@') === 0"
-                                class="float-right button is-small is-warning is-outlined"
-                                @click="leaveDM()">
+                            <button type="button" v-if="channel.indexOf('@') === 0"
+                                class="float-right button is-small is-warning is-outlined" @click="leaveDM()">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>
@@ -3531,53 +3267,45 @@ export default {
                         <!-- Who List button, only shown on public channel view -->
                         <div v-if="!isDM" class="column is-narrow mobile-only">
                             <!-- Responsive mobile button to pan to Right Column -->
-                            <button type="button"
-                                class="button is-success px-2"
-                                @click="openWhoPanel">
+                            <button type="button" class="button is-success px-2" @click="openWhoPanel">
                                 <i class="fa fa-user-group"></i>
                             </button>
                         </div>
                     </div>
                 </header>
-                <div id="video-feeds" class="video-feeds" :class="webcam.videoScale" v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
+                <div id="video-feeds" class="video-feeds" :class="webcam.videoScale"
+                    v-show="webcam.active || Object.keys(WebRTC.streams).length > 0">
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <div class="feed" v-show="webcam.active"
-                        :class="{'popped-out': WebRTC.poppedOut[username],
-                                 'popped-in': !WebRTC.poppedOut[username]}">
-                        <video class="feed"
-                            id="localVideo"
-                            autoplay muted>
+                    <div class="feed" v-show="webcam.active" :class="{
+                        'popped-out': WebRTC.poppedOut[username],
+                        'popped-in': !WebRTC.poppedOut[username]
+                    }">
+                        <video class="feed" id="localVideo" autoplay muted>
                         </video>
 
-                        <div class="caption"
-                            :class="{'has-text-camera-blue': !webcam.nsfw,
-                                     'has-text-camera-red': webcam.nsfw}">
-                            <i class="fa fa-microphone-slash mr-1 has-text-grey"
-                                v-if="webcam.muted"></i>
-                            {{username}}
+                        <div class="caption" :class="{
+                            'has-text-camera-blue': !webcam.nsfw,
+                            'has-text-camera-red': webcam.nsfw
+                        }">
+                            <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="webcam.muted"></i>
+                            {{ username }}
                         </div>
 
                         <div class="controls">
                             <!-- MY Mute button -->
-                            <button type="button"
-                                v-if="webcam.active && !webcam.muted"
-                                class="button is-small is-success is-outlined ml-1 px-2"
-                                @click="muteMe()">
+                            <button type="button" v-if="webcam.active && !webcam.muted"
+                                class="button is-small is-success is-outlined ml-1 px-2" @click="muteMe()">
                                 <i class="fa fa-microphone"></i>
                             </button>
-                            <button type="button"
-                                v-if="webcam.active && webcam.muted"
-                                class="button is-small is-danger ml-1 px-2"
-                                @click="muteMe()">
+                            <button type="button" v-if="webcam.active && webcam.muted"
+                                class="button is-small is-danger ml-1 px-2" @click="muteMe()">
                                 <i class="fa fa-microphone-slash"></i>
                             </button>
 
                             <!-- Pop-out MY video -->
-                            <button type="button"
-                                class="button is-small is-light is-outlined p-2 ml-2"
-                                title="Pop out"
+                            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
                                 @click="popoutVideo(username)">
                                 <i class="fa fa-up-right-from-square"></i>
                             </button>
@@ -3585,60 +3313,45 @@ export default {
                     </div>
 
                     <!-- Others' videos -->
-                    <div class="feed" v-for="(stream, username) in WebRTC.streams"
-                        v-bind:key="username"
-                        :class="{'popped-out': WebRTC.poppedOut[username],
-                                 'popped-in': !WebRTC.poppedOut[username]}">
-                        <video class="feed"
-                            :id="'videofeed-'+username"
-                            autoplay>
+                    <div class="feed" v-for="(stream, username) in WebRTC.streams" v-bind:key="username" :class="{
+                        'popped-out': WebRTC.poppedOut[username],
+                        'popped-in': !WebRTC.poppedOut[username]
+                    }">
+                        <video class="feed" :id="'videofeed-' + username" autoplay>
                         </video>
-                        <div class="caption"
-                            :class="{'has-text-camera-blue': !isUsernameCamNSFW(username),
-                                     'has-text-camera-red': isUsernameCamNSFW(username)}">
-                            <i class="fa fa-microphone-slash mr-1 has-text-grey"
-                                v-if="isSourceMuted(username)"></i>
-                            {{username}}
+                        <div class="caption" :class="{
+                            'has-text-camera-blue': !isUsernameCamNSFW(username),
+                            'has-text-camera-red': isUsernameCamNSFW(username)
+                        }">
+                            <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="isSourceMuted(username)"></i>
+                            {{ username }}
                             <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7"
-                                :title="username+' is watching your camera too'"
-                                v-if="isWatchingMe(username)"></i>
+                                :title="username + ' is watching your camera too'" v-if="isWatchingMe(username)"></i>
 
                             <!-- Frozen stream detection -->
-                            <a class="fa fa-mountain ml-1" href="#"
-                                v-if="WebRTC.frozenStreamDetected[username]"
-                                style="color: #00FFFF"
-                                @click.prevent="openVideoByUsername(username, true)"
+                            <a class="fa fa-mountain ml-1" href="#" v-if="WebRTC.frozenStreamDetected[username]"
+                                style="color: #00FFFF" @click.prevent="openVideoByUsername(username, true)"
                                 title="Frozen video detected!"></a>
                         </div>
                         <div class="close">
-                            <a href="#"
-                                class="has-text-danger"
-                                title="Close video"
+                            <a href="#" class="has-text-danger" title="Close video"
                                 @click.prevent="closeVideo(username, 'offerer')">
                                 <i class="fa fa-close"></i>
                             </a>
                         </div>
                         <div class="controls">
                             <!-- Mute button -->
-                            <button type="button"
-                                v-if="isMuted(username)"
-                                class="button is-small is-danger p-2"
-                                title="Unmute this video"
-                                @click="muteVideo(username)">
+                            <button type="button" v-if="isMuted(username)" class="button is-small is-danger p-2"
+                                title="Unmute this video" @click="muteVideo(username)">
                                 <i class="fa fa-volume-xmark"></i>
                             </button>
-                            <button type="button"
-                                v-else
-                                class="button is-small is-success is-outlined p-2"
-                                title="Mute this video"
-                                @click="muteVideo(username)">
+                            <button type="button" v-else class="button is-small is-success is-outlined p-2"
+                                title="Mute this video" @click="muteVideo(username)">
                                 <i class="fa fa-volume-high"></i>
                             </button>
 
                             <!-- Pop-out -->
-                            <button type="button"
-                                class="button is-small is-light is-outlined p-2 ml-2"
-                                title="Pop out"
+                            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
                                 @click="popoutVideo(username)">
                                 <i class="fa fa-up-right-from-square"></i>
                             </button>
@@ -3661,13 +3374,11 @@ export default {
                     </div> -->
 
                 </div>
-                <div class="card-content" id="chatHistory" :class="{'has-background-dm': isDM}">
+                <div class="card-content" id="chatHistory" :class="{ 'has-background-dm': isDM }">
 
                     <div class="autoscroll-field tag">
                         <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
-                            <input type="checkbox"
-                                v-model="autoscroll"
-                                :value="true">
+                            <input type="checkbox" v-model="autoscroll" :value="true">
                             Auto-scroll
                         </label>
                     </div>
@@ -3679,13 +3390,14 @@ export default {
                         <div class="notification is-warning is-light" v-if="isDM">
                             <i class="fa fa-info-circle mr-1"></i>
                             <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.
-                            Please refer to <span v-html="config.branding"></span>'s Privacy Policy or Terms of Service with regard to DMs.
+                            Please refer to <span v-html="config.branding"></span>'s Privacy Policy or Terms of Service with
+                            regard to DMs.
                         </div>
 
                         <!-- No history? -->
                         <div v-if="chatHistory.length === 0">
                             <em v-if="isDM">
-                                Starting a direct message chat with {{channel}}. Type a message and say hello!
+                                Starting a direct message chat with {{ channel }}. Type a message and say hello!
                             </em>
                             <em v-else>
                                 There are no messages in this channel yet.
@@ -3707,8 +3419,9 @@ export default {
                                     </div>
                                     <div class="column">
                                         <strong>{{ nicknameForUsername(msg.username) }}</strong>
-                                        <small v-if="isUsernameOnline(msg.username)" class="ml-1">(@{{msg.username}})</small>
-                                        {{msg.message}}
+                                        <small v-if="isUsernameOnline(msg.username)"
+                                            class="ml-1">(@{{ msg.username }})</small>
+                                        {{ msg.message }}
                                     </div>
                                 </div>
 
@@ -3718,13 +3431,12 @@ export default {
                             <div v-else class="box mb-2 px-4 pt-3 pb-1 position-relative">
                                 <div class="media mb-0">
                                     <div class="media-left">
-                                        <a :href="profileURLForUsername(msg.username)" @click.prevent="openProfile({username: msg.username})"
-                                            :class="{'cursor-default': !profileURLForUsername(msg.username)}">
+                                        <a :href="profileURLForUsername(msg.username)"
+                                            @click.prevent="openProfile({ username: msg.username })"
+                                            :class="{ 'cursor-default': !profileURLForUsername(msg.username) }">
                                             <figure class="image is-48x48">
-                                                <img v-if="msg.isChatServer"
-                                                    src="/static/img/server.png">
-                                                <img v-else-if="msg.isChatClient"
-                                                    src="/static/img/client.png">
+                                                <img v-if="msg.isChatServer" src="/static/img/server.png">
+                                                <img v-else-if="msg.isChatClient" src="/static/img/client.png">
                                                 <img v-else-if="avatarForUsername(msg.username)"
                                                     :src="avatarForUsername(msg.username)">
                                                 <img v-else src="/static/img/shy.png">
@@ -3734,17 +3446,19 @@ export default {
                                     <div class="media-content">
                                         <div class="columns is-mobile pb-0">
                                             <div class="column is-narrow pb-0">
-                                                <strong
-                                                    :class="{'has-text-success is-dark': msg.isChatServer,
-                                                            'has-text-warning is-dark': msg.isAdmin,
-                                                            'has-text-danger': msg.isChatClient}">
+                                                <strong :class="{
+                                                    'has-text-success is-dark': msg.isChatServer,
+                                                    'has-text-warning is-dark': msg.isAdmin,
+                                                    'has-text-danger': msg.isChatClient
+                                                }">
 
                                                     <!-- User nickname/display name -->
-                                                    {{nicknameForUsername(msg.username)}}
+                                                    {{ nicknameForUsername(msg.username) }}
                                                 </strong>
                                             </div>
                                             <div class="column has-text-right pb-0">
-                                                <small class="has-text-grey is-size-7" :title="msg.at">{{ prettyDate(msg.at) }}</small>
+                                                <small class="has-text-grey is-size-7" :title="msg.at">{{ prettyDate(msg.at)
+                                                }}</small>
                                             </div>
                                         </div>
 
@@ -3753,8 +3467,7 @@ export default {
                                             <div class="column is-narrow pt-0">
                                                 <small v-if="!(msg.isChatClient || msg.isChatServer)">
                                                     <a v-if="profileURLForUsername(msg.username)"
-                                                        :href="profileURLForUsername(msg.username)"
-                                                        target="_blank"
+                                                        :href="profileURLForUsername(msg.username)" target="_blank"
                                                         class="has-text-grey">
                                                         @{{ msg.username }}
                                                     </a>
@@ -3767,8 +3480,7 @@ export default {
                                             <div class="column is-narrow pt-0">
                                                 <small v-if="!(msg.isChatClient || msg.isChatServer)">
                                                     <a v-if="profileURLForUsername(msg.username)"
-                                                        :href="profileURLForUsername(msg.username)"
-                                                        target="_blank"
+                                                        :href="profileURLForUsername(msg.username)" target="_blank"
                                                         class="has-text-grey">
                                                         @{{ msg.username }}
                                                     </a>
@@ -3779,29 +3491,26 @@ export default {
 
                                             <div class="column is-narrow pl-1 pt-0">
                                                 <!-- DMs button -->
-                                                <button type="button"
-                                                    v-if="!(msg.username === username || isDM)"
+                                                <button type="button" v-if="!(msg.username === username || isDM)"
                                                     class="button is-grey is-outlined is-small px-2"
-                                                    @click="openDMs({username: msg.username})"
+                                                    @click="openDMs({ username: msg.username })"
                                                     :title="isUsernameDND(msg.username) ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
                                                     :disabled="isUsernameDND(msg.username)">
                                                     <i class="fa fa-comment"></i>
                                                 </button>
 
                                                 <!-- Mute button -->
-                                                <button type="button"
-                                                    v-if="!(msg.username === username)"
+                                                <button type="button" v-if="!(msg.username === username)"
                                                     class="button is-grey is-outlined is-small px-2 ml-1"
-                                                    @click="muteUser(msg.username)"
-                                                    title="Mute user">
-                                                    <i class="fa fa-comment-slash"
-                                                        :class="{'has-text-success': isMutedUser(msg.username),
-                                                                'has-text-danger': !isMutedUser(msg.username)}"></i>
+                                                    @click="muteUser(msg.username)" title="Mute user">
+                                                    <i class="fa fa-comment-slash" :class="{
+                                                        'has-text-success': isMutedUser(msg.username),
+                                                        'has-text-danger': !isMutedUser(msg.username)
+                                                    }"></i>
                                                 </button>
 
                                                 <!-- Owner or admin: take back the message -->
-                                                <button type="button"
-                                                    v-if="msg.username === username || isOp"
+                                                <button type="button" v-if="msg.username === username || isOp"
                                                     class="button is-grey is-outlined is-small px-2 ml-1"
                                                     title="Take back this message (delete it for everybody)"
                                                     @click="takeback(msg)">
@@ -3809,8 +3518,7 @@ export default {
                                                 </button>
 
                                                 <!-- Everyone else: can hide it locally -->
-                                                <button type="button"
-                                                    v-if="msg.username !== username"
+                                                <button type="button" v-if="msg.username !== username"
                                                     class="button is-grey is-outlined is-small px-2 ml-1"
                                                     title="Hide this message (delete it only for your view)"
                                                     @click="removeMessage(msg)">
@@ -3825,10 +3533,10 @@ export default {
                                 <div v-if="msg.msgID" class="emoji-button columns is-mobile is-gapless mb-0">
                                     <!-- Report message button -->
                                     <div class="column" v-if="isWebhookEnabled('report') && msg.username !== username">
-                                        <button class="button is-small is-outlined mr-1"
-                                            :class="{'is-danger': !msg.reported,
-                                                     'has-text-grey': msg.reported}"
-                                            title="Report this message"
+                                        <button class="button is-small is-outlined mr-1" :class="{
+                                            'is-danger': !msg.reported,
+                                            'has-text-grey': msg.reported
+                                        }" title="Report this message"
                                             @click="reportMessage(msg)">
                                             <i class="fa fa-flag"></i>
                                             <i class="fa fa-check ml-1" v-if="msg.reported"></i>
@@ -3836,11 +3544,11 @@ export default {
                                     </div>
 
                                     <!-- Emoji reactions menu -->
-                                    <div class="column dropdown is-right"
-                                        :class="{'is-up': i >= 2}"
+                                    <div class="column dropdown is-right" :class="{ 'is-up': i >= 2 }"
                                         onclick="this.classList.toggle('is-active')">
                                         <div class="dropdown-trigger">
-                                            <button class="button is-small px-2" aria-haspopup="true" :aria-controls="`react-menu-${msg.msgID}`">
+                                            <button class="button is-small px-2" aria-haspopup="true"
+                                                :aria-controls="`react-menu-${msg.msgID}`">
                                                 <span>
                                                     <i class="fa fa-heart has-text-grey"></i>
                                                     <i class="fa fa-plus has-text-grey pl-1"></i>
@@ -3854,12 +3562,10 @@ export default {
                                                     v-for="row in config.reactions">
 
                                                     <!-- Loop over the icons -->
-                                                    <div class="column p-0 is-narrow"
-                                                        v-for="i in row">
-                                                        <button type="button"
-                                                            class="button px-2 mt-1 ml-1 mr-0 mb-1"
+                                                    <div class="column p-0 is-narrow" v-for="i in row">
+                                                        <button type="button" class="button px-2 mt-1 ml-1 mr-0 mb-1"
                                                             @click="sendReact(msg, i)">
-                                                            {{}}
+                                                            {{ i }}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3877,9 +3583,8 @@ export default {
                                     <div v-if="hasReactions(msg)" class="mt-1">
                                         <span v-for="(users, emoji) in getReactions(msg)"
                                             class="tag is-secondary mr-1 cursor-pointer"
-                                            :class="{'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji)}"
-                                            :title="emoji + ' by: ' + users.join(', ')"
-                                            @click="sendReact(msg, emoji)">
+                                            :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
+                                            :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(msg, emoji)">
                                             {{ emoji }} <small class="ml-1">{{ users.length }}</small>
                                         </span>
                                     </div>
@@ -3894,7 +3599,8 @@ export default {
                     <!-- If this is a DM with a muted user, offer to unmute. -->
                     <div v-if="isDM && isMutedUser(channel)" class="has-text-danger">
                         <i class="fa fa-comment-slash"></i>
-                        <strong>{{ channel }}</strong> is currently <strong>muted</strong> so you have not been seeing their recent
+                        <strong>{{ channel }}</strong> is currently <strong>muted</strong> so you have not been seeing their
+                        recent
                         chat messages or DMs.
                         <a href="#" v-on:click.prevent="muteUser(channel)">Unmute them?</a>
                     </div>
@@ -3910,29 +3616,21 @@ export default {
 
                     <div class="columns is-mobile">
                         <div class="column pr-1 is-narrow" v-if="canUploadFile">
-                            <button type="button" class="button"
-                                @click="uploadFile()"
+                            <button type="button" class="button" @click="uploadFile()"
                                 title="Upload a picture to share in chat">
                                 <i class="fa fa-image"></i>
                             </button>
                         </div>
-                        <div class="column pr-1"
-                            :class="{'pl-1': canUploadFile}">
+                        <div class="column pr-1" :class="{ 'pl-1': canUploadFile }">
                             <form @submit.prevent="sendMessage()">
-                                <input type="text" class="input"
-                                    id="messageBox"
-                                    v-model="message"
-                                    placeholder="Write a message"
-                                    @keydown="sendTypingNotification()"
-                                    autocomplete="off"
+                                <input type="text" class="input" id="messageBox" v-model="message"
+                                    placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
                                     :disabled="!ws.connected">
                             </form>
                         </div>
                         <div class="column pl-1 is-narrow">
-                            <button type="button" class="button"
-                                :disabled="message.length === 0"
-                                title="Click to send your message"
-                                @click="sendMessage()">
+                            <button type="button" class="button" :disabled="message.length === 0"
+                                title="Click to send your message" @click="sendMessage()">
                                 <i class="fa fa-paper-plane"></i>
                             </button>
                         </div>
@@ -3949,9 +3647,7 @@ export default {
                     <div class="columns is-mobile card-header-title has-text-light">
                         <div class="column">Who Is Online</div>
                         <div class="column is-narrow mobile-only">
-                            <button type="button"
-                                class="button is-success px-2"
-                                @click="openChatPanel">
+                            <button type="button" class="button is-success px-2" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>
                         </div>
@@ -3975,8 +3671,9 @@ export default {
                                         <option value="busy">💼 Working</option>
                                         <option value="book">📖 Studying</option>
                                         <option value="gaming">🎮 Gaming</option>
-                                        <option value="idle" v-show="status==='idle'">🕒 Idle</option>
-                                        <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden</option>
+                                        <option value="idle" v-show="status === 'idle'">🕒 Idle</option>
+                                        <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden
+                                        </option>
                                     </optgroup>
                                     <optgroup label="Mood">
                                         <option value="chatty">🗨️ Chatty and sociable</option>
@@ -4012,15 +3709,13 @@ export default {
 
                     <div class="tabs has-text-small">
                         <ul>
-                            <li :class="{'is-active': whoTab==='online'}">
-                                <a class="is-size-7"
-                                    @click.prevent="whoTab='online'">
+                            <li :class="{ 'is-active': whoTab === 'online' }">
+                                <a class="is-size-7" @click.prevent="whoTab = 'online'">
                                     Online ({{ whoList.length }})
                                 </a>
                             </li>
-                            <li v-if="webcam.active" :class="{'is-active': whoTab==='watching'}">
-                                <a class="is-size-7"
-                                    @click.prevent="whoTab='watching'">
+                            <li v-if="webcam.active" :class="{ 'is-active': whoTab === 'watching' }">
+                                <a class="is-size-7" @click.prevent="whoTab = 'watching'">
                                     <i class="fa fa-eye mr-2"></i>
                                     Watching ({{ Object.keys(webcam.watching).length }})
                                 </a>
@@ -4029,98 +3724,93 @@ export default {
                     </div>
 
                     <!-- Who Is Online -->
-                    <ul class="menu-list" v-if="whoTab==='online'">
+                    <ul class="menu-list" v-if="whoTab === 'online'">
                         <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
                                 <div class="column is-narrow pr-0" style="position: relative">
-                                    <a :href="profileURLForUsername(u.username)" @click.prevent="openProfile({username: u.username})"
-                                        :class="{'cursor-default': !profileURLForUsername(u.username)}"
-                                        class="p-0">
-                                        <img v-if="u.avatar" :src="avatarURL(u)"
-                                            width="24" height="24" alt="">
-                                        <img v-else src="/static/img/shy.png"
-                                            width="24" height="24">
+                                    <a :href="profileURLForUsername(u.username)"
+                                        @click.prevent="openProfile({ username: u.username })"
+                                        :class="{ 'cursor-default': !profileURLForUsername(u.username) }" class="p-0">
+                                        <img v-if="u.avatar" :src="avatarURL(u)" width="24" height="24" alt="">
+                                        <img v-else src="/static/img/shy.png" width="24" height="24">
 
                                         <!-- Away symbol -->
                                         <div v-if="u.status !== 'online'" class="status-away-icon">
-                                            <i v-if="u.status === 'away'" class="fa fa-clock has-text-light" title="Status: Away"></i>
-                                            <i v-else-if="u.status === 'lunch'" class="fa fa-utensils has-text-light" title="Status: Out to lunch"></i>
-                                            <i v-else-if="u.status === 'call'" class="fa fa-phone-volume has-text-light" title="Status: On the phone"></i>
-                                            <i v-else-if="u.status === 'brb'" class="fa fa-stopwatch-20 has-text-light" title="Status: Be right back"></i>
-                                            <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light" title="Status: Working"></i>
-                                            <i v-else-if="u.status === 'book'" class="fa fa-book has-text-light" title="Status: Studying"></i>
-                                            <i v-else-if="u.status === 'gaming'" class="fa fa-gamepad who-status-wide-icon-2 has-text-light" title="Status: Gaming"></i>
-                                            <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light" title="Status: Idle"></i>
-                                            <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light" title="Status: Horny"></i>
-                                            <i v-else-if="u.status === 'chatty'" class="fa fa-comment has-text-light" title="Status: Chatty and sociable"></i>
-                                            <i v-else-if="u.status === 'introverted'" class="fa fa-spoon has-text-light" title="Status: Introverted and quiet"></i>
-                                            <i v-else-if="u.status === 'exhibitionist'" class="fa-regular fa-eye who-status-wide-icon-1 has-text-light" title="Status: Watch me"></i>
-                                            <i v-else class="fa fa-clock has-text-light" :title="'Status: '+u.status"></i>
+                                            <i v-if="u.status === 'away'" class="fa fa-clock has-text-light"
+                                                title="Status: Away"></i>
+                                            <i v-else-if="u.status === 'lunch'" class="fa fa-utensils has-text-light"
+                                                title="Status: Out to lunch"></i>
+                                            <i v-else-if="u.status === 'call'" class="fa fa-phone-volume has-text-light"
+                                                title="Status: On the phone"></i>
+                                            <i v-else-if="u.status === 'brb'" class="fa fa-stopwatch-20 has-text-light"
+                                                title="Status: Be right back"></i>
+                                            <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light"
+                                                title="Status: Working"></i>
+                                            <i v-else-if="u.status === 'book'" class="fa fa-book has-text-light"
+                                                title="Status: Studying"></i>
+                                            <i v-else-if="u.status === 'gaming'"
+                                                class="fa fa-gamepad who-status-wide-icon-2 has-text-light"
+                                                title="Status: Gaming"></i>
+                                            <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light"
+                                                title="Status: Idle"></i>
+                                            <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light"
+                                                title="Status: Horny"></i>
+                                            <i v-else-if="u.status === 'chatty'" class="fa fa-comment has-text-light"
+                                                title="Status: Chatty and sociable"></i>
+                                            <i v-else-if="u.status === 'introverted'" class="fa fa-spoon has-text-light"
+                                                title="Status: Introverted and quiet"></i>
+                                            <i v-else-if="u.status === 'exhibitionist'"
+                                                class="fa-regular fa-eye who-status-wide-icon-1 has-text-light"
+                                                title="Status: Watch me"></i>
+                                            <i v-else class="fa fa-clock has-text-light" :title="'Status: ' + u.status"></i>
                                         </div>
                                     </a>
                                 </div>
-                                <div class="column pr-0 is-clipped"
-                                    :class="{'pl-1': u.avatar}">
+                                <div class="column pr-0 is-clipped" :class="{ 'pl-1': u.avatar }">
                                     <strong class="truncate-text-line is-size-7">{{ u.username }}</strong>
-                                    <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1"
-                                        v-if="u.op"
+                                    <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1" v-if="u.op"
                                         title="Operator"></sup>
-                                    <sup class="is-size-7 ml-1"
-                                        :class="config.VIP.Icon"
-                                        v-else-if="u.vip"
+                                    <sup class="is-size-7 ml-1" :class="config.VIP.Icon" v-else-if="u.vip"
                                         :title="config.VIP.Name"></sup>
                                 </div>
                                 <div class="column is-narrow pl-0">
                                     <!-- Emoji icon -->
-                                    <span v-if="u.emoji" class="pr-1 cursor-default"
-                                        :title="u.emoji">
+                                    <span v-if="u.emoji" class="pr-1 cursor-default" :title="u.emoji">
                                         {{ u.emoji.split(" ")[0] }}
                                     </span>
 
                                     <!-- Profile button -->
-                                    <button type="button"
-                                        v-if="u.profileURL"
-                                        class="button is-small px-2 py-1"
-                                        :class="profileButtonClass(u)"
-                                        @click="openProfile(u)"
+                                    <button type="button" v-if="u.profileURL" class="button is-small px-2 py-1"
+                                        :class="profileButtonClass(u)" @click="openProfile(u)"
                                         :title="'Open profile page' + (u.gender ? ` (gender: ${u.gender})` : '') + (u.vip ? ` (${config.VIP.Name})` : '')">
                                         <i class="fa fa-user"></i>
                                     </button>
 
                                     <!-- Unmute User button (if muted) -->
-                                    <button type="button" v-if="isMutedUser(u.username)"
-                                        class="button is-small px-2 py-1"
-                                        @click="muteUser(u.username)"
-                                        title="This user is muted. Click to unmute them.">
+                                    <button type="button" v-if="isMutedUser(u.username)" class="button is-small px-2 py-1"
+                                        @click="muteUser(u.username)" title="This user is muted. Click to unmute them.">
                                         <i class="fa fa-comment-slash has-text-danger"></i>
                                     </button>
 
                                     <!-- DM button (if not muted) -->
-                                    <button type="button" v-else
-                                        class="button is-small px-2 py-1"
-                                        @click="openDMs(u)"
+                                    <button type="button" v-else class="button is-small px-2 py-1" @click="openDMs(u)"
                                         :disabled="u.username === username || (u.dnd && !isOp)"
                                         :title="u.dnd ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
-                                        <i class="fa"
-                                            :class="{'fa-comment': !u.dnd, 'fa-comment-slash': u.dnd}"></i>
+                                        <i class="fa" :class="{ 'fa-comment': !u.dnd, 'fa-comment-slash': u.dnd }"></i>
                                     </button>
 
                                     <!-- Video button -->
                                     <button type="button" class="button is-small px-2 py-1"
-                                        :disabled="!(u.video & VideoFlag.Active)"
-                                        :class="{
+                                        :disabled="!(u.video & VideoFlag.Active)" :class="{
                                             'is-danger is-outlined': (u.video & VideoFlag.Active) && (u.video & VideoFlag.NSFW),
                                             'is-info is-outlined': (u.video & VideoFlag.Active) && !(u.video & VideoFlag.NSFW),
                                             'cursor-notallowed': isVideoNotAllowed(u),
-                                        }"
-                                        :title="`Open video stream` +
-                                            (u.video & VideoFlag.MutualRequired ? '; mutual video sharing required' : '') +
-                                            (u.video & VideoFlag.MutualOpen ? '; will auto-open your video' : '')"
-
+                                        }" :title="`Open video stream` +
+    (u.video & VideoFlag.MutualRequired ? '; mutual video sharing required' : '') +
+    (u.video & VideoFlag.MutualOpen ? '; will auto-open your video' : '')"
                                         @click="openVideo(u)">
-                                        <i class="fa"
-                                            :class="webcamIconClass(u)"></i>
+                                        <i class="fa" :class="webcamIconClass(u)"></i>
                                     </button>
                                 </div>
                             </div>
@@ -4128,7 +3818,7 @@ export default {
                     </ul>
 
                     <!-- Watching My Webcam -->
-                    <ul class="menu-list" v-if="whoTab==='watching'">
+                    <ul class="menu-list" v-if="whoTab === 'watching'">
                         <li v-for="username in Object.keys(webcam.watching)" v-bind:key="username">
                             <div class="columns is-mobile">
                                 <!-- Avatar URL if available -->
@@ -4136,13 +3826,11 @@ export default {
                                     <i class="fa fa-eye"></i>
                                 </div>
                                 <div class="column pr-0">
-                                  {{ username }}
+                                    {{ username }}
                                 </div>
                                 <div class="column is-narrow pl-0">
                                     <!-- Boot from cam button -->
-                                    <button type="button"
-                                        class="button is-small px-2 py-1"
-                                        @click="bootUser(username)"
+                                    <button type="button" class="button is-small px-2 py-1" @click="bootUser(username)"
                                         title="Kick this person off your cam">
                                         <i class="fa fa-user-xmark has-text-danger"></i>
                                     </button>
