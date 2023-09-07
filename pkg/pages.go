@@ -81,7 +81,7 @@ func IndexPage() http.HandlerFunc {
 				return template.JS(fmt.Sprintf("%v", v))
 			},
 		})
-		tmpl, err := tmpl.ParseFiles("web/templates/chat.html")
+		tmpl, err := tmpl.ParseFiles("dist/index.html")
 		if err != nil {
 			panic(err.Error())
 		}

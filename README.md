@@ -184,6 +184,25 @@ user = user
 
 Then `sudo supervisorctl reread && sudo supervisorctl add barertc` to start the app.
 
+# Developing This App
+
+In local development you'll probably run two processes in your terminal: one to `npm run watch` the Vue.js app and the other to run the Go server.
+
+Building and running the front-end app:
+
+```bash
+# Install dependencies
+npm install
+
+# Build the front-end
+npm run build
+
+# Run the front-end in watch mode for local dev
+npm run watch
+```
+
+And `make run` to run the Go server.
+
 # License
 
 GPLv3.
