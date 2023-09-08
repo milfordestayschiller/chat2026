@@ -4,8 +4,11 @@ import TheWelcome from './components/TheWelcome.vue'
 import LoginModal from './components/LoginModal.vue';
 import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
 import ReportModal from './components/ReportModal.vue';
+import MessageBox from './components/MessageBox.vue';
+import WhoListRow from './components/WhoListRow.vue';
 
 import LocalStorage from './lib/LocalStorage';
+import VideoFlag from './lib/VideoFlag';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
 import { isAppleWebkit } from './lib/browsers';
 
@@ -33,6 +36,8 @@ export default {
         LoginModal,
         ExplicitOpenModal,
         ReportModal,
+        MessageBox,
+        WhoListRow,
     },
     data() {
         return {
@@ -77,14 +82,6 @@ export default {
                     audioContext: null,
                     audioTracks: {},
                 },
-                reactions: [
-                    ['❤️', '👍', '😂', '😉', '😢', '😡', '🥰'],
-                    ['😘', '👎', '☹️', '😭', '🤔', '🙄', '🤩'],
-                    ['👋', '🔥', '😈', '🍑', '🍆', '💦', '🍌'],
-                    ['😋', '⭐', '😇', '😴', '😱', '👀', '🎃'],
-                    ['🤮', '🥳', '🙏', '🤦', '💩', '🤯', '💯'],
-                    ['😏', '🙈', '🙉', '🙊', '☀️', '🌈', '🎂'],
-                ],
 
                 // Cached blocklist for the current user sent by your website.
                 CachedBlocklist: CachedBlocklist,
@@ -175,15 +172,7 @@ export default {
             },
 
             // Video flag constants (sync with values in messages.go)
-            VideoFlag: {
-                Active: 1 << 0,
-                NSFW: 1 << 1,
-                Muted: 1 << 2,
-                IsTalking: 1 << 3,
-                MutualRequired: 1 << 4,
-                MutualOpen: 1 << 5,
-                VipOnly: 1 << 6,
-            },
+            VideoFlag: VideoFlag,
 
             // WebRTC sessions with other users.
             WebRTC: {
@@ -574,6 +563,63 @@ export default {
             // Default ordering from ChatServer = a-z
             return result;
         },
+        sortedWatchingList() {
+            let result = [];
+            for (let username of Object.keys(this.webcam.watching)) {
+                let user = this.getUser(username);
+                result.push(user);
+            }
+
+            switch (this.whoSort) {
+                case "broadcasting":
+                    result.sort((a, b) => {
+                        return (b.video & this.VideoFlag.Active) - (a.video & this.VideoFlag.Active);
+                    });
+                    break;
+                case "nsfw":
+                    result.sort((a, b) => {
+                        let left = (a.video & (this.VideoFlag.Active | this.VideoFlag.NSFW)),
+                            right = (b.video & (this.VideoFlag.Active | this.VideoFlag.NSFW));
+                        return right - left;
+                    });
+                    break;
+                case "status":
+                    result.sort((a, b) => {
+                        if (a.status === b.status) return 0;
+                        return b.status < a.status ? -1 : 1;
+                    });
+                    break;
+                case "op":
+                    result.sort((a, b) => {
+                        return b.op - a.op;
+                    });
+                    break;
+                case "emoji":
+                    result.sort((a, b) => {
+                        if (a.emoji === b.emoji) return 0;
+                        return a.emoji < b.emoji ? -1 : 1;
+                    })
+                    break;
+                case "login":
+                    result.sort((a, b) => {
+                        return b.loginAt - a.loginAt;
+                    });
+                    break;
+                case "gender":
+                    result.sort((a, b) => {
+                        if (a.gender === b.gender) return 0;
+                        let left = a.gender || 'z',
+                            right = b.gender || 'z';
+                        return left < right ? -1 : 1;
+                    })
+                    break;
+                case "z-a":
+                    result = result.reverse();
+            }
+
+            // Default ordering from ChatServer = a-z
+            return result;
+        },
     },
     methods: {
         // Load user prefs from localStorage, called on startup
@@ -817,7 +863,6 @@ export default {
         // WhoList updates.
         onWho(msg) {
             this.whoList = msg.whoList;
-            this.whoMap = {};
 
             if (this.whoList == undefined) {
                 this.whoList = [];
@@ -1460,6 +1505,16 @@ export default {
         isUsernameOnline(username) {
             return this.whoMap[username] != undefined;
         },
+        getUser(username) {
+            // Return the full User object from the Who List, or a dummy placeholder if not online.
+            if (this.whoMap[username] != undefined) {
+                return this.whoMap[username];
+            }
+
+            return {
+                username: username,
+            };
+        },
         avatarForUsername(username) {
             if (this.whoMap[username] != undefined && this.whoMap[username].avatar) {
                 return this.avatarURL(this.whoMap[username]);
@@ -2049,6 +2104,9 @@ export default {
             if (this.WebRTC.pc[username] != undefined) {
                 this.closeVideo(username, "answerer");
             }
+
+            // Remove them from our list.
+            delete(this.webcam.watching[username]);
 
             this.ChatClient(
                 `You have booted ${username} off your camera. They will no longer be able ` +
@@ -3428,169 +3486,25 @@ export default {
                             </div>
 
                             <!-- Normal chat message: full size card w/ avatar -->
-                            <div v-else class="box mb-2 px-4 pt-3 pb-1 position-relative">
-                                <div class="media mb-0">
-                                    <div class="media-left">
-                                        <a :href="profileURLForUsername(msg.username)"
-                                            @click.prevent="openProfile({ username: msg.username })"
-                                            :class="{ 'cursor-default': !profileURLForUsername(msg.username) }">
-                                            <figure class="image is-48x48">
-                                                <img v-if="msg.isChatServer" src="/static/img/server.png">
-                                                <img v-else-if="msg.isChatClient" src="/static/img/client.png">
-                                                <img v-else-if="avatarForUsername(msg.username)"
-                                                    :src="avatarForUsername(msg.username)">
-                                                <img v-else src="/static/img/shy.png">
-                                            </figure>
-                                        </a>
-                                    </div>
-                                    <div class="media-content">
-                                        <div class="columns is-mobile pb-0">
-                                            <div class="column is-narrow pb-0">
-                                                <strong :class="{
-                                                    'has-text-success is-dark': msg.isChatServer,
-                                                    'has-text-warning is-dark': msg.isAdmin,
-                                                    'has-text-danger': msg.isChatClient
-                                                }">
-
-                                                    <!-- User nickname/display name -->
-                                                    {{ nicknameForUsername(msg.username) }}
-                                                </strong>
-                                            </div>
-                                            <div class="column has-text-right pb-0">
-                                                <small class="has-text-grey is-size-7" :title="msg.at">{{ prettyDate(msg.at)
-                                                }}</small>
-                                            </div>
-                                        </div>
-
-                                        <!-- User @username below it which may link to a profile URL if JWT -->
-                                        <div class="columns is-mobile pt-0" v-if="(msg.isChatClient || msg.isChatServer)">
-                                            <div class="column is-narrow pt-0">
-                                                <small v-if="!(msg.isChatClient || msg.isChatServer)">
-                                                    <a v-if="profileURLForUsername(msg.username)"
-                                                        :href="profileURLForUsername(msg.username)" target="_blank"
-                                                        class="has-text-grey">
-                                                        @{{ msg.username }}
-                                                    </a>
-                                                    <span v-else class="has-text-grey">@{{ msg.username }}</span>
-                                                </small>
-                                                <small v-else class="has-text-grey">internal</small>
-                                            </div>
-                                        </div>
-                                        <div v-else class="columns is-mobile pt-0">
-                                            <div class="column is-narrow pt-0">
-                                                <small v-if="!(msg.isChatClient || msg.isChatServer)">
-                                                    <a v-if="profileURLForUsername(msg.username)"
-                                                        :href="profileURLForUsername(msg.username)" target="_blank"
-                                                        class="has-text-grey">
-                                                        @{{ msg.username }}
-                                                    </a>
-                                                    <span v-else class="has-text-grey">@{{ msg.username }}</span>
-                                                </small>
-                                                <small v-else class="has-text-grey">internal</small>
-                                            </div>
-
-                                            <div class="column is-narrow pl-1 pt-0">
-                                                <!-- DMs button -->
-                                                <button type="button" v-if="!(msg.username === username || isDM)"
-                                                    class="button is-grey is-outlined is-small px-2"
-                                                    @click="openDMs({ username: msg.username })"
-                                                    :title="isUsernameDND(msg.username) ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
-                                                    :disabled="isUsernameDND(msg.username)">
-                                                    <i class="fa fa-comment"></i>
-                                                </button>
-
-                                                <!-- Mute button -->
-                                                <button type="button" v-if="!(msg.username === username)"
-                                                    class="button is-grey is-outlined is-small px-2 ml-1"
-                                                    @click="muteUser(msg.username)" title="Mute user">
-                                                    <i class="fa fa-comment-slash" :class="{
-                                                        'has-text-success': isMutedUser(msg.username),
-                                                        'has-text-danger': !isMutedUser(msg.username)
-                                                    }"></i>
-                                                </button>
-
-                                                <!-- Owner or admin: take back the message -->
-                                                <button type="button" v-if="msg.username === username || isOp"
-                                                    class="button is-grey is-outlined is-small px-2 ml-1"
-                                                    title="Take back this message (delete it for everybody)"
-                                                    @click="takeback(msg)">
-                                                    <i class="fa fa-rotate-left has-text-danger"></i>
-                                                </button>
-
-                                                <!-- Everyone else: can hide it locally -->
-                                                <button type="button" v-if="msg.username !== username"
-                                                    class="button is-grey is-outlined is-small px-2 ml-1"
-                                                    title="Hide this message (delete it only for your view)"
-                                                    @click="removeMessage(msg)">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Report & Emoji buttons -->
-                                <div v-if="msg.msgID" class="emoji-button columns is-mobile is-gapless mb-0">
-                                    <!-- Report message button -->
-                                    <div class="column" v-if="isWebhookEnabled('report') && msg.username !== username">
-                                        <button class="button is-small is-outlined mr-1" :class="{
-                                            'is-danger': !msg.reported,
-                                            'has-text-grey': msg.reported
-                                        }" title="Report this message"
-                                            @click="reportMessage(msg)">
-                                            <i class="fa fa-flag"></i>
-                                            <i class="fa fa-check ml-1" v-if="msg.reported"></i>
-                                        </button>
-                                    </div>
-
-                                    <!-- Emoji reactions menu -->
-                                    <div class="column dropdown is-right" :class="{ 'is-up': i >= 2 }"
-                                        onclick="this.classList.toggle('is-active')">
-                                        <div class="dropdown-trigger">
-                                            <button class="button is-small px-2" aria-haspopup="true"
-                                                :aria-controls="`react-menu-${msg.msgID}`">
-                                                <span>
-                                                    <i class="fa fa-heart has-text-grey"></i>
-                                                    <i class="fa fa-plus has-text-grey pl-1"></i>
-                                                </span>
-                                            </button>
-                                        </div>
-                                        <div class="dropdown-menu" :id="`react-menu-${msg.msgID}`" role="menu">
-                                            <div class="dropdown-content p-0">
-                                                <!-- Iterate over reactions in rows of emojis-->
-                                                <div class="columns is-mobile ml-0 mb-2 mr-1"
-                                                    v-for="row in config.reactions">
-
-                                                    <!-- Loop over the icons -->
-                                                    <div class="column p-0 is-narrow" v-for="i in row">
-                                                        <button type="button" class="button px-2 mt-1 ml-1 mr-0 mb-1"
-                                                            @click="sendReact(msg, i)">
-                                                            {{ i }}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Message box -->
-                                <div class="content pl-5 pb-3 pt-1 mb-5">
-                                    <em v-if="msg.action === 'presence'">{{ msg.message }}</em>
-                                    <div v-else v-html="msg.message"></div>
-
-                                    <!-- Reactions so far? -->
-                                    <div v-if="hasReactions(msg)" class="mt-1">
-                                        <span v-for="(users, emoji) in getReactions(msg)"
-                                            class="tag is-secondary mr-1 cursor-pointer"
-                                            :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
-                                            :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(msg, emoji)">
-                                            {{ emoji }} <small class="ml-1">{{ users.length }}</small>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
+                            <MessageBox
+                                v-else
+                                :message="msg"
+                                :user="getUser(msg.username)"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(msg.username)"
+                                :is-muted="isMutedUser(msg.username)"
+                                :reactions="getReactions(msg)"
+                                :report-enabled="isWebhookEnabled('report')"
+                                :is-dm="isDM"
+                                :is-op="isOp"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @takeback="takeback"
+                                @remove="removeMessage"
+                                @report="reportMessage"
+                                @react="sendReact"
+                            ></MessageBox>
 
                         </div>
 
@@ -3726,116 +3640,40 @@ export default {
                     <!-- Who Is Online -->
                     <ul class="menu-list" v-if="whoTab === 'online'">
                         <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
-                            <div class="columns is-mobile">
-                                <!-- Avatar URL if available -->
-                                <div class="column is-narrow pr-0" style="position: relative">
-                                    <a :href="profileURLForUsername(u.username)"
-                                        @click.prevent="openProfile({ username: u.username })"
-                                        :class="{ 'cursor-default': !profileURLForUsername(u.username) }" class="p-0">
-                                        <img v-if="u.avatar" :src="avatarURL(u)" width="24" height="24" alt="">
-                                        <img v-else src="/static/img/shy.png" width="24" height="24">
-
-                                        <!-- Away symbol -->
-                                        <div v-if="u.status !== 'online'" class="status-away-icon">
-                                            <i v-if="u.status === 'away'" class="fa fa-clock has-text-light"
-                                                title="Status: Away"></i>
-                                            <i v-else-if="u.status === 'lunch'" class="fa fa-utensils has-text-light"
-                                                title="Status: Out to lunch"></i>
-                                            <i v-else-if="u.status === 'call'" class="fa fa-phone-volume has-text-light"
-                                                title="Status: On the phone"></i>
-                                            <i v-else-if="u.status === 'brb'" class="fa fa-stopwatch-20 has-text-light"
-                                                title="Status: Be right back"></i>
-                                            <i v-else-if="u.status === 'busy'" class="fa fa-briefcase has-text-light"
-                                                title="Status: Working"></i>
-                                            <i v-else-if="u.status === 'book'" class="fa fa-book has-text-light"
-                                                title="Status: Studying"></i>
-                                            <i v-else-if="u.status === 'gaming'"
-                                                class="fa fa-gamepad who-status-wide-icon-2 has-text-light"
-                                                title="Status: Gaming"></i>
-                                            <i v-else-if="u.status === 'idle'" class="fa-regular fa-moon has-text-light"
-                                                title="Status: Idle"></i>
-                                            <i v-else-if="u.status === 'horny'" class="fa fa-fire has-text-light"
-                                                title="Status: Horny"></i>
-                                            <i v-else-if="u.status === 'chatty'" class="fa fa-comment has-text-light"
-                                                title="Status: Chatty and sociable"></i>
-                                            <i v-else-if="u.status === 'introverted'" class="fa fa-spoon has-text-light"
-                                                title="Status: Introverted and quiet"></i>
-                                            <i v-else-if="u.status === 'exhibitionist'"
-                                                class="fa-regular fa-eye who-status-wide-icon-1 has-text-light"
-                                                title="Status: Watch me"></i>
-                                            <i v-else class="fa fa-clock has-text-light" :title="'Status: ' + u.status"></i>
-                                        </div>
-                                    </a>
-                                </div>
-                                <div class="column pr-0 is-clipped" :class="{ 'pl-1': u.avatar }">
-                                    <strong class="truncate-text-line is-size-7">{{ u.username }}</strong>
-                                    <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1" v-if="u.op"
-                                        title="Operator"></sup>
-                                    <sup class="is-size-7 ml-1" :class="config.VIP.Icon" v-else-if="u.vip"
-                                        :title="config.VIP.Name"></sup>
-                                </div>
-                                <div class="column is-narrow pl-0">
-                                    <!-- Emoji icon -->
-                                    <span v-if="u.emoji" class="pr-1 cursor-default" :title="u.emoji">
-                                        {{ u.emoji.split(" ")[0] }}
-                                    </span>
-
-                                    <!-- Profile button -->
-                                    <button type="button" v-if="u.profileURL" class="button is-small px-2 py-1"
-                                        :class="profileButtonClass(u)" @click="openProfile(u)"
-                                        :title="'Open profile page' + (u.gender ? ` (gender: ${u.gender})` : '') + (u.vip ? ` (${config.VIP.Name})` : '')">
-                                        <i class="fa fa-user"></i>
-                                    </button>
-
-                                    <!-- Unmute User button (if muted) -->
-                                    <button type="button" v-if="isMutedUser(u.username)" class="button is-small px-2 py-1"
-                                        @click="muteUser(u.username)" title="This user is muted. Click to unmute them.">
-                                        <i class="fa fa-comment-slash has-text-danger"></i>
-                                    </button>
-
-                                    <!-- DM button (if not muted) -->
-                                    <button type="button" v-else class="button is-small px-2 py-1" @click="openDMs(u)"
-                                        :disabled="u.username === username || (u.dnd && !isOp)"
-                                        :title="u.dnd ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
-                                        <i class="fa" :class="{ 'fa-comment': !u.dnd, 'fa-comment-slash': u.dnd }"></i>
-                                    </button>
-
-                                    <!-- Video button -->
-                                    <button type="button" class="button is-small px-2 py-1"
-                                        :disabled="!(u.video & VideoFlag.Active)" :class="{
-                                            'is-danger is-outlined': (u.video & VideoFlag.Active) && (u.video & VideoFlag.NSFW),
-                                            'is-info is-outlined': (u.video & VideoFlag.Active) && !(u.video & VideoFlag.NSFW),
-                                            'cursor-notallowed': isVideoNotAllowed(u),
-                                        }" :title="`Open video stream` +
-    (u.video & VideoFlag.MutualRequired ? '; mutual video sharing required' : '') +
-    (u.video & VideoFlag.MutualOpen ? '; will auto-open your video' : '')"
-                                        @click="openVideo(u)">
-                                        <i class="fa" :class="webcamIconClass(u)"></i>
-                                    </button>
-                                </div>
-                            </div>
+                            <WhoListRow
+                                :user="u"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(u.username)"
+                                :is-muted="isMutedUser(u.username)"
+                                :is-op="isOp"
+                                :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)"
+                                :vip-config="config.VIP"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @open-video="openVideo"></WhoListRow>
                         </li>
                     </ul>
 
                     <!-- Watching My Webcam -->
                     <ul class="menu-list" v-if="whoTab === 'watching'">
-                        <li v-for="username in Object.keys(webcam.watching)" v-bind:key="username">
-                            <div class="columns is-mobile">
-                                <!-- Avatar URL if available -->
-                                <div class="column is-narrow pr-0">
-                                    <i class="fa fa-eye"></i>
-                                </div>
-                                <div class="column pr-0">
-                                    {{ username }}
-                                </div>
-                                <div class="column is-narrow pl-0">
-                                    <!-- Boot from cam button -->
-                                    <button type="button" class="button is-small px-2 py-1" @click="bootUser(username)"
-                                        title="Kick this person off your cam">
-                                        <i class="fa fa-user-xmark has-text-danger"></i>
-                                    </button>
-                                </div>
-                            </div>
+                        <li v-for="(u, i) in sortedWatchingList" v-bind:key="username">
+                            <WhoListRow
+                                :is-watching-tab="true"
+                                :user="u"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(username)"
+                                :is-muted="isMutedUser(username)"
+                                :is-op="isOp"
+                                :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)"
+                                :vip-config="config.VIP"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @open-video="openVideo"
+                                @boot-user="bootUser"></WhoListRow>
                         </li>
                     </ul>
 

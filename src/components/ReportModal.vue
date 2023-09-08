@@ -1,10 +1,15 @@
 <script>
+import MessageBox from './MessageBox.vue';
+
 export default {
     props: {
         visible: Boolean,
         busy: Boolean,
         user: Object,
         message: Object,
+    },
+    components: {
+        MessageBox,
     },
     data() {
         return {
@@ -24,14 +29,21 @@ export default {
         };
     },
     methods: {
+        reset() {
+            this.classification = this.reportClassifications[0];
+            this.comment = "";
+        },
+
         accept() {
             this.$emit('accept', {
                 classification: this.classification,
                 comment: this.comment,
             });
+            this.reset();
         },
         cancel() {
             this.$emit('cancel');
+            this.reset();
         },
     }
 }
@@ -48,38 +60,12 @@ export default {
                 </header>
                 <div class="card-content">
 
-                    <!-- Message preview we are reporting on
-                         TODO: make it DRY: style copied/referenced from chat history cards -->
-                    <div class="box mb-2 px-4 pt-3 pb-1 position-relative">
-                        <div class="media mb-0">
-                            <div class="media-left">
-                                <figure class="image is-48x48">
-                                    <img v-if="user?.avatar"
-                                        :src="user?.avatar">
-                                    <img v-else src="/static/img/shy.png">
-                                </figure>
-                            </div>
-                            <div class="media-content">
-                                <div>
-                                    <strong>
-                                        <!-- User nickname/display name -->
-                                        {{ user?.nickname }}
-                                    </strong>
-                                </div>
-
-                                <!-- User @username below it which may link to a profile URL if JWT -->
-                                <div>
-                                    <small class="has-text-grey">
-                                        @{{ message.username }}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Message copy -->
-                        <div class="content pl-5 py-3 mb-5 report-modal-message" v-html="message.message">
-                        </div>
-                    </div>
+                    <!-- Message preview we are reporting on -->
+                    <MessageBox
+                        :message="message"
+                        :user="user"
+                        :no-buttons="true"
+                    ></MessageBox>
 
                     <div class="field mb-1">
                         <label class="label" for="classification">Report classification:</label>
