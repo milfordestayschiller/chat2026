@@ -9,6 +9,7 @@ export default {
         isMuted: Boolean,   // user is muted by current user
         reactions: Object,  // emoji reactions on the message
         reportEnabled: Boolean, // Report Message webhook is available
+        position: Number,   // position of the message (0 to n), for the emoji menu to know which side to pop
         isDm: Boolean,      // is in a DM thread (hide DM buttons)
         isOp: Boolean,      // current user is Operator (always show takeback button)
         noButtons: Boolean, // hide all message buttons (e.g. for Report Modal)
@@ -240,7 +241,7 @@ export default {
             </div>
 
             <!-- Emoji reactions menu -->
-            <div class="column dropdown is-right" :class="{ 'is-up': i >= 2 }"
+            <div class="column dropdown is-right" :class="{ 'is-up': position >= 2 }"
                 onclick="this.classList.toggle('is-active')">
                 <div class="dropdown-trigger">
                     <button class="button is-small px-2" aria-haspopup="true"

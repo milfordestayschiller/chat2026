@@ -189,8 +189,8 @@ export default {
                 :title="vipConfig.Name"></sup>
         </div>
         <div class="column is-narrow pl-0">
-            <!-- Emoji icon -->
-            <span v-if="user.emoji" class="pr-1 cursor-default" :title="user.emoji">
+            <!-- Emoji icon (Who's Online tab only) -->
+            <span v-if="user.emoji && !isWatchingTab" class="pr-1 cursor-default" :title="user.emoji">
                 {{ user.emoji.split(" ")[0] }}
             </span>
 
@@ -214,9 +214,8 @@ export default {
                 <i class="fa" :class="{ 'fa-comment': !user.dnd, 'fa-comment-slash': user.dnd }"></i>
             </button>
 
-            <!-- Video button (Who List tab) -->
+            <!-- Video button -->
             <button type="button" class="button is-small px-2 py-1"
-                v-if="!isWatchingTab"
                 :disabled="!(user.video & VideoFlag.Active)"
                 :class="videoButtonClass"
                 :title="videoButtonTitle"
@@ -224,8 +223,8 @@ export default {
                 <i class="fa" :class="videoIconClass"></i>
             </button>
 
-            <!-- Boot from Video button (Watching tab) -->
-            <button v-else type="button" class="button is-small px-2 py-1"
+            <!-- Boot from Video button (Watching tab only) -->
+            <button v-if="isWatchingTab" type="button" class="button is-small px-2 py-1"
                 @click="bootUser()"
                 title="Kick this person off your cam">
                 <i class="fa fa-user-xmark has-text-danger"></i>

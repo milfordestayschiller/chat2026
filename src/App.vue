@@ -3499,6 +3499,7 @@ export default {
                             <MessageBox
                                 v-else
                                 :message="msg"
+                                :position="i"
                                 :user="getUser(msg.username)"
                                 :username="username"
                                 :website-url="config.website"
