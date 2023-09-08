@@ -27,8 +27,9 @@ export default {
             return null;
         },
         profileButtonClass() {
-            // VIP background.
             let result = "";
+
+            // VIP background.
             if (this.user.vip) {
                 result = "has-background-vip ";
             }
@@ -42,6 +43,43 @@ export default {
                 return result + "has-text-gender-other";
             }
             return "";
+        },
+        videoButtonClass() {
+            let result = "";
+
+            // VIP background if their cam is set to VIPs only
+            if ((this.user.video & VideoFlag.Active) && (this.user.video & VideoFlag.VipOnly)) {
+                result = "has-background-vip ";
+            }
+
+            // Colors and/or cursors.
+            if ((this.user.video & VideoFlag.Active) && (this.user.video & VideoFlag.NSFW)) {
+                result += "is-danger is-outlined";
+            } else if ((this.user.video & VideoFlag.Active) && !(this.user.video & VideoFlag.NSFW)) {
+                result += "is-info is-outlined";
+            } else if (this.isVideoNotAllowed) {
+                result += "cursor-notallowed";
+            }
+
+            return result;
+        },
+        videoButtonTitle() {
+            // Mouse-over title text for the video button.
+            let parts = ["Open video stream"];
+
+            if (this.user.video & VideoFlag.MutualRequired) {
+                parts.push("mutual video sharing required");
+            }
+
+            if (this.user.video & VideoFlag.MutualOpen) {
+                parts.push("will auto-open your video");
+            }
+
+            if (this.user.video & VideoFlag.VipOnly) {
+                parts.push(`${this.vipConfig.Name} only`);
+            }
+
+            return parts.join("; ");
         },
         avatarURL() {
             if (this.user.avatar) {
@@ -179,13 +217,9 @@ export default {
             <!-- Video button (Who List tab) -->
             <button type="button" class="button is-small px-2 py-1"
                 v-if="!isWatchingTab"
-                :disabled="!(user.video & VideoFlag.Active)" :class="{
-                    'is-danger is-outlined': (user.video & VideoFlag.Active) && (user.video & VideoFlag.NSFW),
-                    'is-info is-outlined': (user.video & VideoFlag.Active) && !(user.video & VideoFlag.NSFW),
-                    'cursor-notallowed': isVideoNotAllowed,
-                }" :title="`Open video stream` +
-(user.video & VideoFlag.MutualRequired ? '; mutual video sharing required' : '') +
-(user.video & VideoFlag.MutualOpen ? '; will auto-open your video' : '')"
+                :disabled="!(user.video & VideoFlag.Active)"
+                :class="videoButtonClass"
+                :title="videoButtonTitle"
                 @click="openVideo()">
                 <i class="fa" :class="videoIconClass"></i>
             </button>

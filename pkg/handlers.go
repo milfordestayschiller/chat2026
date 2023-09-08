@@ -453,6 +453,7 @@ func (s *Server) OnBlocklist(sub *Subscriber, msg messages.Message) {
 
 	sub.muteMu.Lock()
 	for _, username := range msg.Usernames {
+		sub.muted[username] = struct{}{}
 		sub.blocked[username] = struct{}{}
 	}
 

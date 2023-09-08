@@ -354,7 +354,7 @@ func (s *Server) Broadcast(msg messages.Message) {
 		}
 
 		// VIP channels: only deliver to subscribed VIP users.
-		if ch, ok := config.Current.GetChannel(msg.Channel); ok && ch.VIP && !sub.IsVIP() {
+		if ch, ok := config.Current.GetChannel(msg.Channel); ok && ch.VIP && !sub.IsVIP() && !sub.IsAdmin() {
 			log.Debug("Do not broadcast message to %s: VIP channel and they are not VIP", sub.Username)
 			continue
 		}
@@ -496,6 +496,11 @@ func (s *Subscriber) Mutes(username string) bool {
 // Blocks checks whether the subscriber blocks the username, or vice versa (blocking goes both directions).
 func (s *Subscriber) Blocks(other *Subscriber) bool {
 	if s == nil || other == nil {
+		return false
+	}
+
+	// If either side is an admin, blocking is not allowed.
+	if s.IsAdmin() || other.IsAdmin() {
 		return false
 	}
 
