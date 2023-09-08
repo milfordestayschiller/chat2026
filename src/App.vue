@@ -381,7 +381,7 @@ export default {
             // If we have toggled this while already connected to people:
             // Hang up on any that have a mutual viewership requirement, if
             // they can not see our VIP-only camera.
-            for (username of Object.keys(this.WebRTC.pc)) {
+            for (let username of Object.keys(this.WebRTC.pc)) {
                 if (this.whoMap[username] != undefined && this.isVideoNotAllowed(this.whoMap[username])) {
                     this.closeVideo(username);
                 }
