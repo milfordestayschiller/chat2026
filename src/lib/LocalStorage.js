@@ -40,7 +40,12 @@ class UserSettings {
                     case Boolean:
                         this[key] = localStorage[key] === "true";
                     case Object:
-                        this[key] = JSON.parse(localStorage[key]);
+                        try {
+                            this[key] = JSON.parse(localStorage[key]);
+                        } catch(e) {
+                            console.error(`LocalStorage: parsing key ${key}: ${e}`);
+                            delete(this[key]);
+                        }
                 }
             }
         }
