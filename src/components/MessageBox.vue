@@ -281,7 +281,7 @@ export default {
                 <span v-for="(users, emoji) in reactions"
                     class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
-                    :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(msg, emoji)">
+                    :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }} <small class="ml-1">{{ users.length }}</small>
                 </span>
             </div>

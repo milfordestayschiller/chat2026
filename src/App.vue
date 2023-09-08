@@ -1,6 +1,5 @@
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import interact from 'interactjs';
 import LoginModal from './components/LoginModal.vue';
 import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
 import ReportModal from './components/ReportModal.vue';
