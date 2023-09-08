@@ -2133,7 +2133,7 @@ export default {
         // Stop broadcasting.
         stopVideo() {
             // Close all WebRTC sessions.
-            for (username of Object.keys(this.WebRTC.pc)) {
+            for (let username of Object.keys(this.WebRTC.pc)) {
                 this.closeVideo(username, "answerer");
             }
 
