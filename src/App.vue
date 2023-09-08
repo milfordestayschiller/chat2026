@@ -340,6 +340,9 @@ export default {
             });
             LocalStorage.set('videoScale', this.webcam.videoScale);
         },
+        whoSort() {
+            LocalStorage.set('whoSort', this.whoSort);
+        },
         fontSizeClass() {
             // Store the setting persistently.
             LocalStorage.set('fontSizeClass', this.fontSizeClass);
@@ -650,34 +653,40 @@ export default {
             }
 
             // Webcam mutality preferences from last broadcast.
-            if (settings.videoMutual === "true") {
+            if (settings.videoMutual === true) {
                 this.webcam.mutual = true;
             }
-            if (settings.videoMutualOpen === "true") {
+            if (settings.videoMutualOpen === true) {
                 this.webcam.mutualOpen = true;
             }
-            if (settings.videoAutoMute === "true") {
+            if (settings.videoAutoMute === true) {
                 this.webcam.autoMute = true;
             }
-            if (settings.videoVipOnly === "true") {
+            if (settings.videoVipOnly === true) {
                 this.webcam.vipOnly = true;
+            }
+            if (settings.videoExplicit === true) {
+                this.webcam.nsfw = true;
             }
 
             // Misc preferences
             if (settings.joinMessages != undefined) {
-                this.prefs.joinMessages = settings.joinMessages === "true";
+                this.prefs.joinMessages = settings.joinMessages === true;
             }
             if (settings.exitMessages != undefined) {
-                this.prefs.exitMessages = settings.exitMessages === "true";
+                this.prefs.exitMessages = settings.exitMessages === true;
             }
             if (settings.watchNotif != undefined) {
-                this.prefs.watchNotif = settings.watchNotif === "true";
+                this.prefs.watchNotif = settings.watchNotif === true;
             }
             if (settings.muteSounds != undefined) {
-                this.prefs.muteSounds = settings.muteSounds === "true";
+                this.prefs.muteSounds = settings.muteSounds === true;
             }
             if (settings.closeDMs != undefined) {
-                this.prefs.closeDMs = settings.closeDMs === "true";
+                this.prefs.closeDMs = settings.closeDMs === true;
+            }
+            if (settings.whoSort != undefined) {
+                this.whoSort = settings.whoSort;
             }
         },
 
@@ -850,7 +859,7 @@ export default {
             // The server can set our webcam NSFW flag.
             let myNSFW = this.webcam.nsfw;
             let theirNSFW = (msg.video & this.VideoFlag.NSFW) > 0;
-            if (myNSFW != theirNSFW) {
+            if (this.webcam.active && myNSFW != theirNSFW) {
                 this.webcam.nsfw = theirNSFW;
             }
 
@@ -1693,6 +1702,7 @@ export default {
                 LocalStorage.set('videoMutualOpen', this.webcam.mutualOpen);
                 LocalStorage.set('videoAutoMute', this.webcam.autoMute);
                 LocalStorage.set('videoVipOnly', this.webcam.vipOnly);
+                LocalStorage.set('videoExplicit', this.webcam.nsfw);
 
                 // Auto-mute our camera? Two use cases:
                 // 1. The user marked their cam as muted but then changed video device,

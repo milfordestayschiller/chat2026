@@ -5,12 +5,14 @@ const keys = {
     'imageDisplaySetting': String,  // Show/hide/expand image preference
     'scrollback': Number,           // Scrollback buffer (int)
     'preferredDeviceNames': Object, // Webcam/mic device names (object, keys video,audio)
+    'whoSort': String,              // user's preferred sort order for the Who List
 
     // Webcam settings (booleans)
     'videoMutual': Boolean,
     'videoMutualOpen': Boolean,
     'videoAutoMute': Boolean,
     'videoVipOnly': Boolean,
+    'videoExplicit': Boolean,  // whether the user turns explicit on by default
 
     // Booleans
     'joinMessages': Boolean,
