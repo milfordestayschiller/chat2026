@@ -22,6 +22,9 @@ body {
 .has-background-dm {
     background-color: #ffefff;
 }
+.has-background-at-mention {
+    background-color: rgb(250, 250, 192);
+}
 
 /* Truncate long text, e.g. usernames in the who list */
 .truncate-text-line {

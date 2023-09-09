@@ -19,6 +19,10 @@
     background-color: rgba(15, 129, 204, 0.25) !important;
   }
 
+  .has-background-at-mention {
+    background-color: rgb(50, 50, 0);
+}
+
   .tag.is-success {
     background-color: #15241d !important;
     color: #85dfb6 !important;

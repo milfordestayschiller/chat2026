@@ -1,5 +1,9 @@
 <script>
 import interact from 'interactjs';
+import FloatingVue from 'floating-vue';
+import 'floating-vue/dist/style.css';
+import { Mentionable } from 'vue-mention';
+
 import LoginModal from './components/LoginModal.vue';
 import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
 import ReportModal from './components/ReportModal.vue';
@@ -32,6 +36,9 @@ const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 export default {
     name: 'BareRTC',
     components: {
+        FloatingVue,
+        Mentionable,
+
         LoginModal,
         ExplicitOpenModal,
         ReportModal,
@@ -516,6 +523,27 @@ export default {
         numVideosOpen() {
             // Return the count of other peoples videos we have open.
             return Object.keys(this.WebRTC.streams).length;
+        },
+        atMentionItems() {
+            // Available users in chat for the at-mentions support.
+            let result = [
+                {
+                    value: "all",
+                    label: "All people in the current room",
+                },
+                {
+                    value: "here",
+                    label: "Everybody here in the current room",
+                },
+            ];
+            for (let user of this.whoList) {
+                if (user.username === this.username) continue;
+                result.push({
+                    value: user.username,
+                    label: user.nickname,
+                });
+            }
+            return result;
         },
         sortedWhoList() {
             let result = [...this.whoList];
@@ -2371,6 +2399,14 @@ export default {
                 }
             }
 
+            // Were we at mentioned in this message?
+            if (message.indexOf("@"+this.username) > -1) {
+                let re = new RegExp("@"+this.username+"\\b");
+                message = message.replace(re, `<strong class="has-background-at-mention">@${this.username}</strong>`);
+            }
+
+            // And same for @here or @all
+            message = message.replace(/@(here|all)\b/i, `<strong class="has-background-at-mention">@$1</strong>`);
 
             // Append the message.
             this.channels[channel].updated = new Date().getTime();
@@ -3617,9 +3653,35 @@ export default {
                         </div>
                         <div class="column pr-1" :class="{ 'pl-1': canUploadFile }">
                             <form @submit.prevent="sendMessage()">
-                                <input type="text" class="input" id="messageBox" v-model="message"
-                                    placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
-                                    :disabled="!ws.connected">
+
+                                <!-- At Mentions -->
+                                <Mentionable
+                                    :keys="['@']"
+                                    :items="atMentionItems"
+                                    offset="12"
+                                    insert-space>
+
+                                    <!-- My text entry box -->
+                                    <input type="text" class="input" id="messageBox" v-model="message"
+                                        placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
+                                        :disabled="!ws.connected">
+
+                                    <!-- At Mention templates-->
+                                    <template #no-result>
+                                        <div class="has-text-grey m-2">
+                                            No result
+                                        </div>
+                                    </template>
+
+                                    <template #item-@="{ item }">
+                                        <div class="has-text-link m-2">
+                                            @{{ item.value }}
+                                            <span class="has-text-grey">
+                                                {{ item.label }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </Mentionable>
                             </form>
                         </div>
                         <div class="column pl-1 is-narrow">
@@ -3763,31 +3825,14 @@ export default {
     </div>
 </template>
 
-<style scoped>
-/* header {
-  line-height: 1.5;
+<style>
+/* At-mention styles */
+.mention-item {
+    padding: 4px 10px;
+    border-radius: 4px;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.mention-selected {
+    background: rgb(192, 250, 153);
 }
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-} */
 </style>
