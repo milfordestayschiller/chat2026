@@ -25,6 +25,29 @@ export default {
         return {
             // Emoji picker visible
             showEmojiPicker: false,
+
+            // Favorite emojis
+            customEmojiGroups: {
+                frequently_used: [
+                    { n: ['heart'], u: '2764-fe0f' },
+                    { n: ['+1', 'thumbs_up'], u: '1f44d' },
+                    { n: ['-1', 'thumbs_down'], u: '1f44e' },
+                    { n: ['rolling_on_the_floor_laughing'], u: '1f923' },
+                    { n: ['wink'], u: '1f609' },
+                    { n: ['cry'], u: '1f622' },
+                    { n: ['angry'], u: '1f620' },
+                    { n: ['heart_eyes'], u: '1f60d' },
+
+                    { n: ['kissing_heart'], u: '1f618' },
+                    { n: ['wave'], u: '1f44b' },
+                    { n: ['fire'], u: '1f525' },
+                    { n: ['smiling_imp'], u: '1f608' },
+                    { n: ['peach'], u: '1f351' },
+                    { n: ['eggplant', 'aubergine'], u: '1f346' },
+                    { n: ['splash', 'sweat_drops'], u: '1f4a6' },
+                    { n: ['banana'], u: '1f34c' },
+                ]
+            },
         };
     },
     computed: {
@@ -274,6 +297,8 @@ export default {
                             :native="true"
                             :display-recent="true"
                             :disable-skin-tones="true"
+                            :additional-groups="customEmojiGroups"
+                            :group-names="{ frequently_used: 'Frequently Used' }"
                             theme="auto"
                             @select="onSelectEmoji"></EmojiPicker>
                     </div>
