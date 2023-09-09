@@ -32,6 +32,7 @@ func (s *Server) Setup() error {
 
 	mux.Handle("/", IndexPage())
 	mux.Handle("/about", AboutPage())
+	mux.Handle("/logout", LogoutPage())
 	mux.Handle("/ws", s.WebSocket())
 	mux.Handle("/api/statistics", s.Statistics())
 	mux.Handle("/api/blocklist", s.BlockList())

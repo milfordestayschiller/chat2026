@@ -125,3 +125,16 @@ func AboutPage() http.HandlerFunc {
 		tmpl.ExecuteTemplate(w, "index", values)
 	})
 }
+
+// LogoutPage returns the HTML template for the logout page.
+func LogoutPage() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Load the template, TODO: once on server startup.
+		tmpl := template.New("index")
+		tmpl, err := tmpl.ParseFiles("web/templates/logout.html")
+		if err != nil {
+			panic(err.Error())
+		}
+		tmpl.ExecuteTemplate(w, "index", nil)
+	})
+}

@@ -116,6 +116,7 @@ export default {
             whoTab: 'online',
             whoSort: 'a-z',
             whoMap: {}, // map username to wholist entry
+            whoOnline: {}, // map users actually online right now
             muted: {},  // muted usernames for client side state
 
             // Misc. user preferences (TODO: move all of them here)
@@ -512,6 +513,10 @@ export default {
             if (this.webcam.vipOnly && this.isVIP) status |= this.VideoFlag.VipOnly;
             return status;
         },
+        numVideosOpen() {
+            // Return the count of other peoples videos we have open.
+            return Object.keys(this.WebRTC.streams).length;
+        },
         sortedWhoList() {
             let result = [...this.whoList];
 
@@ -871,6 +876,7 @@ export default {
         // WhoList updates.
         onWho(msg) {
             this.whoList = msg.whoList;
+            this.whoOnline = {};
 
             if (this.whoList == undefined) {
                 this.whoList = [];
@@ -880,6 +886,7 @@ export default {
             // off camera, close our side of the connection.
             for (let row of this.whoList) {
                 this.whoMap[row.username] = row;
+                this.whoOnline[row.username] = true;
                 if (this.WebRTC.streams[row.username] != undefined &&
                     !(row.video & this.VideoFlag.Active)) {
                     this.closeVideo(row.username, "offerer");
@@ -1510,9 +1517,6 @@ export default {
             }
             return "";
         },
-        isUsernameOnline(username) {
-            return this.whoMap[username] != undefined;
-        },
         getUser(username) {
             // Return the full User object from the Who List, or a dummy placeholder if not online.
             if (this.whoMap[username] != undefined) {
@@ -1522,6 +1526,10 @@ export default {
             return {
                 username: username,
             };
+        },
+        isUserOffline(username) {
+            // Return if the username is not presently online in the chat.
+            return this.whoOnline[username] !== true;
         },
         avatarForUsername(username) {
             if (this.whoMap[username] != undefined && this.whoMap[username].avatar) {
@@ -1998,6 +2006,32 @@ export default {
 
             // Inform backend we have closed it.
             this.sendWatch(username, false);
+        },
+        closeOpenVideos() {
+            // Close all videos open of other users.
+            for (let username of Object.keys(this.WebRTC.streams)) {
+                this.closeVideo(username, "offerer");
+            }
+        },
+        muteAllVideos() {
+            // Mute the mic of all open videos.
+            let count = 0;
+            for (let username of Object.keys(this.WebRTC.streams)) {
+                if (this.WebRTC.muted[username]) continue;
+
+                // Find the <video> tag to mute it.
+                this.WebRTC.muted[username] = true;
+                let $ref = document.getElementById(`videofeed-${username}`);
+                if ($ref) {
+                    $ref.muted = this.WebRTC.muted[username];
+                }
+
+                count++;
+            }
+
+            if (count > 0) {
+                this.ChatClient(`You have muted the audio on ${count} video${count === 1 ? '' : 's'}.`);
+            }
         },
         unMutualVideo() {
             // If we had our camera on to watch a video of someone who wants mutual cameras,
@@ -3218,14 +3252,45 @@ export default {
                         <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>
                 </div>
-                <div class="column is-narrow pl-1">
-                    <a href="/about" target="_blank" class="button is-small is-link px-2">
-                        <i class="fa fa-info-circle"></i>
-                    </a>
-                    <button type="button" class="button is-small is-light ml-1 px-2" @click="showSettings()"
-                        title="Chat Settings">
-                        <i class="fa fa-gear"></i>
-                    </button>
+                <div class="column dropdown is-right is-narrow pl-1"
+                    onclick="this.classList.toggle('is-active')">
+                    <div class="dropdown-trigger">
+                        <button type="button" class="button is-small is-link px-2"
+                            aria-haspopup="true"
+                            aria-controls="chat-settings-menu">
+                            <span>
+                                <i class="fa fa-bars"></i>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="dropdown-menu mr-3" id="chat-settings-menu" role="menu">
+                        <div class="dropdown-content">
+                            <a href="#" class="dropdown-item" @click.prevent="showSettings()">
+                                <i class="fa fa-gear mr-1"></i> Chat Settings
+                            </a>
+
+                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0"
+                                @click.prevent="closeOpenVideos()">
+                                <i class="fa fa-video-slash mr-1"></i> Close all cameras
+                            </a>
+
+                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0"
+                                @click.prevent="muteAllVideos()">
+                                <i class="fa fa-microphone-slash mr-1"></i> Mute all cameras
+                            </a>
+
+                            <hr class="dropdown-divider">
+
+                            <a href="/about" target="_blank" class="dropdown-item">
+                                <i class="fa fa-info-circle mr-1"></i> About
+                            </a>
+
+                            <a href="/logout" class="dropdown-item">
+                                <i class="fa fa-arrow-right-from-bracket mr-1"></i> Log out
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -3279,9 +3344,12 @@ export default {
                                         </div>
 
                                         <div class="column">
-                                            {{ c.name }}
+                                            <del v-if="isUserOffline(c.name)">
+                                                {{ c.name }}
+                                            </del>
+                                            <span v-else>{{ c.name }}</span>
 
-                                            <span v-if="hasUnread(c.channel)" class="tag is-danger">
+                                            <span v-if="hasUnread(c.channel)" class="tag is-danger ml-1">
                                                 {{ hasUnread(c.channel) }}
                                             </span>
                                         </div>
@@ -3486,8 +3554,8 @@ export default {
                                     </div>
                                     <div class="column">
                                         <strong>{{ nicknameForUsername(msg.username) }}</strong>
-                                        <small v-if="isUsernameOnline(msg.username)"
-                                            class="ml-1">(@{{ msg.username }})</small>
+                                        <span v-if="isUserOffline(msg.username)" class="ml-1">(offline)</span>
+                                        <small v-else class="ml-1">(@{{ msg.username }})</small>
                                         {{ msg.message }}
                                     </div>
                                 </div>
@@ -3500,6 +3568,7 @@ export default {
                                 :message="msg"
                                 :position="i"
                                 :user="getUser(msg.username)"
+                                :is-offline="isUserOffline(msg.username)"
                                 :username="username"
                                 :website-url="config.website"
                                 :is-dnd="isUsernameDND(msg.username)"

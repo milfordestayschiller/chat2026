@@ -3,6 +3,7 @@ export default {
     props: {
         message: Object,    // chat Message object
         user: Object,       // User object of the Message author
+        isOffline: Boolean, // user is not currently online
         username: String,   // current username logged in
         websiteUrl: String, // Base URL to website (for profile/avatar URLs)
         isDnd: Boolean,     // user is not accepting DMs
@@ -151,6 +152,9 @@ export default {
 
                             <!-- User nickname/display name -->
                             {{ nickname }}
+
+                            <!-- Offline now? -->
+                            <span v-if="isOffline">(offline)</span>
                         </strong>
                     </div>
                     <div class="column has-text-right pb-0">
