@@ -3252,8 +3252,9 @@ export default {
                         <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>
                 </div>
-                <div class="column dropdown is-right is-narrow pl-1"
-                    onclick="this.classList.toggle('is-active')">
+                <div class="column dropdown is-right is-narrow pl-1" id="chat-settings-hamburger-menu">
+                    <!-- Note: the onclick for the previous div is handled in index.html -->
+
                     <div class="dropdown-trigger">
                         <button type="button" class="button is-small is-link px-2"
                             aria-haspopup="true"

@@ -48,6 +48,21 @@
           $modal.classList.add("is-active");
           return false;
       }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // Add global body click to hide the hamburger menu for chat settings.
+        const settingsMenu = document.querySelector("#chat-settings-hamburger-menu");
+        settingsMenu.addEventListener('click', (e) => {
+          settingsMenu.classList.toggle('is-active');
+          e.stopPropagation();
+        });
+
+        document.body.addEventListener('click', () => {
+          if (settingsMenu != undefined && settingsMenu.classList.contains("is-active")) {
+            settingsMenu.classList.remove('is-active');
+          }
+        })
+      });
     </script>
 
     <script type="module" src="/src/main.js"></script>

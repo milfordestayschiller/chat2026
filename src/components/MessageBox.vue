@@ -1,4 +1,7 @@
 <script>
+import EmojiPicker from 'vue3-emoji-picker';
+import 'vue3-emoji-picker/css';
+
 export default {
     props: {
         message: Object,    // chat Message object
@@ -15,16 +18,13 @@ export default {
         isOp: Boolean,      // current user is Operator (always show takeback button)
         noButtons: Boolean, // hide all message buttons (e.g. for Report Modal)
     },
+    components: {
+        EmojiPicker,
+    },
     data() {
         return {
-            reactionsAvailable: [
-                ['❤️', '👍', '😂', '😉', '😢', '😡', '🥰'],
-                ['😘', '👎', '☹️', '😭', '🤔', '🙄', '🤩'],
-                ['👋', '🔥', '😈', '🍑', '🍆', '💦', '🍌'],
-                ['😋', '⭐', '😇', '😴', '😱', '👀', '🎃'],
-                ['🤮', '🥳', '🙏', '🤦', '💩', '🤯', '💯'],
-                ['😏', '🙈', '🙉', '🙊', '☀️', '🌈', '🎂'],
-            ],
+            // Emoji picker visible
+            showEmojiPicker: false,
         };
     },
     computed: {
@@ -51,10 +51,6 @@ export default {
         },
     },
     methods: {
-        signIn() {
-            this.$emit('signIn', this.username);
-        },
-
         openProfile() {
             let url = this.profileURL;
             if (url) {
@@ -86,6 +82,20 @@ export default {
 
         sendReact(emoji) {
             this.$emit('react', this.message, emoji);
+        },
+
+        // Vue3-emoji-picker callback
+        onSelectEmoji(emoji) {
+            this.sendReact(emoji.i);
+            this.hideEmojiPicker();
+        },
+
+        // Hide the emoji menu (after sending an emoji or clicking the react button again)
+        hideEmojiPicker() {
+            if (!this.showEmojiPicker) return;
+            window.requestAnimationFrame(() => {
+                this.showEmojiPicker = false;
+            });
         },
 
         urlFor(url) {
@@ -244,12 +254,12 @@ export default {
                 </button>
             </div>
 
-            <!-- Emoji reactions menu -->
-            <div class="column dropdown is-right" :class="{ 'is-up': position >= 2 }"
-                onclick="this.classList.toggle('is-active')">
+            <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
+                @click="showEmojiPicker=true">
                 <div class="dropdown-trigger">
-                    <button class="button is-small px-2" aria-haspopup="true"
-                        :aria-controls="`react-menu-${message.msgID}`">
+                    <button type="button" class="button is-small px-2" aria-haspopup="true"
+                        :aria-controls="`react-menu-${message.msgID}`"
+                        @click="hideEmojiPicker()">
                         <span>
                             <i class="fa fa-heart has-text-grey"></i>
                             <i class="fa fa-plus has-text-grey pl-1"></i>
@@ -258,18 +268,13 @@ export default {
                 </div>
                 <div class="dropdown-menu" :id="`react-menu-${message.msgID}`" role="menu">
                     <div class="dropdown-content p-0">
-                        <!-- Iterate over reactions in rows of emojis-->
-                        <div class="columns is-mobile ml-0 mb-2 mr-1"
-                            v-for="row in reactionsAvailable">
-
-                            <!-- Loop over the icons -->
-                            <div class="column p-0 is-narrow" v-for="i in row">
-                                <button type="button" class="button px-2 mt-1 ml-1 mr-0 mb-1"
-                                    @click="sendReact(i)">
-                                    {{ i }}
-                                </button>
-                            </div>
-                        </div>
+                        <!-- Emoji reactions menu -->
+                        <EmojiPicker
+                            :native="true"
+                            :display-recent="true"
+                            :disable-skin-tones="true"
+                            theme="auto"
+                            @select="onSelectEmoji"></EmojiPicker>
                     </div>
                 </div>
             </div>
