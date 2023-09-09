@@ -270,6 +270,7 @@ export default {
                     <div class="dropdown-content p-0">
                         <!-- Emoji reactions menu -->
                         <EmojiPicker
+                            v-if="showEmojiPicker"
                             :native="false"
                             :display-recent="true"
                             :disable-skin-tones="true"
