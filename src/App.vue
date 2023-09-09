@@ -3722,7 +3722,10 @@ export default {
                                     </span>
                                 </button>
                             </div>
-                            <div class="dropdown-menu" id="input-emoji-picker" role="menu">
+                            <div class="dropdown-menu" id="input-emoji-picker" role="menu"
+                                style="z-index: 9000">
+                                <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
+                                     label on the chat history panel -->
                                 <div class="dropdown-content p-0">
                                     <EmojiPicker
                                         :native="false"
