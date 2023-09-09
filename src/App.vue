@@ -2404,12 +2404,12 @@ export default {
 
             // Were we at mentioned in this message?
             if (message.indexOf("@"+this.username) > -1) {
-                let re = new RegExp("@"+this.username+"\\b");
+                let re = new RegExp("@"+this.username+"\\b", "ig");
                 message = message.replace(re, `<strong class="has-background-at-mention">@${this.username}</strong>`);
             }
 
             // And same for @here or @all
-            message = message.replace(/@(here|all)\b/i, `<strong class="has-background-at-mention">@$1</strong>`);
+            message = message.replace(/@(here|all)\b/ig, `<strong class="has-background-at-mention">@$1</strong>`);
 
             // Append the message.
             this.channels[channel].updated = new Date().getTime();
