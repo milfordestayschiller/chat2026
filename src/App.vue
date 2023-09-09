@@ -3,6 +3,7 @@ import interact from 'interactjs';
 import FloatingVue from 'floating-vue';
 import 'floating-vue/dist/style.css';
 import { Mentionable } from 'vue-mention';
+import EmojiPicker from 'vue3-emoji-picker';
 
 import LoginModal from './components/LoginModal.vue';
 import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
@@ -36,9 +37,12 @@ const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 export default {
     name: 'BareRTC',
     components: {
+        // Third party components
         FloatingVue,
         Mentionable,
+        EmojiPicker,
 
+        // My components
         LoginModal,
         ExplicitOpenModal,
         ReportModal,
@@ -107,6 +111,9 @@ export default {
             messageBox: null, // HTML element for message entry box
             typingNotifDebounce: null,
             status: "online", // away/idle status
+
+            // Emoji picker visible for messages
+            showEmojiPicker: false,
 
             // Idle detection variables
             idleTimeout: null,
@@ -740,6 +747,21 @@ export default {
          * Chat API Methods (WebSocket packets sent/received)
          */
 
+        onSelectEmoji(e) {
+            // Callback from EmojiPicker to add an emoji to the user textbox.
+            let selectionStart = this.messageBox.selectionStart;
+            this.message = this.message.slice(0, selectionStart) + e.i + this.message.slice(selectionStart);
+            this.hideEmojiPicker();
+        },
+        hideEmojiPicker() {
+            // Hide the emoji menu (after sending an emoji or clicking the react button again)
+            if (!this.showEmojiPicker) return;
+            window.requestAnimationFrame(() => {
+                this.showEmojiPicker = false;
+                this.messageBox.focus();
+                this.messageBox.selectionStart = this.messageBox.selectionEnd = this.messageBox.value.length;
+            });
+        },
         sendMessage() {
             if (!this.message) {
                 return;
@@ -3664,7 +3686,7 @@ export default {
                                     offset="12"
                                     insert-space>
 
-                                    <!-- My text entry box -->
+                                    <!-- My text box -->
                                     <input type="text" class="input" id="messageBox" v-model="message"
                                         placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
                                         :disabled="!ws.connected">
@@ -3686,6 +3708,31 @@ export default {
                                     </template>
                                 </Mentionable>
                             </form>
+                        </div>
+                        <div class="column px-1 is-narrow dropdown is-right is-up" :class="{ 'is-active': showEmojiPicker }"
+                            @click="showEmojiPicker=true">
+                            <!-- Emoji picker for messages -->
+                            <div class="dropdown-trigger">
+                                <button type="button" class="button"
+                                    aria-haspopup="true"
+                                    aria-controls="input-emoji-picker"
+                                    @click="hideEmojiPicker()">
+                                    <span>
+                                        <i class="fa-regular fa-smile"></i>
+                                    </span>
+                                </button>
+                            </div>
+                            <div class="dropdown-menu" id="input-emoji-picker" role="menu">
+                                <div class="dropdown-content p-0">
+                                    <EmojiPicker
+                                        :native="false"
+                                        :display-recent="true"
+                                        :disable-skin-tones="true"
+                                        theme="auto"
+                                        @select="onSelectEmoji">
+                                    </EmojiPicker>
+                                </div>
+                            </div>
                         </div>
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button" :disabled="message.length === 0"

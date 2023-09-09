@@ -271,7 +271,7 @@ export default {
                         <!-- Emoji reactions menu -->
                         <EmojiPicker
                             v-if="showEmojiPicker"
-                            :native="false"
+                            :native="true"
                             :display-recent="true"
                             :disable-skin-tones="true"
                             theme="auto"
