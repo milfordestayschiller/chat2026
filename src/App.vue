@@ -530,10 +530,12 @@ export default {
                 {
                     value: "all",
                     label: "All people in the current room",
+                    searchText: "all people in the current room"
                 },
                 {
                     value: "here",
                     label: "Everybody here in the current room",
+                    searchText: "all people in the current room"
                 },
             ];
             for (let user of this.whoList) {
@@ -541,6 +543,7 @@ export default {
                 result.push({
                     value: user.username,
                     label: user.nickname,
+                    searchText: user.username + " " + user.nickname,
                 });
             }
             return result;

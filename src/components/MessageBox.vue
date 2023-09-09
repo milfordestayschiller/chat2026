@@ -270,7 +270,7 @@ export default {
                     <div class="dropdown-content p-0">
                         <!-- Emoji reactions menu -->
                         <EmojiPicker
-                            :native="true"
+                            :native="false"
                             :display-recent="true"
                             :disable-skin-tones="true"
                             theme="auto"

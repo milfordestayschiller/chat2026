@@ -20,7 +20,7 @@
   }
 
   .has-background-at-mention {
-    background-color: rgb(50, 50, 0);
+    background-color: rgb(50, 50, 0) !important;
 }
 
   .tag.is-success {
