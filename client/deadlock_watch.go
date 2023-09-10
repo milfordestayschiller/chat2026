@@ -31,11 +31,13 @@ func (h *BotHandlers) watchForDeadlock() {
 
 	for {
 		time.Sleep(15 * time.Second)
-		h.client.Send(messages.Message{
-			Action:  messages.ActionMessage,
-			Channel: "@" + h.client.Username(),
-			Message: "deadlock ping",
-		})
+		go func() {
+			h.client.Send(messages.Message{
+				Action:  messages.ActionMessage,
+				Channel: "@" + h.client.Username(),
+				Message: "deadlock ping",
+			})
+		}()
 
 		// Has it been a while since our last ping?
 		if time.Since(h.deadlockLastOK) > deadlockTTL {
@@ -50,6 +52,7 @@ func (h *BotHandlers) watchForDeadlock() {
 func (h *BotHandlers) onMessageFromSelf(msg messages.Message) {
 	// If it is our own DM channel thread, it's for deadlock detection.
 	if msg.Channel == "@"+h.client.Username() {
+		log.Info("(Deadlock test) got echo from self, server still seems OK")
 		h.deadlockLastOK = time.Now()
 	}
 }
