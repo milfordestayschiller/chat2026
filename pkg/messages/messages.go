@@ -84,6 +84,7 @@ const (
 	ActionFile     = "file"     // image sharing in chat
 	ActionTakeback = "takeback" // user takes back (deletes) their message for everybody
 	ActionReact    = "react"    // emoji reaction to a chat message
+	ActionTyping   = "typing"   // typing indicator for DM threads
 
 	// Actions sent by server only
 	ActionPing     = "ping"

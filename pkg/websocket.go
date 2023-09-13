@@ -438,8 +438,16 @@ func (s *Server) SendWhoList() {
 			if user.Username != sub.Username {
 
 				// If this person had booted us, force their camera to "off"
-				if (user.Boots(sub.Username) || user.Mutes(sub.Username)) && !sub.IsAdmin() {
-					who.Video = 0
+				if user.Boots(sub.Username) || user.Mutes(sub.Username) {
+					if sub.IsAdmin() {
+						// They kicked the admin off, but admin can reopen the cam if they want.
+						// But, unset the user's "auto-open your camera" flag, so if the admin
+						// reopens it, the admin's cam won't open on the recipient's screen.
+						who.Video ^= messages.VideoFlagMutualOpen
+					} else {
+						// Force their video to "off"
+						who.Video = 0
+					}
 				}
 
 				// If this person's VideoFlag is set to VIP Only, force their camera to "off"
