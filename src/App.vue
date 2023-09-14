@@ -2009,7 +2009,7 @@ export default {
             // Clean up any lingering camera freeze states.
             delete (this.WebRTC.frozenStreamDetected[username]);
             if (this.WebRTC.frozenStreamInterval[username]) {
-                clearInterval(this.WebRTC.frozenStreamInterval);
+                clearInterval(this.WebRTC.frozenStreamInterval[username]);
                 delete (this.WebRTC.frozenStreamInterval[username]);
             }
 
@@ -2053,7 +2053,7 @@ export default {
             // Clean up any lingering camera freeze states.
             delete (this.WebRTC.frozenStreamDetected[username]);
             if (this.WebRTC.frozenStreamInterval[username]) {
-                clearInterval(this.WebRTC.frozenStreamInterval);
+                clearInterval(this.WebRTC.frozenStreamInterval[username]);
                 delete (this.WebRTC.frozenStreamInterval[username]);
             }
 
