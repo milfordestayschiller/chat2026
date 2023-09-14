@@ -1373,6 +1373,11 @@ export default {
                     videoTrack.onmute = freezeDetected;
 
                     // Double check for frozen streams on an interval.
+                    if (this.WebRTC.frozenStreamInterval[username]) {
+                        // Clear the existing interval (e.g. audio+video track sets up the
+                        // interval twice right now, don't overwrite and lose the interval)
+                        clearInterval(this.WebRTC.frozenStreamInterval[username]);
+                    }
                     this.WebRTC.frozenStreamInterval[username] = setInterval(() => {
                         if (videoTrack.muted) freezeDetected();
                     }, 3000);
