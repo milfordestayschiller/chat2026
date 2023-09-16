@@ -54,6 +54,19 @@ func (h *BotHandlers) setObjectMacros() {
 		return "[react: invalid number of parameters]"
 	})
 
+	// Mark a camera NSFW for a username.
+	h.rs.SetSubroutine("nsfw", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 1 {
+			var username = strings.TrimPrefix(args[0], "@")
+			h.client.Send(messages.Message{
+				Action:  messages.ActionMessage,
+				Message: fmt.Sprintf("/nsfw %s", username),
+			})
+			return ""
+		}
+		return "[nsfw: invalid number of parameters]"
+	})
+
 	// Takeback a message (admin action especially)
 	h.rs.SetSubroutine("takeback", func(rs *rivescript.RiveScript, args []string) string {
 		if len(args) >= 1 {
@@ -117,6 +130,27 @@ func (h *BotHandlers) setObjectMacros() {
 			})
 		} else {
 			return "[dm: invalid number of parameters]"
+		}
+		return ""
+	})
+
+	// Send a public chat message to a channel name.
+	h.rs.SetSubroutine("send-message", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 2 {
+			var (
+				channel = args[0]
+				message = strings.Join(args[1:], " ")
+			)
+
+			// Slide into their DMs.
+			log.Error("Send chat to [%s]: %s", channel, message)
+			h.client.Send(messages.Message{
+				Action:  messages.ActionMessage,
+				Channel: channel,
+				Message: message,
+			})
+		} else {
+			return "[send-message: invalid number of parameters]"
 		}
 		return ""
 	})

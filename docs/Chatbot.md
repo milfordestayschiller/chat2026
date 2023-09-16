@@ -171,6 +171,25 @@ Example: say you have a global keyword trigger on public rooms and want to DM a 
 < topic
 ```
 
+**Note:** the `dm` command will auto insert the @ prefix for the channel name, so it can only send to DM threads. Use `send-message` for the ability to send a message to a public channel (or DM thread) by having more control over the exact spelling of the channel name.
+
+## Send Message
+
+Send a chat message to a public channel. Like the `dm` macro but doesn't assume it to be a DM thread.
+
+Usage: `send-message <channel> <message to send>`
+
+Example:
+
+```rivescript
++ to * send the message *
+* <get isAdmin> <> true => This command is only available to operators.
+- I will send that to the <star1> channel.
+^ <call>send-message <star1> "{sentence}<star2>{/sentence}"</call>
+```
+
+Then you could say: "to lobby send the message hey everyone" to send to a public channel (by its internal ID), or "to @soandso send the message hey there" to send it to a DM thread.
+
 ## Takeback
 
 Take back a message by its ID. This may be useful if you have a global moderator trigger set up so you can remove a user's message.
@@ -211,3 +230,17 @@ Example:
 ```
 
 Note: the `report` command returns no text (except on error).
+
+## NSFW
+
+Send a BareRTC `/nsfw` operator command to mark a user's camera as Explicit.
+
+Usage: `nsfw <username>`
+
+Example:
+
+```rivescript
++ please mark the camera red for *
+- I will issue the NSFW camera command for: <star>
+^ <call>nsfw <star></call>
+```
