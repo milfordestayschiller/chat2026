@@ -12,7 +12,7 @@
 </head>
 <body>
 
-    <div class="container is-fullhd">
+    <div class="container is-fullhd p-2">
         <div class="content my-5">
             <h1>About BareRTC</h1>
 
@@ -47,15 +47,15 @@
 
             <ul>
                 <li><a href="#tour">Tour of the user interface</a></li>
-                <li><a href="#browsers">Supported browsers</a></li>
-                <li><a href="#webcam">Webcam sharing</a></li>
-                <li><a href="#markdown">Styling your messages</a></li>
+                <li><a href="#video-sharing">Video Sharing How-To's</a></li>
+                <li><a href="#features">Feature Highlights</a></li>
+                <li><a href="#browsers">Supported Browsers</a></li>
                 <li><a href="#privacy">Privacy</a></li>
             </ul>
 
             <h1 id="tour">Tour of the user interface</h1>
 
-            <div class="has-text-centered">
+            <div class="has-text-centered mb-4">
                 <img src="/static/img/screenshot.png" alt="Screenshot of the user interface on desktop">
                 <br><em>Pictured: Screenshot of the user interface on tablet or desktop-sized screens.</em><br><br>
                 <img src="/static/img/mobile.png" alt="Screenshot of the user interface on mobile">
@@ -82,9 +82,29 @@
                         0
                     </button>
                     button, which will show the number of watchers inside the button itself.
+                    <ul>
+                        {{if .Config.PermitNSFW}}
+                        <li>
+                            The <button type="button" class="button is-small is-outlined is-dark px-1">
+                                <i class="fa fa-fire has-text-danger mr-1"></i> Explicit
+                            </button>
+                            button will toggle the setting on your camera. If you are going to be
+                            behaving sexually on cam, we ask that you please mark your own camera
+                            as 'Explicit' by using this button. The button will illuminate in red
+                            when active, and look like:
+                            <button type="button" class="button is-small is-danger px-1">
+                                <i class="fa fa-fire mr-1"></i> Explicit
+                            </button>
+                        </li>
+                        {{end}}
+                        <li>
+                            You can also see who is Watching your camera by clicking on the "Watching"
+                            tab on the Who's Online list.
+                        </li>
+                    </ul>
                 </li>
                 <li>
-                    The <strong>Who List</strong> shows all of the people who are currently connected
+                    The <strong>Who Is Online</strong> list shows all of the people who are currently connected
                     to the chat room. The Who List is global to the entire chat - it is the same list
                     of people no matter which Channel you are currently looking at. In the Who List
                     you may also find buttons to open a Direct Message (DM) or tune in to somebody's
@@ -94,7 +114,10 @@
                             <button type="button" class="button is-small px-2 py-1">
                                 <i class="fa fa-user"></i>
                             </button>
-                            This button will open their profile page, if they have one.
+                            This button will open their profile page, if they have one. The icon may
+                            be color-coded for the user's gender, if available: <i class="fa fa-user has-text-gender-male"></i> male,
+                            <i class="fa fa-user has-text-gender-female"></i> female, and
+                            <i class="fa fa-user has-text-gender-other"></i> non-binary/trans/other.
                         </li>
                         <li>
                             <button type="button" class="button is-small px-2 py-1">
@@ -117,16 +140,40 @@
                 <li>
                     The <strong>Channels &amp; DMs</strong> panel lists the available public chat channels
                     you may participate in as well as any currently open DMs for private one-on-one chats
-                    with other people. Some channels may have red notifications beside them to indicate
+                    with other people. Some channels may have notification counters beside them to indicate
                     unread messages have appeared.
+                    <ul>
+                        <li>
+                            <strong>Note:</strong> the Chat Rooms are just public channels that <em>everybody</em>
+                            is "in" and is designed to organize public conversations into various topics. For example,
+                            one chat room may be a dedicated space for people to share photos on chat so that the
+                            main conversation channels don't get spammed too much with those photos.
+                        </li>
+                    </ul>
                 </li>
                 <li>
                     The <strong>Message entry box</strong> at the bottom of the screen is how you type a
                     message and send it to the currently selected Channel or DM conversation.
+                    <ul>
+                        <li>
+                            In public channels you may <strong>send a picture</strong> by clicking on the picture
+                            button to the left of the message box.
+                        </li>
+                        <li>
+                            You may <strong>add an emoji</strong> to your message by clicking on the smile icon
+                            to the right of the message box.
+                        </li>
+                        <li>
+                            You may <strong>at-mention</strong> people in chat by typing the "@" symbol, which
+                            should prompt an auto-complete of users currently online. You may hit the Tab key
+                            to insert the currently selected name into your message.
+                        </li>
+                    </ul>
                 </li>
                 <li>
-                    In the upper right, the <i class="fa fa-gear"></i> <strong>Settings</strong> button
-                    will show some chat settings. Some interesting features in there include:
+                    In the upper right, the <i class="fa fa-bars"></i> <strong>Menu</strong> button houses
+                    some options such as the <i class="fa fa-gears"></i> <strong>Chat Settings</strong>.
+                    Some interesting features in there include:
                     <ul>
                         <li>
                             <strong>Video scaling:</strong> you can make the webcam videos larger on
@@ -150,80 +197,71 @@
                 in to their webcams, respectively).
             </p>
 
-            <h1 id="browsers">Supported browsers</h1>
+            <h1 id="features">Feature Highlights</h1>
+
+            <h3 id="emoji-reactions">Emoji Reactions</h3>
 
             <p>
-                Currently, BareRTC works best on <i class="fab fa-chrome"></i> Chromium browsers (including Google
-                Chrome, Microsoft Edge, Opera, Brave, and other Chromium derivatives) as well as
-                <i class="fab fa-firefox"></i> Mozilla Firefox.
+            You may add emoji reactions to chat messages by clicking on the
+            <button type="button" class="button is-small has-text-grey is-outlined px-2">
+                <i class="fa fa-plus mr-2"></i> <i class="fa fa-heart"></i>
+            </button>
+            button at the bottom right corner.
             </p>
 
             <p>
-                It works in these browsers on desktop operating systems (including <i class="fab fa-windows"></i> Windows,
-                <i class="fab fa-apple"></i> Mac OS and <i class="fab fa-linux"></i> GNU/Linux) as well as on
-                <i class="fab fa-android"></i> Android devices.
+            Reactions added by yourself or others will appear at the bottom of their message. You can
+            see who reacted by hovering your mouse cursor over the button, or you can 'upvote' their
+            reaction by clicking on it.
+            </p>
+
+            <h3>Muting spammy users</h3>
+
+            <p>
+            If somebody on chat is bothering you, you may <strong>mute</strong> their messages by clicking
+            on the red <i class="fa fa-comment-slash has-text-danger"></i> button on their message.
             </p>
 
             <p>
-                Unfortunately, the chat <strong class="has-text-danger">does not work</strong> on Apple's mobile
-                devices such as the iPad and iPhone -- but research on this is underway and hopefully iOS devices
-                will be supported soon!
+            While they are muted:
+            </p>
+
+            <ul>
+                <li>You will no longer see their future messages in public chat rooms.</li>
+                <li>You will no longer receive any of their future Direct Messages (DMs).</li>
+                <li>
+                    They will not be allowed to watch your webcam if you are sharing. The chat
+                    server will lie and tell them your camera <em>isn't even online</em> so they
+                    will not know they had been muted.
+                </li>
+            </ul>
+
+            <p>
+            The mute is <strong>temporary</strong> and will last for the remainder of your chat
+            session (until you log off).
+            </p>
+
+            <h3 id="markdown">Styling Your Messages</h3>
+
+            <p>
+            BareRTC supports Markdown syntax for your chat messages. You can make text <strong>bold</strong>
+            by putting asterisks around part of it, <strong>**like this**</strong> or make text italic with
+            <em>*single asterisks*</em>.
             </p>
 
             <p>
-                Feature support matrix of browsers currently tested:
+            Hyperlinks you paste that begin with https:// will be clickable as-is, or you can create a custom
+            label for it by typing e.g. <code>[click my link](https://www.wikipedia.org/)</code>.
             </p>
 
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Device Type</th>
-                        <th>Web Browsers</th>
-                        <th>Chat works?</th>
-                        <th>Video works?</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><i class="fa fa-computer"></i> All Desktops</td>
-                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
-                        <td>✔️</td>
-                        <td>✔️</td>
-                    </tr>
-                    <tr>
-                        <td><i class="fa fa-computer"></i> All Desktops</td>
-                        <td><i class="fab fa-chrome"></i> Chromium (Chrome, Edge)</td>
-                        <td>✔️</td>
-                        <td>✔️</td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-apple"></i> Mac OS Desktop</td>
-                        <td><i class="fab fa-chrome"></i> Safari</td>
-                        <td>✔️</td>
-                        <td>❌</td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-android"></i> Android</td>
-                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
-                        <td>✔️</td>
-                        <td>✔️</td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-android"></i> Android</td>
-                        <td><i class="fab fa-chrome"></i> Chromium (Vanadium)</td>
-                        <td>✔️</td>
-                        <td>✔️</td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-apple"></i> iPhone &amp; iPad</td>
-                        <td><i class="fa fa-globe"></i> All browsers</td>
-                        <td>❌</td>
-                        <td>❌</td>
-                    </tr>
-                </tbody>
-            </table>
+            <p>
+            To learn more about Markdown, please check out the <a href="https://www.markdownguide.org" target="_blank">Markdown Guide</a>
+            website.
+            </p>
 
-            <h1 id="webcam">Webcam sharing</h1>
+            <h1 id="video-sharing">Video Sharing How-To's</h1>
+
+            <h3 id="webcam">About webcam sharing</h3>
 
             <p>
             The WebRTC technology used by this chat room allows for direct, <strong>peer to peer</strong>
@@ -250,22 +288,200 @@
             way so that they may be banned from the chat room.
             </p>
 
-            <h1 id="markdown">Styling Your Messages</h1>
+            <h3>How do I go on video?</h3>
 
             <p>
-            BareRTC supports Markdown syntax for your chat messages. You can make text <strong>bold</strong>
-            by putting asterisks around part of it, <strong>**like this**</strong> or make text italic with
-            <em>*single asterisks*</em>.
+                To share your webcam, click on the green
+                <button type="button" class="button is-small is-success px-1">
+                    <i class="fa fa-video mr-2"></i>
+                    Share webcam
+                </button>
+                button at the top left of the web page. This will open a modal with some options for
+                your camera:
+            </p>
+
+            <ul>
+                <li>
+                    You may start with your microphone muted by default.
+                </li>
+                {{if .Config.PermitNSFW}}
+                <li>
+                    You may mark your camera as "Explicit" to begin with. If you are intending immediately to
+                    behave sexually on camera, please mark this box so that your camera will appear 'red' by
+                    default and other people on chat can know what they're getting into when they click to
+                    watch your camera.
+                </li>
+                {{end}}
+                <li>
+                    You may opt-in to some "mutual webcam settings":
+                    <ul>
+                        <li>You may require your viewers to also be sharing their own camera first before they can open yours.</li>
+                        <li>You may automatically open your viewer's cameras when they open yours (and they are also broadcasting).</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>How do I stop my camera?</h3>
+
+            <p>
+                When you are broadcasting, the red "<i class="fa fa-stop"></i> Stop" button at the top of the
+                page will turn your camera off.
+            </p>
+
+            <h3>How do I mute my camera's microphone?</h3>
+
+            <p>
+                The button to <i class="fa fa-mute"></i> Mute will be at the top of the page next to the
+                <i class="fa fa-stop"></i> Stop button. Alternatively, you can click on the microphone inside
+                your own webcam video preview to toggle the mute that way. Either button works!
+            </p>
+
+            <h3>How do I see who is watching me?</h3>
+
+            <p>
+                You may click on the <button type="button" class="button is-small is-info is-outlined ml-1 px-1">
+                    <i class="fa fa-eye mr-2"></i>
+                    0
+                </button> button at the top of the page to see who is watching you. The number inside the
+                button will be your current number of viewers.
             </p>
 
             <p>
-            Hyperlinks you paste that begin with https:// will be clickable as-is, or you can create a custom
-            label for it by typing e.g. <code>[click my link](https://www.wikipedia.org/)</code>.
+                You may also click on the <i class="fa fa-eye"></i> Watching tab in the Who's Online list.
+            </p>
+
+            <h3>How do I stop somebody from watching me?</h3>
+
+            <p>
+                On the Who's Online list, click on the <i class="fa fa-eye"></i> Watching tab to see who
+                is currently watching your camera.
             </p>
 
             <p>
-            To learn more about Markdown, please check out the <a href="https://www.markdownguide.org" target="_blank">Markdown Guide</a>
-            website.
+                To 'boot' somebody off your camera, click on the
+                <button type="button" class="button is-small px-2 py-1"
+                    title="Kick this person off your cam">
+                    <i class="fa fa-user-xmark has-text-danger"></i>
+                </button>
+                button next to their name. This will kick them off your camera and they will not
+                be allowed to re-open your cam for the remainder of <em>your</em> chat session.
+            </p>
+
+            <p>
+                To people who have been booted from your camera, the chat server will tell them that
+                your camera <em>isn't even broadcasting</em> at all! They will see a greyed-out video
+                button and may think you have simply turned off your camera, and they won't know for
+                sure that you have booted them!
+            </p>
+
+            <h1 id="browsers">Supported Browsers</h1>
+
+            <p>
+                Currently, BareRTC works best on <i class="fab fa-chrome"></i> Chromium browsers (including Google
+                Chrome, Microsoft Edge, Opera, Brave, and other Chromium derivatives) as well as
+                <i class="fab fa-firefox"></i> Mozilla Firefox.
+            </p>
+
+            <p>
+                It works in these browsers on desktop operating systems (including <i class="fab fa-windows"></i> Windows,
+                <i class="fab fa-apple"></i> Mac OS and <i class="fab fa-linux"></i> GNU/Linux) as well as on
+                <i class="fab fa-android"></i> Android devices.
+            </p>
+
+            <p>
+                Feature support matrix of browsers currently tested:
+            </p>
+
+            <table class="table table-striped mb-5">
+                <thead>
+                    <tr>
+                        <th>Device Type</th>
+                        <th>Web Browsers</th>
+                        <th>Chat works?</th>
+                        <th>Video works?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><i class="fa fa-computer"></i> All Desktops</td>
+                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                    </tr>
+                    <tr>
+                        <td><i class="fa fa-computer"></i> All Desktops</td>
+                        <td><i class="fab fa-chrome"></i> Chromium (Chrome, Edge)</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-apple"></i> Mac OS Desktop</td>
+                        <td><i class="fab fa-chrome"></i> Safari</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-asterisk has-text-warning-dark"></i></td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-android"></i> Android</td>
+                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-android"></i> Android</td>
+                        <td><i class="fab fa-chrome"></i> Chromium (Vanadium)</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                    </tr>
+                    <tr>
+                        <td><i class="fab fa-apple"></i> iPhone &amp; iPad</td>
+                        <td><i class="fa fa-globe"></i> All browsers</td>
+                        <td><i class="fa fa-check has-text-success-dark"></i></td>
+                        <td><i class="fa fa-asterisk has-text-warning-dark"></i></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5 id="safari"><i class="fa fa-asterisk has-text-warning-dark"></i> Apple Safari Browsers</h5>
+
+            <p>
+            This section applies to web browsers based on Safari, which includes <strong>every</strong> web
+            browser on iPad and iPhone. There are some more nuances to the support level of these browsers on
+            BareRTC.
+            </p>
+
+            <p>
+            The regular chat features (logging in, chatting, sharing pictures) are 100% supported on Safari,
+            but webcam sharing may be more difficult to get working. On iPad, iPhone, and Safari browsers,
+            connecting to somebody's webcam may <strong>only</strong> work correctly if you follow exactly
+            these steps:
+            </p>
+
+            <ol>
+                <li>
+                    First, you need to share your own local webcam first (by clicking on the green "Share webcam"
+                    button at the top of the chat page).
+                </li>
+                <li>
+                    Then, you may only be able to view somebody else's camera <strong>IF</strong> they have marked
+                    the setting "When somebody opens my camera, I also open their camera automatically."
+                </li>
+            </ol>
+
+            <p>
+            This is because Apple Safari only supports two-directional video calls, which is in contrast to the
+            way that BareRTC was designed to work: it is intended to be possible that somebody can start their webcam
+            and be watched by anybody who wants to tune in, without it always needing to be a two-way video call. But
+            for Apple Safari browsers, uni-directional video channels are not supported, so iPads and iPhones are only
+            able to successfully connect to a video <strong>if</strong> that person opts-in to open your video in
+            return (thus making it a two-way video call).
+            </p>
+
+            <p>
+            For <i class="fab fa-apple"></i> <strong>macOS users</strong>, it is recommended to use a Chromium or
+            Firefox browser instead of Safari for the best experience. It is only Safari-based browsers that have
+            this limitation. Unfortunately, there is no alternative for iPad or iPhone: <em>every</em> web browser on
+            iOS is based on Safari per Apple's app store guidelines. (Chrome and Firefox on iOS were not allowed to
+            bring their <em>actual</em> web browser engine to Apple's mobiles).
             </p>
 
             <h1 id="privacy">Privacy</h1>
