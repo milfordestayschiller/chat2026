@@ -48,4 +48,3 @@ require (
 	golang.org/x/text v0.13.0 // indirect
 )
 
-replace github.com/aichaos/rivescript-go => /home/kirsle/git/rivescript-go
