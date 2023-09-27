@@ -9,6 +9,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
 	"github.com/aichaos/rivescript-go"
+	"github.com/aichaos/rivescript-go/lang/javascript"
 )
 
 // Set up object macros for RiveScript.
@@ -19,6 +20,8 @@ func (h *BotHandlers) setObjectMacros() {
 			UTF8:  true,
 			Debug: rs.Debug,
 		})
+		bot.SetHandler("javascript", javascript.New(bot))
+
 		if err := bot.LoadDirectory("brain"); err != nil {
 			return fmt.Sprintf("Error on LoadDirectory: %s", err)
 		}

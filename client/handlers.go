@@ -10,6 +10,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
 	"github.com/aichaos/rivescript-go"
+	"github.com/aichaos/rivescript-go/lang/javascript"
 )
 
 const (
@@ -84,6 +85,12 @@ func (c *Client) SetupChatbot() error {
 		reactions:  map[int]map[string]interface{}{},
 	}
 
+	// Add JavaScript support.
+	handler.rs.SetHandler("javascript", javascript.New(handler.rs))
+
+	// Attach RiveScript object macros.
+	handler.setObjectMacros()
+
 	log.Info("Initializing RiveScript brain")
 	if err := handler.rs.LoadDirectory("./brain"); err != nil {
 		return fmt.Errorf("RiveScript LoadDirectory: %s", err)
@@ -91,9 +98,6 @@ func (c *Client) SetupChatbot() error {
 	if err := handler.rs.SortReplies(); err != nil {
 		return fmt.Errorf("RiveScript SortReplies: %s", err)
 	}
-
-	// Attach RiveScript object macros.
-	handler.setObjectMacros()
 
 	// Set all the handler funcs.
 	c.OnWho = handler.OnWho
