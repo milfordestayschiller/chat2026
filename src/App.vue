@@ -80,6 +80,11 @@ export default {
                     ["x3", "3x larger chat room text"],
                     ["x4", "4x larger chat room text"],
                 ],
+                messageStyleSettings: [
+                    ["cards", "Card style (default)"],
+                    ["compact", "Compact style (with display names)"],
+                    ["compact2", "Compact style (usernames only)"],
+                ],
                 imageDisplaySettings: [
                     ["show", "Always show images in chat"],
                     ["collapse", "Collapse images in chat, clicking to expand (default)"],
@@ -229,6 +234,7 @@ export default {
             historyScrollbox: null,
             autoscroll: true, // scroll to bottom on new messages
             fontSizeClass: "", // font size magnification
+            messageStyle: "cards", // message display style
             imageDisplaySetting: "collapse", // image show/hide setting
             scrollback: 1000,  // scrollback buffer (messages to keep per channel)
             DMs: {},
@@ -360,6 +366,9 @@ export default {
         fontSizeClass() {
             // Store the setting persistently.
             LocalStorage.set('fontSizeClass', this.fontSizeClass);
+        },
+        messageStyle() {
+            LocalStorage.set('messageStyle', this.messageStyle);
         },
         imageDisplaySetting() {
             LocalStorage.set('imageDisplaySetting', this.imageDisplaySetting);
@@ -673,6 +682,10 @@ export default {
 
             if (settings.fontSizeClass != undefined) {
                 this.fontSizeClass = settings.fontSizeClass;
+            }
+
+            if (settings.messageStyle != undefined) {
+                this.messageStyle = settings.messageStyle;
             }
 
             if (settings.videoScale != undefined) {
@@ -2898,6 +2911,25 @@ export default {
 
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
+                                <label class="label">Text style</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select v-model="messageStyle">
+                                                <option v-for="s in config.messageStyleSettings" v-bind:key="s[0]" :value="s[0]">
+                                                    {{ s[1] }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
                                 <label class="label">Images</label>
                             </div>
                             <div class="field-body">
@@ -3599,7 +3631,9 @@ export default {
                     </div> -->
 
                 </div>
-                <div class="card-content" id="chatHistory" :class="{ 'has-background-dm': isDM }">
+                <div class="card-content" id="chatHistory"
+                    :class="{ 'has-background-dm': isDM,
+                              'p-1': messageStyle.indexOf('compact') === 0 }">
 
                     <div class="autoscroll-field tag">
                         <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
@@ -3643,6 +3677,11 @@ export default {
                                         </figure>
                                     </div>
                                     <div class="column">
+                                        <!-- Timestamp on the right -->
+                                        <span class="float-right is-size-7" :title="msg.at">
+                                            {{ prettyDate(msg.at) }}
+                                        </span>
+
                                         <strong>{{ nicknameForUsername(msg.username) }}</strong>
                                         <span v-if="isUserOffline(msg.username)" class="ml-1">(offline)</span>
                                         <small v-else class="ml-1">(@{{ msg.username }})</small>
@@ -3656,6 +3695,7 @@ export default {
                             <MessageBox
                                 v-else
                                 :message="msg"
+                                :appearance="messageStyle"
                                 :position="i"
                                 :user="getUser(msg.username)"
                                 :is-offline="isUserOffline(msg.username)"

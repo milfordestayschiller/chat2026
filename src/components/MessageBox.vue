@@ -5,6 +5,7 @@ import 'vue3-emoji-picker/css';
 export default {
     props: {
         message: Object,    // chat Message object
+        appearance: String, // message style appearance (cards, compact, etc.)
         user: Object,       // User object of the Message author
         isOffline: Boolean, // user is not currently online
         username: String,   // current username logged in
@@ -25,6 +26,9 @@ export default {
         return {
             // Emoji picker visible
             showEmojiPicker: false,
+
+            // Message menu (compact displays)
+            menuVisible: false,
 
             // Favorite emojis
             customEmojiGroups: {
@@ -72,6 +76,11 @@ export default {
         hasReactions() {
             return this.reactions != undefined && Object.keys(this.reactions).length > 0;
         },
+
+        // Compactify a message (remove paragraph breaks added by Markdown renderer)
+        compactMessage() {
+            return this.message.message.replace(/<\/p>\s*<p>/g, "<br><br>").replace(/<\/?p>/g, "");
+        }
     },
     methods: {
         openProfile() {
@@ -154,12 +163,20 @@ export default {
             let hour = hours % 12 || 12;
             return `${(hour)}:${minutes} ${ampm}`;
         },
+
+        prettyDateCompact(date) {
+            if (date == undefined) return '';
+            let hour = date.getHours(),
+                minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hour}:${minutes}`;
+        },
     }
 }
 </script>
 
 <template>
-    <div class="box mb-2 px-4 pt-3 pb-1 position-relative">
+    <!-- Card Style (default) -->
+    <div v-if="appearance === 'cards' || !appearance" class="box mb-2 px-4 pt-3 pb-1 position-relative">
         <div class="media mb-0">
             <div class="media-left">
                 <a :href="profileURL"
@@ -314,11 +331,154 @@ export default {
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mt-1">
                 <span v-for="(users, emoji) in reactions"
+                    v-bind:key="emoji"
                     class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }} <small class="ml-1">{{ users.length }}</small>
                 </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Compact styles (with or without usernames) -->
+    <div v-else-if="appearance.indexOf('compact') === 0" class="columns is-mobile">
+        <!-- Timestamp -->
+        <div class="column is-narrow pr-0">
+            <small class="has-text-grey is-size-7" :title="message.at">{{ prettyDateCompact(message.at) }}</small>
+        </div>
+
+        <!-- Avatar icon -->
+        <div class="column is-narrow px-1">
+            <a :href="profileURL"
+                @click.prevent="openProfile()"
+                :class="{ 'cursor-default': !profileURL }" class="p-0">
+                <img v-if="avatarURL" :src="avatarURL" width="16" height="16" alt="">
+                <img v-else src="/static/img/shy.png" width="16" height="16">
+            </a>
+        </div>
+
+        <!-- Name/username/message -->
+        <div class="column px-1">
+            [<a :href="profileURL"
+                @click.prevent="openProfile()"
+                :class="{ 'cursor-default': !profileURL }">
+                <!-- Display name? -->
+                <strong v-if="(message.isChatServer || message.isChatClient || message.isAdmin)
+                               || (appearance === 'compact' && nickname !== message.username)"
+                    class="has-text-dark"
+                    :class="{
+                                'has-text-success is-dark': message.isChatServer,
+                                'has-text-warning is-dark': message.isAdmin,
+                                'has-text-danger': message.isChatClient
+                            }">
+                    {{ nickname }}
+                </strong>
+
+                <small class="has-text-grey"
+                    :class="{'ml-1': appearance === 'compact' && nickname !== message.username}"
+                    v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)"
+                >@{{ message.username }}</small>
+            </a>]
+
+            <span v-html="compactMessage"></span>
+
+            <!-- Reactions so far? -->
+            <div v-if="hasReactions" class="mt-1">
+                <span v-for="(users, emoji) in reactions"
+                    v-bind:key="emoji"
+                    class="tag is-secondary mr-1 cursor-pointer"
+                    :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
+                    :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
+                    {{ emoji }} <small class="ml-1">{{ users.length }}</small>
+                </span>
+            </div>
+        </div>
+
+        <!-- Emoji/Menu button -->
+        <div v-if="message.msgID && !noButtons" class="column is-narrow pl-1">
+
+            <div class="columns is-mobile is-gapless mb-0">
+                <!-- More buttons menu (DM, mute, report, etc.) -->
+                <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': menuVisible }"
+                    @click="menuVisible=!menuVisible">
+                    <div class="dropdown-trigger">
+                        <button type="button" class="button is-small px-2 mr-1" aria-haspopup="true"
+                            :aria-controls="`msg-menu-${message.msgID}`">
+                            <small>
+                                <i class="fa fa-ellipsis-vertical"></i>
+                            </small>
+                        </button>
+                    </div>
+                    <div class="dropdown-menu" :id="`msg-menu-${message.msgID}`" role="menu">
+                        <div class="dropdown-content">
+                            <a href="#" class="dropdown-item" v-if="message.username !== username"
+                                @click.prevent="openDMs()">
+                                <i class="fa fa-comment mr-1"></i> Direct Message
+                            </a>
+
+                            <a href="#" class="dropdown-item" v-if="!(message.username === username)"
+                                @click.prevent="muteUser()">
+                                <i class="fa fa-comment-slash mr-1" :class="{
+                                    'has-text-success': isMuted,
+                                    'has-text-danger': !isMuted
+                                }"></i>
+                                <span v-if="isMuted">Unmute user</span>
+                                <span v-else>Mute user</span>
+                            </a>
+
+                            <a href="#" class="dropdown-item" v-if="message.username === username || isOp"
+                                @click.prevent="takeback()">
+                                <i class="fa fa-rotate-left has-text-danger mr-1"></i>
+                                Take back
+                            </a>
+
+                            <a href="#" class="dropdown-item" v-if="message.username !== username"
+                                @click.prevent="removeMessage()">
+                                <i class="fa fa-trash mr-1"></i>
+                                Hide message
+                            </a>
+
+                            <!-- Report button -->
+                            <a href="#" class="dropdown-item" v-if="reportEnabled && message.username !== username"
+                                @click.prevent="reportMessage()">
+                                <i class="fa fa-flag mr-1"
+                                    :class="{'has-text-danger': !message.reported}"></i>
+                                <span v-if="message.reported">Reported</span>
+                                <span v-else>Report</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emoji reactions -->
+                <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
+                    @click="showEmojiPicker=true">
+                    <div class="dropdown-trigger">
+                        <button type="button" class="button is-small px-2" aria-haspopup="true"
+                            :aria-controls="`react-menu-${message.msgID}`"
+                            @click="hideEmojiPicker()">
+                            <small>
+                                <i class="fa fa-heart has-text-grey"></i>
+                            </small>
+                        </button>
+                    </div>
+                    <div class="dropdown-menu" :id="`react-menu-${message.msgID}`" role="menu">
+                        <div class="dropdown-content p-0">
+                            <!-- Emoji reactions menu -->
+                            <EmojiPicker
+                                v-if="showEmojiPicker"
+                                :native="true"
+                                :display-recent="true"
+                                :disable-skin-tones="true"
+                                :additional-groups="customEmojiGroups"
+                                :group-names="{ frequently_used: 'Frequently Used' }"
+                                theme="auto"
+                                @select="onSelectEmoji"></EmojiPicker>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

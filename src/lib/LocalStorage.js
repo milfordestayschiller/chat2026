@@ -2,6 +2,7 @@
 const keys = {
     'fontSizeClass': String,        // Text magnification
     'videoScale': String,           // Video magnification (CSS classnames)
+    'messageStyle': String,         // Message display style (cards, compact, etc.)
     'imageDisplaySetting': String,  // Show/hide/expand image preference
     'scrollback': Number,           // Scrollback buffer (int)
     'preferredDeviceNames': Object, // Webcam/mic device names (object, keys video,audio)
@@ -32,20 +33,11 @@ class UserSettings {
         // found in localStorage on page load.
         for (let key of Object.keys(keys)) {
             if (localStorage[key] != undefined) {
-                switch (keys[key]) {
-                    case String:
-                        this[key] = localStorage[key];
-                    case Number:
-                        this[key] = parseInt(localStorage[key]);
-                    case Boolean:
-                        this[key] = localStorage[key] === "true";
-                    case Object:
-                        try {
-                            this[key] = JSON.parse(localStorage[key]);
-                        } catch(e) {
-                            console.error(`LocalStorage: parsing key ${key}: ${e}`);
-                            delete(this[key]);
-                        }
+                try {
+                    this[key] = JSON.parse(localStorage[key]);
+                } catch(e) {
+                    console.error(`LocalStorage: parsing key ${key}: ${e}`);
+                    delete(this[key]);
                 }
             }
         }
