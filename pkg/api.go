@@ -354,6 +354,119 @@ func (s *Server) BlockList() http.HandlerFunc {
 	})
 }
 
+// BlockNow (/api/block/now) allows your website to add to a current online chatter's
+// blocked list immediately.
+//
+// For example: the BlockList endpoint does a bulk sync of the blocklist at the time
+// a user joins the chat room, but if users are already on chat when the blocking begins,
+// it doesn't take effect until one or the other re-joins the room. This API endpoint
+// can apply the blocking immediately to the currently online users.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"APIKey": "from settings.toml",
+//		"Usernames": [ "source", "target" ]
+//	}
+//
+// The pair of usernames will be the two users who block one another (in any order).
+// If any of the users are currently connected to the chat, they will all mutually
+// block one another immediately.
+func (s *Server) BlockNow() http.HandlerFunc {
+	type request struct {
+		APIKey    string
+		Usernames []string
+	}
+
+	type result struct {
+		OK    bool
+		Error string `json:",omitempty"`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Validate the API key.
+		if params.APIKey != config.Current.AdminAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Authentication denied.",
+			})
+			return
+		}
+
+		// Check if any of these users are online, and update their blocklist accordingly.
+		var changed bool
+		for _, username := range params.Usernames {
+			if sub, err := s.GetSubscriber(username); err == nil {
+				for _, otherName := range params.Usernames {
+					if username == otherName {
+						continue
+					}
+					log.Info("BlockNow API: %s is currently on chat, add block for %+v", username, otherName)
+
+					sub.muteMu.Lock()
+					sub.muted[otherName] = struct{}{}
+					sub.blocked[otherName] = struct{}{}
+					sub.muteMu.Unlock()
+
+					// Changes have been made to online users.
+					changed = true
+
+					// Send a server-side "block" command to the subscriber, so their front-end page might
+					// update the cachedBlocklist so there's no leakage in case of chat server rebooting.
+					sub.SendJSON(messages.Message{
+						Action:   messages.ActionBlock,
+						Username: otherName,
+					})
+				}
+			}
+		}
+
+		// If any changes to blocklists were made: send the Who List.
+		if changed {
+			s.SendWhoList()
+		}
+
+		enc.Encode(result{
+			OK: true,
+		})
+	})
+}
+
 // Blocklist cache sent over from your website.
 var (
 	// Map of username to the list of usernames they block.

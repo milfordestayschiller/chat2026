@@ -957,6 +957,21 @@ export default {
             }
         },
 
+        // Server side "block" event: for when the main website sends a BlockNow API request.
+        onBlock(msg) {
+            // Close any video connections we had with this user.
+            this.closeVideo(msg.username);
+
+            // Add it to our CachedBlocklist so in case the server reboots, we continue to sync it on reconnect.
+            for (let existing of this.config.CachedBlocklist) {
+                if (existing === msg.username) {
+                    return;
+                }
+            }
+
+            this.config.CachedBlocklist.push(msg.username);
+        },
+
         // Mute or unmute a user.
         muteUser(username) {
             username = this.normalizeUsername(username);
@@ -1184,6 +1199,11 @@ export default {
                 this.ws.connected = true;
                 this.ChatClient("Websocket connected!");
 
+                // Upload our blocklist to the server before login. This resolves a bug where if a block
+                // was added recently (other user still online in chat), that user would briefly see your
+                // "has entered the room" message followed by you immediately not being online.
+                this.bulkMuteUsers();
+
                 // Tell the server our username.
                 this.ws.conn.send(JSON.stringify({
                     action: "login",
@@ -1248,6 +1268,9 @@ export default {
                         break;
                     case "unwatch":
                         this.onUnwatch(msg);
+                        break;
+                    case "block":
+                        this.onBlock(msg);
                         break;
                     case "error":
                         this.pushHistory({
@@ -3733,7 +3756,7 @@ export default {
                                      label on the chat history panel -->
                                 <div class="dropdown-content p-0">
                                     <EmojiPicker
-                                        :native="false"
+                                        :native="true"
                                         :display-recent="true"
                                         :disable-skin-tones="true"
                                         theme="auto"

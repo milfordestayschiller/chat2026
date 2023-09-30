@@ -36,6 +36,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/ws", s.WebSocket())
 	mux.Handle("/api/statistics", s.Statistics())
 	mux.Handle("/api/blocklist", s.BlockList())
+	mux.Handle("/api/block/now", s.BlockNow())
 	mux.Handle("/api/authenticate", s.Authenticate())
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("dist/assets"))))

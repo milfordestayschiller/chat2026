@@ -345,7 +345,7 @@ The `unmute` action does the opposite and removes the mute status:
 
 ## Block
 
-Sent by: Client.
+Sent by: Client, Server.
 
 The block command places a hard block between the current user and the target.
 
@@ -363,6 +363,10 @@ When either user blocks the other:
     "username": "target"
 }
 ```
+
+The server may send a "block" message to the client in response to the BlockNow API endpoint: your main website can communicate that a block was just added, so if either user is currently in chat the block can apply immediately instead of at either user's next re-join of the room.
+
+The server "block" message follows the same format, having the username of the other party.
 
 ## Blocklist
 

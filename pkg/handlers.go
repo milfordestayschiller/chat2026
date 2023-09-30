@@ -179,6 +179,7 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 			// If the user is OP, just tell them we would.
 			if sub.IsAdmin() {
 				sub.ChatServer("Your recent chat context would have been reported to your main website.")
+				return
 			}
 
 			// Send the report to the main website.
@@ -483,7 +484,7 @@ func (s *Server) OnBlock(sub *Subscriber, msg messages.Message) {
 
 // OnBlocklist is a bulk user mute from the CachedBlocklist sent by the website.
 func (s *Server) OnBlocklist(sub *Subscriber, msg messages.Message) {
-	log.Info("%s syncs their blocklist: %s", sub.Username, msg.Usernames)
+	log.Info("[%s] syncs their blocklist: %s", sub.Username, msg.Usernames)
 
 	sub.muteMu.Lock()
 	for _, username := range msg.Usernames {

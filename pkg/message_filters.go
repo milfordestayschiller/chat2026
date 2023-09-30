@@ -28,6 +28,13 @@ func (s *Server) filterMessage(sub *Subscriber, rawMsg messages.Message, msg *me
 	if strings.HasPrefix(msg.Channel, "@") {
 		// DM
 		pushDirectMessageContext(sub, sub.Username, msg.Channel[1:], rawMsg)
+
+		// If either party is an admin user, waive filtering this DM chat.
+		if sub.IsAdmin() {
+			return nil, false
+		} else if other, err := s.GetSubscriber(msg.Channel[1:]); err == nil && other.IsAdmin() {
+			return nil, false
+		}
 	} else {
 		// Public channel
 		pushMessageContext(sub, msg.Channel, rawMsg)
