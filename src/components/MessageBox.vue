@@ -360,7 +360,7 @@ export default {
         </div>
 
         <!-- Name/username/message -->
-        <div class="column px-1">
+        <div class="column px-1 content">
             <strong
                 :class="{
                             'has-text-success is-dark': message.isChatServer,
