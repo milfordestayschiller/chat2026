@@ -43,7 +43,7 @@ type Subscriber struct {
 
 	// Record which message IDs belong to this user.
 	midMu      sync.Mutex
-	messageIDs map[int]struct{}
+	messageIDs map[int64]struct{}
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -141,7 +141,16 @@ func (sub *Subscriber) SendJSON(v interface{}) error {
 		return err
 	}
 	log.Debug("SendJSON(%d=%s): %s", sub.ID, sub.Username, data)
-	return sub.conn.Write(sub.ctx, websocket.MessageText, data)
+
+	// Add the message to the recipient's queue. If the queue is too full,
+	// disconnect the client as they can't keep up.
+	select {
+	case sub.messages <- data:
+	default:
+		go sub.closeSlow()
+	}
+
+	return nil
 }
 
 // SendMe sends the current user state to the client.
@@ -197,7 +206,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 			booted:     make(map[string]struct{}),
 			muted:      make(map[string]struct{}),
 			blocked:    make(map[string]struct{}),
-			messageIDs: make(map[int]struct{}),
+			messageIDs: make(map[int64]struct{}),
 			ChatStatus: "online",
 		}
 

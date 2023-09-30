@@ -849,7 +849,7 @@ export default {
         },
 
         sendTypingNotification() {
-            // TODO
+            // Send typing indicator for DM threads.
         },
 
         // Emoji reactions

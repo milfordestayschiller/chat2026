@@ -45,7 +45,7 @@ func (h *BotHandlers) setObjectMacros() {
 					time.Sleep(2500 * time.Millisecond)
 					h.client.Send(messages.Message{
 						Action:    messages.ActionReact,
-						MessageID: msgID,
+						MessageID: int64(msgID),
 						Message:   args[1],
 					})
 				}()
@@ -77,7 +77,7 @@ func (h *BotHandlers) setObjectMacros() {
 				// Take it back.
 				h.client.Send(messages.Message{
 					Action:    messages.ActionTakeback,
-					MessageID: msgID,
+					MessageID: int64(msgID),
 				})
 			} else {
 				return fmt.Sprintf("[takeback: %s]", err)
@@ -94,7 +94,7 @@ func (h *BotHandlers) setObjectMacros() {
 				var comment = strings.Join(args[1:], " ")
 
 				// Look up this message.
-				if msg, ok := h.getMessageByID(msgID); ok {
+				if msg, ok := h.getMessageByID(int64(msgID)); ok {
 					// Report it with the custom comment.
 					h.client.Send(messages.Message{
 						Action:    messages.ActionReport,

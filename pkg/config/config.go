@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 7
+var currentVersion = 8
 
 // Config for your BareRTC app.
 type Config struct {
@@ -47,6 +47,8 @@ type Config struct {
 	WebhookURLs []WebhookURL
 
 	VIP VIP
+
+	MessageFilters []*MessageFilter
 }
 
 type TurnConfig struct {
@@ -153,6 +155,19 @@ func DefaultConfig() Config {
 			Name:     "VIP",
 			Branding: "<em>VIP Members</em>",
 			Icon:     "fa fa-circle",
+		},
+		MessageFilters: []*MessageFilter{
+			{
+				PublicChannels:  true,
+				PrivateChannels: true,
+				KeywordPhrases: []string{
+					`\bswear words\b`,
+					`\b(swearing|cursing)\b`,
+					`suck my ([^\s]+)`,
+				},
+				CensorMessage:      true,
+				ChatServerResponse: "Watch your language.",
+			},
 		},
 	}
 	c.JWT.Strict = true

@@ -61,7 +61,7 @@ type BotHandlers struct {
 
 	// Store the reactions we have previously sent by messageID,
 	// so we don't accidentally take back our own reactions.
-	reactions   map[int]map[string]interface{}
+	reactions   map[int64]map[string]interface{}
 	reactionsMu sync.Mutex
 
 	// Deadlock detection (deadlock_watch.go): record time of last successful
@@ -82,7 +82,7 @@ func (c *Client) SetupChatbot() error {
 		}),
 		autoGreet:  map[string]time.Time{},
 		messageBuf: []messages.Message{},
-		reactions:  map[int]map[string]interface{}{},
+		reactions:  map[int64]map[string]interface{}{},
 	}
 
 	// Add JavaScript support.
@@ -149,7 +149,7 @@ func (h *BotHandlers) cacheMessage(msg messages.Message) {
 }
 
 // Get a message by ID from the recent message buffer.
-func (h *BotHandlers) getMessageByID(msgID int) (messages.Message, bool) {
+func (h *BotHandlers) getMessageByID(msgID int64) (messages.Message, bool) {
 	h.messageBufMu.RLock()
 	defer h.messageBufMu.RUnlock()
 	for _, msg := range h.messageBuf {

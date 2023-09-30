@@ -1,15 +1,18 @@
 package messages
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // Auto incrementing Message ID for anything pushed out by the server.
 var (
-	messageID int
+	messageID = time.Now().Unix()
 	mu        sync.Mutex
 )
 
 // NextMessageID atomically increments and returns a new MessageID.
-func NextMessageID() int {
+func NextMessageID() int64 {
 	mu.Lock()
 	defer mu.Unlock()
 	messageID++
@@ -42,7 +45,7 @@ type Message struct {
 	DND         bool   `json:"dnd,omitempty"`    // Do Not Disturb, e.g. DMs are closed
 
 	// Message ID to support takebacks/local deletions
-	MessageID int `json:"msgID,omitempty"`
+	MessageID int64 `json:"msgID,omitempty"`
 
 	// Sent on `open` actions along with the (other) Username.
 	OpenSecret string `json:"openSecret,omitempty"`

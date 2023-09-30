@@ -159,6 +159,40 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		MessageID: mid,
 	}
 
+	// Run message filters.
+	if filter, ok := s.filterMessage(sub, msg, &message); ok {
+		// What do we do with the matched filter?
+
+		// If we will not send this message out, do echo it back to
+		// the sender (possibly with censors applied).
+		if !filter.ForwardMessage {
+			s.SendTo(sub.Username, message)
+		}
+
+		// Is ChatServer to say something?
+		if filter.ChatServerResponse != "" {
+			sub.ChatServer(filter.ChatServerResponse)
+		}
+
+		// Are we to report the message to the site admin?
+		if filter.ReportMessage {
+			// If the user is OP, just tell them we would.
+			if sub.IsAdmin() {
+				sub.ChatServer("Your recent chat context would have been reported to your main website.")
+			}
+
+			// Send the report to the main website.
+			if err := s.reportFilteredMessage(sub, msg); err != nil {
+				log.Error("Reporting filtered message: %s", err)
+			}
+		}
+
+		// If we are not forwarding this message, stop here.
+		if !filter.ForwardMessage {
+			return
+		}
+	}
+
 	// Is this a DM?
 	if strings.HasPrefix(msg.Channel, "@") {
 		// Echo the message only to both parties.

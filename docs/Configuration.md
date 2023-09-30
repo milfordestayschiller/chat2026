@@ -42,6 +42,20 @@ PreviewImageWidth = 360
   Branding = "<em>VIP Members</em>"
   Icon = "fa fa-circle"
   MutuallySecret = false
+
+[[MessageFilters]]
+  Enabled = true
+  PublicChannels = true
+  PrivateChannels = true
+  KeywordPhrases = [
+    "\\bswear words\\b",
+    "\\b(swearing|cursing)\\b",
+    "suck my ([^\\s]+)"
+  ]
+  CensorMessage = true
+  ForwardMessage = false
+  ReportMessage = false
+  ChatServerResponse = "Watch your language."
 ```
 
 A description of the config directives includes:
@@ -87,3 +101,21 @@ If using JWT authentication, your website can mark some users as VIPs when sendi
 * **Branding** (string): HTML supported, this will appear in webcam sharing modals to "make my cam only visible to fellow VIP users"
 * **Icon** (string): icon CSS name from Font Awesome.
 * **MutuallySecret** (bool): if true, the VIP features are hidden and only visible to people who are, themselves, VIP. For example, the icon on the Who List will only show to VIP users but non-VIP will not see the icon.
+
+## Message Filters
+
+BareRTC supports optional server-side filtering of messages. These can be applied to monitor public channels, Direct Messages, or both; and provide a variety of options how you want to handle filtered messages.
+
+You can configure multiple sets of filters to treat different sets of keywords with different behaviors.
+
+Options for the `[[MessageFilters]]` section include:
+
+* **Enabled** (bool): whether to enable this filter. The default settings.toml has a filter template example by default, but it's not enabled.
+* **PublicChannels** (bool): whether to apply the filter to public channel messages.
+* **PrivateChannels** (bool): whether to apply the filter to private (Direct Message) channels.
+* **KeywordPhrases** ([]string): a listing of regular expression compatible strings to search the user's message again.
+    * Tip: use word-boundary `\b` metacharacters to detect whole words and reduce false positives from partial word matches.
+* **CensorMessage** (bool): if true, the matching keywords will be substituted with asterisks in the user's message when it appears in chat.
+* **ForwardMessage** (bool): whether to repeat the message to the other chatters. If false, the sender will see their own message echo (possibly censored) but other chatters will not get their message at all.
+* **ReportMessage** (bool): if true, report the message along with the recent context (previous 10 messages in that conversation) to your website's report webhook (if configured).
+* **ChatServerResponse** (str): optional - you can have ChatServer send a message to the sender (in the same channel) after the filter has been run. An empty string will not send a ChatServer message.
