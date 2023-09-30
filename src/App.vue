@@ -3633,7 +3633,7 @@ export default {
                 </div>
                 <div class="card-content" id="chatHistory"
                     :class="{ 'has-background-dm': isDM,
-                              'p-1': messageStyle.indexOf('compact') === 0 }">
+                              'p-1 pb-5': messageStyle.indexOf('compact') === 0 }">
 
                     <div class="autoscroll-field tag">
                         <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
