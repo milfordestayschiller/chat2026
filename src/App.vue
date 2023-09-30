@@ -57,7 +57,7 @@ export default {
             windowFocusedAt: new Date(),
 
             // Disconnect spamming: don't retry too many times.
-            disconnectLimit: 3,
+            disconnectLimit: 2,
             disconnectCount: 0,
 
             // Temp: spam counting for OF links

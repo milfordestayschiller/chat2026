@@ -218,7 +218,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		for {
 			select {
 			case msg := <-sub.messages:
-				err = writeTimeout(ctx, time.Second*15, c, msg)
+				err = writeTimeout(ctx, time.Second*time.Duration(config.Current.WebSocketSendTimeout), c, msg)
 				if err != nil {
 					return
 				}

@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 8
+var currentVersion = 9
 
 // Config for your BareRTC app.
 type Config struct {
@@ -36,9 +36,10 @@ type Config struct {
 
 	UseXForwardedFor bool
 
-	WebSocketReadLimit int64
-	MaxImageWidth      int
-	PreviewImageWidth  int
+	WebSocketReadLimit   int64
+	WebSocketSendTimeout int
+	MaxImageWidth        int
+	PreviewImageWidth    int
 
 	TURN TurnConfig
 
@@ -112,9 +113,10 @@ func DefaultConfig() Config {
 		CORSHosts: []string{
 			"https://www.example.com",
 		},
-		WebSocketReadLimit: 1024 * 1024 * 40, // 40 MB.
-		MaxImageWidth:      1280,
-		PreviewImageWidth:  360,
+		WebSocketReadLimit:   1024 * 1024 * 40, // 40 MB.
+		WebSocketSendTimeout: 10,               // seconds
+		MaxImageWidth:        1280,
+		PreviewImageWidth:    360,
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",
