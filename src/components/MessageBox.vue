@@ -361,7 +361,7 @@ export default {
 
         <!-- Name/username/message -->
         <div class="column px-1">
-            <div class="content">
+            <div class="content mb-2">
                 <strong
                     :class="{
                                 'has-text-success is-dark': message.isChatServer,
@@ -394,7 +394,7 @@ export default {
             </div>
 
             <!-- Reactions so far? -->
-            <div v-if="hasReactions" class="my-1">
+            <div v-if="hasReactions" class="mb-2">
                 <span v-for="(users, emoji) in reactions"
                     v-bind:key="emoji"
                     class="tag is-secondary mr-1 cursor-pointer"
