@@ -360,36 +360,38 @@ export default {
         </div>
 
         <!-- Name/username/message -->
-        <div class="column px-1 content">
-            <strong
-                :class="{
-                            'has-text-success is-dark': message.isChatServer,
-                            'has-text-warning is-dark': message.isAdmin,
-                            'has-text-danger': message.isChatClient
-                        }">
-                [<a :href="profileURL"
-                    @click.prevent="openProfile()"
-                    class="has-text-dark"
-                    :class="{ 'cursor-default': !profileURL }">
-                    <!-- Display name? -->
-                    <span v-if="(message.isChatServer || message.isChatClient || message.isAdmin)
-                                || (appearance === 'compact' && nickname !== message.username)"
-                        :class="{
-                            'has-text-success is-dark': message.isChatServer,
-                            'has-text-warning is-dark': message.isAdmin,
-                            'has-text-danger': message.isChatClient
-                        }">
-                        {{ nickname }}
-                    </span>
+        <div class="column px-1">
+            <div class="content">
+                <strong
+                    :class="{
+                                'has-text-success is-dark': message.isChatServer,
+                                'has-text-warning is-dark': message.isAdmin,
+                                'has-text-danger': message.isChatClient
+                            }">
+                    [<a :href="profileURL"
+                        @click.prevent="openProfile()"
+                        class="has-text-dark"
+                        :class="{ 'cursor-default': !profileURL }">
+                        <!-- Display name? -->
+                        <span v-if="(message.isChatServer || message.isChatClient || message.isAdmin)
+                                    || (appearance === 'compact' && nickname !== message.username)"
+                            :class="{
+                                'has-text-success is-dark': message.isChatServer,
+                                'has-text-warning is-dark': message.isAdmin,
+                                'has-text-danger': message.isChatClient
+                            }">
+                            {{ nickname }}
+                        </span>
 
-                    <small class="has-text-grey"
-                        :class="{'ml-1': appearance === 'compact' && nickname !== message.username}"
-                        v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)"
-                    >@{{ message.username }}</small>
-                </a>]
-            </strong>
+                        <small class="has-text-grey"
+                            :class="{'ml-1': appearance === 'compact' && nickname !== message.username}"
+                            v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)"
+                        >@{{ message.username }}</small>
+                    </a>]
+                </strong>
 
-            <span v-html="compactMessage"></span>
+                <span v-html="compactMessage"></span>
+            </div>
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="my-1">
