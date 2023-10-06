@@ -21,7 +21,7 @@ type Server struct {
 // NewServer initializes the Server.
 func NewServer() *Server {
 	return &Server{
-		subscriberMessageBuffer: 16,
+		subscriberMessageBuffer: 32,
 		subscribers:             make(map[*Subscriber]struct{}),
 	}
 }

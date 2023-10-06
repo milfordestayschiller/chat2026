@@ -10,6 +10,7 @@ import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
 import ReportModal from './components/ReportModal.vue';
 import MessageBox from './components/MessageBox.vue';
 import WhoListRow from './components/WhoListRow.vue';
+import VideoFeed from './components/VideoFeed.vue';
 
 import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
@@ -48,6 +49,7 @@ export default {
         ReportModal,
         MessageBox,
         WhoListRow,
+        VideoFeed,
     },
     data() {
         return {
@@ -2313,6 +2315,13 @@ export default {
                 $ref.muted = this.WebRTC.muted[username];
             }
         },
+        setVideoVolume(username, volume) {
+            // Set the volume on their video.
+            let $ref = document.getElementById(`videofeed-${username}`);
+            if ($ref) {
+                $ref.volume = volume / 100;
+            }
+        },
 
         // Pop out a user's video.
         popoutVideo(username) {
@@ -3123,7 +3132,8 @@ export default {
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.videoDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
-                                        <option v-for="(d, i) in webcam.videoDevices" :value="d.id">
+                                        <option v-for="(d, i) in webcam.videoDevices" :value="d.id"
+                                            v-bind:key="i">
                                             {{ d.label || `Camera ${i}` }}
                                         </option>
                                     </select>
@@ -3135,7 +3145,8 @@ export default {
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.audioDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
-                                        <option v-for="(d, i) in webcam.audioDevices" :value="d.id">
+                                        <option v-for="(d, i) in webcam.audioDevices" :value="d.id"
+                                            v-bind:key="i">
                                             {{ d.label || `Microphone ${i}` }}
                                         </option>
                                     </select>
@@ -3448,7 +3459,7 @@ export default {
                         </ul>
 
                         <p class="menu-label">
-                            Private Messages
+                            Direct Messages
                         </p>
 
                         <ul class="menu-list">
@@ -3481,6 +3492,21 @@ export default {
                             </li>
                         </ul>
                     </aside>
+
+                    <!-- Close new DMs toggle -->
+                    <div class="tag mt-2">
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                v-model="prefs.closeDMs"
+                                :value="true">
+                            Ignore unsolicited DMs
+
+                            <a href="#"
+                                onclick="alert('When checked, your DMs will be closed to new conversations. You may still initiate new DMs with others.'); return false"
+                                class="fa fa-info-circle ml-2">
+                            </a>
+                        </label>
+                    </div>
 
                 </div>
             </div>
@@ -3535,85 +3561,36 @@ export default {
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <div class="feed" v-show="webcam.active" :class="{
-                        'popped-out': WebRTC.poppedOut[username],
-                        'popped-in': !WebRTC.poppedOut[username]
-                    }">
-                        <video class="feed" id="localVideo" autoplay muted>
-                        </video>
-
-                        <div class="caption" :class="{
-                            'has-text-camera-blue': !webcam.nsfw,
-                            'has-text-camera-red': webcam.nsfw
-                        }">
-                            <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="webcam.muted"></i>
-                            {{ username }}
-                        </div>
-
-                        <div class="controls">
-                            <!-- MY Mute button -->
-                            <button type="button" v-if="webcam.active && !webcam.muted"
-                                class="button is-small is-success is-outlined ml-1 px-2" @click="muteMe()">
-                                <i class="fa fa-microphone"></i>
-                            </button>
-                            <button type="button" v-if="webcam.active && webcam.muted"
-                                class="button is-small is-danger ml-1 px-2" @click="muteMe()">
-                                <i class="fa fa-microphone-slash"></i>
-                            </button>
-
-                            <!-- Pop-out MY video -->
-                            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
-                                @click="popoutVideo(username)">
-                                <i class="fa fa-up-right-from-square"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <VideoFeed
+                        v-show="webcam.active"
+                        :local-video="true"
+                        :username="username"
+                        :popped-out="WebRTC.poppedOut[username]"
+                        :is-explicit="webcam.nsfw"
+                        :is-muted="webcam.muted"
+                        :is-source-muted="webcam.muted"
+                        @mute-video="muteMe()"
+                        @popout="popoutVideo"
+                        @set-volume="setVideoVolume">
+                    </VideoFeed>
 
                     <!-- Others' videos -->
-                    <div class="feed" v-for="(stream, username) in WebRTC.streams" v-bind:key="username" :class="{
-                        'popped-out': WebRTC.poppedOut[username],
-                        'popped-in': !WebRTC.poppedOut[username]
-                    }">
-                        <video class="feed" :id="'videofeed-' + username" autoplay>
-                        </video>
-                        <div class="caption" :class="{
-                            'has-text-camera-blue': !isUsernameCamNSFW(username),
-                            'has-text-camera-red': isUsernameCamNSFW(username)
-                        }">
-                            <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="isSourceMuted(username)"></i>
-                            {{ username }}
-                            <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7"
-                                :title="username + ' is watching your camera too'" v-if="isWatchingMe(username)"></i>
-
-                            <!-- Frozen stream detection -->
-                            <a class="fa fa-mountain ml-1" href="#" v-if="WebRTC.frozenStreamDetected[username]"
-                                style="color: #00FFFF" @click.prevent="openVideoByUsername(username, true)"
-                                title="Frozen video detected!"></a>
-                        </div>
-                        <div class="close">
-                            <a href="#" class="has-text-danger" title="Close video"
-                                @click.prevent="closeVideo(username, 'offerer')">
-                                <i class="fa fa-close"></i>
-                            </a>
-                        </div>
-                        <div class="controls">
-                            <!-- Mute button -->
-                            <button type="button" v-if="isMuted(username)" class="button is-small is-danger p-2"
-                                title="Unmute this video" @click="muteVideo(username)">
-                                <i class="fa fa-volume-xmark"></i>
-                            </button>
-                            <button type="button" v-else class="button is-small is-success is-outlined p-2"
-                                title="Mute this video" @click="muteVideo(username)">
-                                <i class="fa fa-volume-high"></i>
-                            </button>
-
-                            <!-- Pop-out -->
-                            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
-                                @click="popoutVideo(username)">
-                                <i class="fa fa-up-right-from-square"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <VideoFeed
+                        v-for="(stream, username) in WebRTC.streams"
+                        v-bind:key="username"
+                        :username="username"
+                        :popped-out="WebRTC.poppedOut[username]"
+                        :is-explicit="isUsernameCamNSFW(username)"
+                        :is-source-muted="isSourceMuted(username)"
+                        :is-muted="isMuted(username)"
+                        :is-watching-me="isWatchingMe(username)"
+                        :is-frozen="WebRTC.frozenStreamDetected[username]"
+                        @reopen-video="openVideoByUsername"
+                        @mute-video="muteVideo"
+                        @popout="popoutVideo"
+                        @close-video="closeVideo"
+                        @set-volume="setVideoVolume">
+                    </VideoFeed>
 
                     <!-- Debugging - copy a lot of these to simulate more videos -->
 
