@@ -99,10 +99,7 @@ export default {
     },
     methods: {
         openProfile() {
-            let url = this.profileURL;
-            if (url) {
-                window.open(url);
-            }
+            this.$emit('open-profile', this.user.username);
         },
 
         openDMs() {
@@ -141,7 +138,7 @@ export default {
         <div class="column is-narrow pr-0" style="position: relative">
             <a :href="profileURL"
                 @click.prevent="openProfile()"
-                :class="{ 'cursor-default': !profileURL }" class="p-0">
+                class="p-0">
                 <img v-if="avatarURL" :src="avatarURL" width="24" height="24" alt="">
                 <img v-else src="/static/img/shy.png" width="24" height="24">
 
@@ -178,9 +175,8 @@ export default {
             </a>
         </div>
         <div class="column pr-0 is-clipped" :class="{ 'pl-1': avatarURL }">
-            <strong class="truncate-text-line is-size-7"
-                @click="openProfile()"
-                :class="{'cursor-pointer': profileURL}">
+            <strong class="truncate-text-line is-size-7 cursor-pointer"
+                @click="openProfile()">
                 {{ user.username }}
             </strong>
             <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1" v-if="user.op"
@@ -195,7 +191,7 @@ export default {
             </span>
 
             <!-- Profile button -->
-            <button type="button" v-if="profileURL" class="button is-small px-2 py-1"
+            <button type="button" class="button is-small px-2 py-1"
                 :class="profileButtonClass" @click="openProfile()"
                 :title="'Open profile page' + (user.gender ? ` (gender: ${user.gender})` : '') + (user.vip ? ` (${vipConfig.Name})` : '')">
                 <i class="fa fa-user"></i>

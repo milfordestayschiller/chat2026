@@ -82,7 +82,7 @@ func (s *Server) reportFilteredMessage(sub *Subscriber, msg messages.Message) er
 		context = getMessageContext(msg.Channel)
 	}
 
-	if err := PostWebhook(WebhookReport, WebhookRequest{
+	if _, err := PostWebhook(WebhookReport, WebhookRequest{
 		Action: WebhookReport,
 		APIKey: config.Current.AdminAPIKey,
 		Report: WebhookRequestReport{

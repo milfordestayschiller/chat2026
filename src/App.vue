@@ -11,6 +11,7 @@ import ReportModal from './components/ReportModal.vue';
 import MessageBox from './components/MessageBox.vue';
 import WhoListRow from './components/WhoListRow.vue';
 import VideoFeed from './components/VideoFeed.vue';
+import ProfileModal from './components/ProfileModal.vue';
 
 import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
@@ -50,6 +51,7 @@ export default {
         MessageBox,
         WhoListRow,
         VideoFeed,
+        ProfileModal,
     },
     data() {
         return {
@@ -287,6 +289,12 @@ export default {
                 user: {},  // full copy of the user for the modal component
                 message: {},
                 origMessage: {}, // pointer, so we can set the "reported" flag
+            },
+
+            profileModal: {
+                visible: false,
+                user: {},
+                username: "",
             },
         }
     },
@@ -1085,6 +1093,12 @@ export default {
         sendBoot(username) {
             this.ws.conn.send(JSON.stringify({
                 action: "boot",
+                username: username,
+            }));
+        },
+        sendUnboot(username) {
+            this.ws.conn.send(JSON.stringify({
+                action: "unboot",
                 username: username,
             }));
         },
@@ -2229,6 +2243,19 @@ export default {
 
         // Boot someone off your video.
         bootUser(username) {
+            // Un-boot?
+            if (this.isBooted(username)) {
+                if (!window.confirm(`Allow ${username} to watch your webcam again?`)) {
+                    return;
+                }
+
+                this.sendUnboot(username);
+                delete(this.WebRTC.booted[username]);
+
+                return;
+            }
+
+            // Boot them off our webcam.
             if (!window.confirm(
                 `Kick ${username} off your camera? This will also prevent them ` +
                 `from seeing that your camera is active for the remainder of your ` +
@@ -2253,6 +2280,9 @@ export default {
                 `to them it appears as though you had turned yours off.<br><br>This will be ` +
                 `in place for the remainder of your current chat session.`
             );
+        },
+        isBooted(username) {
+            return this.WebRTC.booted[username] === true;
         },
         isBootedAdmin(username) {
             return (this.WebRTC.booted[username] === true || this.muted[username] === true) &&
@@ -2661,6 +2691,15 @@ export default {
                 reader.readAsArrayBuffer(file);
             };
             input.click();
+        },
+
+        // Invoke the Profile Modal
+        showProfileModal(username) {
+            if (this.whoMap[username] != undefined) {
+                this.profileModal.user = this.whoMap[username];
+                this.profileModal.username = username;
+                this.profileModal.visible = true;
+            }
         },
 
         /**
@@ -3335,6 +3374,22 @@ export default {
         @accept="doReport"
         @cancel="reportModal.visible=false"></ReportModal>
 
+    <!-- Profile Modal (profile cards popup) -->
+    <ProfileModal :visible="profileModal.visible"
+        :user="profileModal.user"
+        :username="username"
+        :jwt="jwt.token"
+        :website-url="config.website"
+        :is-dnd="isUsernameDND(profileModal.username)"
+        :is-muted="isMutedUser(profileModal.username)"
+        :is-booted="isBooted(profileModal.username)"
+        :profile-webhook-enabled="isWebhookEnabled('profile')"
+        :vip-config="config.VIP"
+        @send-dm="openDMs"
+        @mute-user="muteUser"
+        @boot-user="bootUser"
+        @cancel="profileModal.visible=false"></ProfileModal>
+
     <div class="chat-container">
 
         <!-- Top header panel -->
@@ -3684,6 +3739,7 @@ export default {
                                 :report-enabled="isWebhookEnabled('report')"
                                 :is-dm="isDM"
                                 :is-op="isOp"
+                                @open-profile="showProfileModal"
                                 @send-dm="openDMs"
                                 @mute-user="muteUser"
                                 @takeback="takeback"
@@ -3892,7 +3948,8 @@ export default {
                                 :vip-config="config.VIP"
                                 @send-dm="openDMs"
                                 @mute-user="muteUser"
-                                @open-video="openVideo"></WhoListRow>
+                                @open-video="openVideo"
+                                @open-profile="showProfileModal"></WhoListRow>
                         </li>
                     </ul>
 
@@ -3913,7 +3970,8 @@ export default {
                                 @send-dm="openDMs"
                                 @mute-user="muteUser"
                                 @open-video="openVideo"
-                                @boot-user="bootUser"></WhoListRow>
+                                @boot-user="bootUser"
+                                @open-profile="showProfileModal"></WhoListRow>
                         </li>
                     </ul>
 

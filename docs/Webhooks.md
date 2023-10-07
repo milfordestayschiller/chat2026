@@ -9,6 +9,11 @@ Webhooks are configured in your settings.toml file and look like so:
   Name = "report"
   Enabled = true
   URL = "http://localhost:8080/v1/barertc/report"
+
+[[WebhookURLs]]
+  Name = "profile"
+  Enabled = true
+  URL = "http://localhost:8080/v1/barertc/profile"
 ```
 
 All Webhooks will be called as **POST** requests and will contain a JSON payload that will always have the following two keys:
@@ -43,3 +48,40 @@ Example JSON payload posted to the webhook:
 ```
 
 BareRTC expects your webhook URL to return a 200 OK status code or it will surface an error in chat to the reporter.
+
+## Profile Webhook
+
+Enabling this webhook will allow your site to deliver more detailed profile information on demand for your users. This is used in chat when somebody opens the Profile Card modal for a user in chat.
+
+BareRTC will call your webhook URL with the following payload:
+
+```javascript
+{
+    "Action": "profile",
+    "APIKey": "shared secret from settings.toml#AdminAPIKey",
+    "Username": "soandso"
+}
+```
+
+The expected response from your endpoint should follow this format:
+
+```javascript
+{
+    "StatusCode": 200,
+    "Data": {
+        "OK": true,
+        "Error": "any error messaging (omittable if no errors)",
+        "ProfileFields": [
+            {
+                "Name": "Age",
+                "Value": "30yo",
+            },
+            {
+                "Name": "Gender",
+                "Value": "Man",
+            },
+            // etc.
+        ]
+    }
+}
+```

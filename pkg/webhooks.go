@@ -39,18 +39,20 @@ func GetWebhook(name string) (config.WebhookURL, bool) {
 }
 
 // PostWebhook submits a JSON body to one of the app's configured webhooks.
-func PostWebhook(name string, payload any) error {
+//
+// Returns the bytes of the response body (hopefully, JSON data) and any errors.
+func PostWebhook(name string, payload any) ([]byte, error) {
 	webhook, ok := GetWebhook(name)
 	if !ok {
-		return errors.New("PostWebhook(%s): webhook name %s is not configured")
+		return nil, errors.New("PostWebhook(%s): webhook name %s is not configured")
 	} else if !webhook.Enabled {
-		return errors.New("PostWebhook(%s): webhook is not enabled")
+		return nil, errors.New("PostWebhook(%s): webhook is not enabled")
 	}
 
 	// JSON request body.
 	jsonStr, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Make the API request to BareRTC.
@@ -58,7 +60,7 @@ func PostWebhook(name string, payload any) error {
 	log.Debug("PostWebhook(%s): to %s we send: %s", name, url, jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -67,15 +69,15 @@ func PostWebhook(name string, payload any) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
 		log.Error("PostWebhook(%s): unexpected response from webhook URL %s (code %d): %s", name, url, resp.StatusCode, body)
-		return errors.New("unexpected error from webhook URL")
+		return body, errors.New("unexpected error from webhook URL")
 	}
 
-	return nil
+	return body, nil
 }

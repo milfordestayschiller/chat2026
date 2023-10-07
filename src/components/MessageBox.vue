@@ -84,10 +84,7 @@ export default {
     },
     methods: {
         openProfile() {
-            let url = this.profileURL;
-            if (url) {
-                window.open(url);
-            }
+            this.$emit('open-profile', this.message.username);
         },
 
         openDMs() {
@@ -180,8 +177,7 @@ export default {
         <div class="media mb-0">
             <div class="media-left">
                 <a :href="profileURL"
-                    @click.prevent="openProfile()"
-                    :class="{ 'cursor-default': !profileURL }">
+                    @click.prevent="openProfile()">
                     <figure class="image is-48x48">
                         <img v-if="message.isChatServer" src="/static/img/server.png">
                         <img v-else-if="message.isChatClient" src="/static/img/client.png">
@@ -218,6 +214,7 @@ export default {
                         <small v-if="!(message.isChatClient || message.isChatServer)">
                             <a v-if="profileURL"
                                 :href="profileURL" target="_blank"
+                                @click.prevent="openProfile()"
                                 class="has-text-grey">
                                 @{{ message.username }}
                             </a>
@@ -229,12 +226,12 @@ export default {
                 <div v-else class="columns is-mobile pt-0">
                     <div class="column is-narrow pt-0">
                         <small v-if="!(message.isChatClient || message.isChatServer)">
-                            <a v-if="profileURL"
-                                :href="profileURL" target="_blank"
+                            <a :href="profileURL || '#'"
+                                target="_blank"
+                                @click.prevent="openProfile()"
                                 class="has-text-grey">
                                 @{{ message.username }}
                             </a>
-                            <span v-else class="has-text-grey">@{{ message.username }}</span>
                         </small>
                         <small v-else class="has-text-grey">internal</small>
                     </div>
@@ -353,7 +350,7 @@ export default {
         <div class="column is-narrow px-1">
             <a :href="profileURL"
                 @click.prevent="openProfile()"
-                :class="{ 'cursor-default': !profileURL }" class="p-0">
+                class="p-0">
                 <img v-if="avatarURL" :src="avatarURL" width="16" height="16" alt="">
                 <img v-else src="/static/img/shy.png" width="16" height="16">
             </a>

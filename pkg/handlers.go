@@ -418,20 +418,26 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 }
 
 // OnBoot is a user kicking you off their video stream.
-func (s *Server) OnBoot(sub *Subscriber, msg messages.Message) {
-	log.Info("%s boots %s off their camera", sub.Username, msg.Username)
-
+func (s *Server) OnBoot(sub *Subscriber, msg messages.Message, boot bool) {
 	sub.muteMu.Lock()
-	sub.booted[msg.Username] = struct{}{}
-	sub.muteMu.Unlock()
 
-	// If the subject of the boot is an admin, inform them they have been booted.
-	if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
-		other.ChatServer(
-			"%s has booted you off of their camera!",
-			sub.Username,
-		)
+	if boot {
+		log.Info("%s boots %s off their camera", sub.Username, msg.Username)
+		sub.booted[msg.Username] = struct{}{}
+
+		// If the subject of the boot is an admin, inform them they have been booted.
+		if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
+			other.ChatServer(
+				"%s has booted you off of their camera!",
+				sub.Username,
+			)
+		}
+	} else {
+		log.Info("%s unboots %s from their camera", sub.Username, msg.Username)
+		delete(sub.booted, msg.Username)
 	}
+
+	sub.muteMu.Unlock()
 
 	s.SendWhoList()
 }
@@ -506,7 +512,7 @@ func (s *Server) OnReport(sub *Subscriber, msg messages.Message) {
 	}
 
 	// Post to the report webhook.
-	if err := PostWebhook(WebhookReport, WebhookRequest{
+	if _, err := PostWebhook(WebhookReport, WebhookRequest{
 		Action: WebhookReport,
 		APIKey: config.Current.AdminAPIKey,
 		Report: WebhookRequestReport{

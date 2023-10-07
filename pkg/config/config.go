@@ -152,6 +152,10 @@ func DefaultConfig() Config {
 				Name: "report",
 				URL:  "https://example.com/barertc/report",
 			},
+			{
+				Name: "profile",
+				URL:  "https://example.com/barertc/user-profile",
+			},
 		},
 		VIP: VIP{
 			Name:     "VIP",

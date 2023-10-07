@@ -22,12 +22,20 @@ export default {
 
             // Volume change debounce
             volumeDebounce: null,
+
+            // Mouse over status
+            mouseOver: false,
         };
     },
     computed: {
         videoID() {
             return this.localVideo ? 'localVideo' : `videofeed-${this.username}`;
-        }
+        },
+    },
+    watch: {
+        mouseOver() {
+            console.log("mouse over:", this.mouseOver);
+        },
     },
     methods: {
         closeVideo() {
@@ -77,7 +85,7 @@ export default {
     <div class="feed" :class="{
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
-    }">
+    }" @mouseover="mouseOver=true" @mouseleave="mouseOver=false">
         <video class="feed" :id="videoID" autoplay :muted="localVideo"></video>
 
         <!-- Caption -->
@@ -140,7 +148,7 @@ export default {
         </div>
 
         <!-- Volume slider -->
-        <div class="volume-slider" v-if="!localVideo && !isMuted">
+        <div class="volume-slider" v-show="!localVideo && !isMuted && mouseOver">
             <Slider
                 v-model="volume"
                 color="#00FF00"

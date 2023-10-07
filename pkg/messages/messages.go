@@ -69,9 +69,10 @@ type Message struct {
 
 const (
 	// Actions sent by the client side only
-	ActionLogin     = "login" // post the username to backend
-	ActionBoot      = "boot"  // boot a user off your video feed
-	ActionMute      = "mute"  // mute a user's chat messages
+	ActionLogin     = "login"  // post the username to backend
+	ActionBoot      = "boot"   // boot a user off your video feed
+	ActionUnboot    = "unboot" // unboot a user
+	ActionMute      = "mute"   // mute a user's chat messages
 	ActionUnmute    = "unmute"
 	ActionBlock     = "block"     // hard block another user
 	ActionBlocklist = "blocklist" // mute in bulk for usernames

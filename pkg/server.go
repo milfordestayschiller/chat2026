@@ -39,6 +39,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/block/now", s.BlockNow())
 	mux.Handle("/api/authenticate", s.Authenticate())
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
+	mux.Handle("/api/profile", s.UserProfile())
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("dist/assets"))))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("dist/static"))))
 
