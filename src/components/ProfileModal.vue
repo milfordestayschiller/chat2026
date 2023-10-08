@@ -167,7 +167,7 @@ export default {
                             </div>
 
                             <!-- User badges -->
-                            <div v-if="user.op || user.vip" class="mt-4">
+                            <div v-if="user.op || user.vip || user.emoji" class="mt-4">
                                 <!-- Emoji icon -->
                                 <span v-if="user.emoji" class="mr-2">
                                     {{ user.emoji }}
