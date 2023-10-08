@@ -388,7 +388,7 @@ The chat server holds onto blocklists temporarily in memory: when that user load
 
 The reason for this workflow is in case the chat server is rebooted _while_ the user is in the room. The cached blocklist pushed by your website is forgotten by the chat server back-end, but the client's page was still open with the cached blocklist already, and it will send the `blocklist` command to the server when it reconnects, eliminating any gaps.
 
-## Boot
+## Boot, Unboot
 
 Sent by: Client.
 
@@ -408,6 +408,16 @@ When a user is booted:
 * The chat server lies to them about your camera status on future `who` messages - showing that your camera is not running.
 
 Note: it is designed that the person being booted off can not detect that they have been booted. They will see your RTC PeerConnection close + get a Who List that says you are not sharing video - exactly the same as if you had simply turned off your camera completely.
+
+There is also a client side Unboot command, to undo the effects of a boot:
+
+```javascript
+// Client Unboot
+{
+    "action": "unboot",
+    "username": "target"
+}
+```
 
 ## WebRTC Signaling
 

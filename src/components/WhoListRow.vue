@@ -102,6 +102,15 @@ export default {
             this.$emit('open-profile', this.user.username);
         },
 
+        // Directly open the profile page.
+        openProfilePage() {
+            if (this.profileURL) {
+                window.open(this.profileURL);
+            } else {
+                this.openProfile();
+            }
+        },
+
         openDMs() {
             this.$emit('send-dm', {
                 username: this.user.username,
@@ -192,7 +201,7 @@ export default {
 
             <!-- Profile button -->
             <button type="button" class="button is-small px-2 py-1"
-                :class="profileButtonClass" @click="openProfile()"
+                :class="profileButtonClass" @click="openProfilePage()"
                 :title="'Open profile page' + (user.gender ? ` (gender: ${user.gender})` : '') + (user.vip ? ` (${vipConfig.Name})` : '')">
                 <i class="fa fa-user"></i>
             </button>

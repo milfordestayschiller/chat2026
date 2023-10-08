@@ -393,21 +393,25 @@ export default {
 
         // Webcam preferences that the user can edit while live.
         "webcam.nsfw": function () {
+            LocalStorage.set('videoExplicit', this.webcam.nsfw);
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
         "webcam.mutual": function () {
+            LocalStorage.set('videoMutual', this.webcam.mutual);
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
         "webcam.mutualOpen": function () {
+            LocalStorage.set('videoMutualOpen', this.webcam.videoMutualOpen);
             if (this.webcam.active) {
                 this.sendMe();
             }
         },
         "webcam.vipOnly": function () {
+            LocalStorage.set('videoVipOnly', this.webcam.vipOnly);
             if (this.webcam.active) {
                 this.sendMe();
             }
@@ -939,7 +943,7 @@ export default {
             // The server can set our webcam NSFW flag.
             let myNSFW = this.webcam.nsfw;
             let theirNSFW = (msg.video & this.VideoFlag.NSFW) > 0;
-            if (this.webcam.active && myNSFW != theirNSFW) {
+            if (this.webcam.active && myNSFW != theirNSFW && theirNSFW) {
                 this.webcam.nsfw = theirNSFW;
             }
 

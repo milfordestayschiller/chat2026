@@ -143,7 +143,7 @@ export default {
                             <a :href="profileURL"
                                 @click.prevent="openProfile()"
                                 :class="{ 'cursor-default': !profileURL }">
-                                <figure class="image is-48x48">
+                                <figure class="image is-96x96">
                                     <img v-if="avatarURL"
                                         :src="avatarURL">
                                     <img v-else src="/static/img/shy.png">
@@ -165,22 +165,22 @@ export default {
                                     <span v-else class="has-text-grey">@{{ user.username }}</span>
                                 </small>
                             </div>
+
+                            <!-- User badges -->
+                            <div v-if="user.op || user.vip" class="mt-4">
+                                <!-- Operator? -->
+                                <span v-if="user.op" class="tag is-warning is-light mr-2">
+                                    <i class="fa fa-peace mr-1"></i> Operator
+                                </span>
+
+                                <!-- VIP? -->
+                                <span v-if="vipConfig && user.vip" class="tag is-success is-light mr-2"
+                                    :title="vipConfig.Name">
+                                    <i class="mr-1" :class="vipConfig.Icon"></i>
+                                    {{ vipConfig.Name }}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- User badges -->
-                    <div v-if="user.op || user.vip" class="mt-4">
-                        <!-- Operator? -->
-                        <span v-if="user.op" class="tag is-warning is-light mr-2">
-                            <i class="fa fa-peace mr-1"></i> Operator
-                        </span>
-
-                        <!-- VIP? -->
-                        <span v-if="vipConfig && user.vip" class="tag is-success is-light mr-2"
-                            :title="vipConfig.Name">
-                            <i class="mr-1" :class="vipConfig.Icon"></i>
-                            {{ vipConfig.Name }}
-                        </span>
                     </div>
 
                     <!-- Action buttons -->
@@ -244,7 +244,8 @@ export default {
                 </div>
                 <footer class="card-footer">
                     <a :href="profileURL" target="_blank"
-                        v-if="profileURL" class="card-footer-item">
+                        v-if="profileURL" class="card-footer-item"
+                        @click="cancel()">
                         Full profile <i class="fa fa-external-link ml-2"></i>
                     </a>
                     <a href="#" @click.prevent="cancel()" class="card-footer-item">
