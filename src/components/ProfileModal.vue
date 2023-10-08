@@ -168,6 +168,11 @@ export default {
 
                             <!-- User badges -->
                             <div v-if="user.op || user.vip" class="mt-4">
+                                <!-- Emoji icon -->
+                                <span v-if="user.emoji" class="mr-2">
+                                    {{ user.emoji }}
+                                </span>
+
                                 <!-- Operator? -->
                                 <span v-if="user.op" class="tag is-warning is-light mr-2">
                                     <i class="fa fa-peace mr-1"></i> Operator
