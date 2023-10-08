@@ -2657,6 +2657,14 @@ export default {
 
         // The image upload button handler.
         uploadFile() {
+            // Prepare the message now so the channel name will be correct,
+            // in case they upload a fat file and switch to a wrong channel
+            // before the data is ready to send.
+            let msg = {
+                action: "file",
+                channel: this.channel,
+            };
+
             let input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
@@ -2681,12 +2689,10 @@ export default {
                         fileByteArray.push(u8array[i]);
                     }
 
-                    let msg = JSON.stringify({
-                        action: "file",
-                        channel: this.channel,
-                        message: file.name,
-                        bytes: fileByteArray, //btoa(fileByteArray),
-                    });
+                    // Attach the file to the message.
+                    msg.message = file.name;
+                    msg.bytes = fileByteArray;
+                    msg = JSON.stringify(msg);
 
                     // Send it to the chat server.
                     this.ws.conn.send(msg);
