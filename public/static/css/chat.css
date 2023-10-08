@@ -236,7 +236,6 @@ div.feed.popped-out {
     cursor: move;
     top: 0;
     left: 0;
-    z-index: 1000;
     resize: none;
 }
 
