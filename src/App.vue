@@ -219,6 +219,18 @@ export default {
                 // a camera, the icon changes to a spinner for a few seconds to see
                 // whether the video goes on to open.
                 openTimeouts: {}, // map usernames to timeouts
+
+                // Map of usernames whose cameras were expressly closed by us.
+                // Example: we have mutualOpen enabled, someone opens our cam
+                // so we open theirs back, and then we expressly 'X' out and
+                // close their camera. If they close and re-open ours, we don't
+                // want to auto-open their cam back because we had previously
+                // closed out of it manually.
+                //
+                // Usernames are added when we 'X' out of their video,
+                // and usernames are removed when we expressly re-open their
+                // video (e.g., by clicking their Who List video button).
+                expresslyClosed: {},  // bool per username
             },
 
             // Chat history.
@@ -1390,6 +1402,16 @@ export default {
             pc.ontrack = event => {
                 const stream = event.streams[0];
 
+                // Had we expressly closed this user's cam before? e.g.: if we have auto-open their
+                // video enabled, and we 'X' out, and they reopen ours - we may be receiving their
+                // video right now. If we had expressly closed it, do not accept their video
+                // and hang up the connection.
+                if (this.WebRTC.expresslyClosed[username]) {
+                    if (!isOfferer) {
+                        return;
+                    }
+                }
+
                 // We've received a video! If we had an "open camera spinner timeout",
                 // clear it before it expires.
                 if (this.WebRTC.openTimeouts[username] != undefined) {
@@ -1457,7 +1479,12 @@ export default {
             // is also the only way that iPads/iPhones/Safari browsers can make a call
             // (two-way video is the only option for them; send-only/receive-only channels seem
             // not to work in Safari).
-            if (isOfferer && (this.whoMap[username].video & this.VideoFlag.MutualOpen) && this.webcam.active) {
+            if (isOfferer &&
+                (this.whoMap[username].video & this.VideoFlag.MutualOpen) // They auto-open us
+                && this.webcam.active             // Our camera is active (to add it)
+                && !this.isBooted(username)       // We had not booted them off ours before
+                && !this.isMutedUser(username)    // We had not muted them before
+            ) {
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     pc.addTrack(track, stream)
@@ -1503,7 +1530,7 @@ export default {
 
             // Add the new ICE candidate.
             pc.addIceCandidate(candidate).catch(e => {
-                this.ChatClient(`addIceCandidate: ${e}`);
+                console.error(`addIceCandidate: ${e}`);
             });
         },
         onSDP(msg) {
@@ -2002,8 +2029,14 @@ export default {
             }
 
             // If we have muted the target, we shouldn't view their video.
-            if (this.isMutedUser(user.username)) {
+            if (this.isMutedUser(user.username) && !this.isOp) {
                 this.ChatClient(`You have muted <strong>${user.username}</strong> and so should not see their camera.`);
+                return;
+            }
+
+            // If we have booted the target off our cam, we shouldn't view their video.
+            if (this.isBooted(user.username) && !this.isOp) {
+                this.ChatClient(`You had kicked <strong>${user.username}</strong> off your camera and so it wouldn't be right to still watch their camera.`);
                 return;
             }
 
@@ -2014,6 +2047,10 @@ export default {
                 this.nsfwModalView.visible = true;
                 return;
             }
+
+            // If the local user had expressly closed this user's camera before, forget
+            // this action because the user now is expressly OPENING this camera on purpose.
+            delete(this.WebRTC.expresslyClosed[user.username]);
 
             // Debounce so we don't spam too much for the same user.
             if (this.WebRTC.debounceOpens[user.username]) return;
@@ -2028,7 +2065,7 @@ export default {
             }
 
             // If this user requests mutual viewership...
-            if (this.isVideoNotAllowed(user)) {
+            if (this.isVideoNotAllowed(user) && !this.isOp) {
                 this.ChatClient(
                     `<strong>${user.username}</strong> has requested that you should share your own camera too before opening theirs.`
                 );
@@ -2120,6 +2157,14 @@ export default {
 
             // Inform backend we have closed it.
             this.sendWatch(username, false);
+        },
+        expresslyCloseVideo(username, name) {
+            // Like closeVideo but communicates the user's intent to expressly
+            // close the video for a user. e.g. they clicked the 'X' icon to
+            // close it out. As opposed to a user went off camera and were closed
+            // out automatically.
+            this.WebRTC.expresslyClosed[username] = true;
+            return this.closeVideo(username, name);
         },
         closeOpenVideos() {
             // Close all videos open of other users.
@@ -2218,7 +2263,7 @@ export default {
             }
 
             // We have muted them and it wouldn't be appropriate to still watch their video but not get their messages.
-            if (this.isMutedUser(user.username)) {
+            if (this.isMutedUser(user.username) || this.isBooted(user.username)) {
                 return true;
             }
 
@@ -2270,9 +2315,9 @@ export default {
             this.sendBoot(username);
             this.WebRTC.booted[username] = true;
 
-            // Close the WebRTC peer connection.
+            // Close the WebRTC peer connections.
             if (this.WebRTC.pc[username] != undefined) {
-                this.closeVideo(username, "answerer");
+                this.closeVideo(username);
             }
 
             // Remove them from our list.
@@ -3653,7 +3698,7 @@ export default {
                         @reopen-video="openVideoByUsername"
                         @mute-video="muteVideo"
                         @popout="popoutVideo"
-                        @close-video="closeVideo"
+                        @close-video="expresslyCloseVideo"
                         @set-volume="setVideoVolume">
                     </VideoFeed>
 
@@ -3952,6 +3997,7 @@ export default {
                                 :website-url="config.website"
                                 :is-dnd="isUsernameDND(u.username)"
                                 :is-muted="isMutedUser(u.username)"
+                                :is-booted="isBooted(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"
                                 :video-icon-class="webcamIconClass(u)"
@@ -3973,6 +4019,7 @@ export default {
                                 :website-url="config.website"
                                 :is-dnd="isUsernameDND(username)"
                                 :is-muted="isMutedUser(username)"
+                                :is-booted="isBooted(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"
                                 :video-icon-class="webcamIconClass(u)"

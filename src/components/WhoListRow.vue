@@ -8,6 +8,7 @@ export default {
         websiteUrl: String, // Base URL to website (for profile/avatar URLs)
         isDnd: Boolean,     // user is not accepting DMs
         isMuted: Boolean,   // user is muted by current user
+        isBooted: Boolean,  // user is booted by current user
         vipConfig: Object,  // VIP config settings for BareRTC
         isOp: Boolean,      // current user is operator (can always DM)
         isVideoNotAllowed: Boolean,  // whether opening this camera is not allowed
