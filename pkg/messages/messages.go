@@ -126,7 +126,7 @@ const (
 	VideoFlagActive         int = 1 << iota // user's camera is enabled/broadcasting
 	VideoFlagNSFW                           // viewer's camera is marked as NSFW
 	VideoFlagMuted                          // user source microphone is muted
-	VideoFlagIsTalking                      // broadcaster seems to be talking
+	VideoFlagNonExplicit                    // viewer prefers not to see NSFW cameras (don't auto-open red cams/auto-close blue cams going red)
 	VideoFlagMutualRequired                 // video wants viewers to share their camera too
 	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
 	VideoFlagOnlyVIP                        // can only shows as active to VIP members

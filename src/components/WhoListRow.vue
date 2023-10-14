@@ -80,6 +80,10 @@ export default {
                 parts.push(`${this.vipConfig.Name} only`);
             }
 
+            if (this.user.video & VideoFlag.NonExplicit) {
+                parts.push("prefers non-explicit video");
+            }
+
             return parts.join("; ");
         },
         avatarURL() {

@@ -162,7 +162,9 @@ export default {
                 nsfw: false,  // user has flagged their camera to be NSFW
                 mutual: false, // user wants viewers to share their own videos
                 mutualOpen: false, // user wants to open video mutually
+                nonExplicit: false, // user prefers not to see explicit cameras
                 vipOnly: false, // only show camera to fellow VIP users
+                rememberExpresslyClosed: true,  // remember cams we expressly closed
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -422,6 +424,12 @@ export default {
                 this.sendMe();
             }
         },
+        "webcam.nonExplicit": function () {
+            LocalStorage.set('videoNonExplicit', this.webcam.nonExplicit);
+            if (this.webcam.active) {
+                this.sendMe();
+            }
+        },
         "webcam.vipOnly": function () {
             LocalStorage.set('videoVipOnly', this.webcam.vipOnly);
             if (this.webcam.active) {
@@ -436,6 +444,9 @@ export default {
                     this.closeVideo(username);
                 }
             }
+        },
+        "webcam.rememberExpresslyClosed": function() {
+            LocalStorage.set('rememberExpresslyClosed', this.webcam.rememberExpresslyClosed);
         },
 
         // Misc preference watches
@@ -559,6 +570,7 @@ export default {
             if (this.webcam.nsfw) status |= this.VideoFlag.NSFW;
             if (this.webcam.mutual) status |= this.VideoFlag.MutualRequired;
             if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
+            if (this.webcam.nonExplicit) status |= this.VideoFlag.NonExplicit;
             if (this.webcam.vipOnly && this.isVIP) status |= this.VideoFlag.VipOnly;
             return status;
         },
@@ -748,6 +760,12 @@ export default {
             }
             if (settings.videoExplicit === true) {
                 this.webcam.nsfw = true;
+            }
+            if (settings.videoNonExplicit === true) {
+                this.webcam.nonExplicit = true;
+            }
+            if (settings.rememberExpresslyClosed === false) {
+                this.webcam.rememberExpresslyClosed = false;
             }
 
             // Misc preferences
@@ -976,6 +994,15 @@ export default {
             }
 
             for (let row of this.whoList) {
+                // If we were watching this user's (blue) camera and we prefer non-Explicit,
+                // and their camera is now becoming explicit (red), close it now.
+                if (this.webcam.nonExplicit && this.WebRTC.streams[row.username] != undefined) {
+                    if (!(this.whoMap[row.username].video & this.VideoFlag.NSFW)
+                        && (row.video & this.VideoFlag.NSFW)) {
+                        this.closeVideo(row.username, "offerer");
+                    }
+                }
+
                 this.whoMap[row.username] = row;
                 this.whoOnline[row.username] = true;
 
@@ -995,6 +1022,17 @@ export default {
             // Hang up on mutual cameras, if they changed their setting while we
             // are already watching them.
             this.unMutualVideo();
+
+            // If we have any webcams open with users who are no longer in the Who List
+            // (e.g.: can happen during a server reboot when the Who List goes empty),
+            // close those video connections. Note: during normal room exit events this
+            // is done on the onUserExited function - this is an extra safety check especially
+            // in case of unexpected disconnect.
+            for (let username of Object.keys(this.WebRTC.pc)) {
+                if (this.whoOnline[username] == undefined) {
+                    this.closeVideo(username);
+                }
+            }
 
             // Has the back-end server forgotten we are on video? This can
             // happen if we disconnect/reconnect while we were streaming.
@@ -1418,7 +1456,7 @@ export default {
                 // video enabled, and we 'X' out, and they reopen ours - we may be receiving their
                 // video right now. If we had expressly closed it, do not accept their video
                 // and hang up the connection.
-                if (this.WebRTC.expresslyClosed[username]) {
+                if (this.WebRTC.expresslyClosed[username] && this.webcam.rememberExpresslyClosed) {
                     if (!isOfferer) {
                         return;
                     }
@@ -1496,6 +1534,10 @@ export default {
                 && this.webcam.active             // Our camera is active (to add it)
                 && !this.isBooted(username)       // We had not booted them off ours before
                 && !this.isMutedUser(username)    // We had not muted them before
+
+                // If our webcam is NSFW and the viewer prefers not to see explicit,
+                // do not send our camera on this offer.
+                && (!this.webcam.nsfw || !(this.whoMap[username].video & this.VideoFlag.NonExplicit))
             ) {
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
@@ -3185,11 +3227,23 @@ export default {
                         <p class="block mb-1" v-if="config.permitNSFW">
                             <label class="label">Explicit</label>
                         </p>
-                        <div class="field" v-if="config.permitNSFW">
-                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
-                                <input type="checkbox" v-model="webcam.nsfw" :disabled="!webcam.active">
-                                Mark my camera as featuring explicit content
+
+                        <div class="field mb-1" v-if="config.permitNSFW">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.nsfw">
+                                Mark my camera as featuring Explicit content
                             </label>
+                        </div>
+
+                        <div class="field">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.nonExplicit">
+                                I prefer not to see Explicit cameras from other chatters
+                            </label>
+                            <p class="help">
+                                Don't auto-open explicit cameras when they open mine; and automatically
+                                close a camera I am watching if it toggles to become explicit.
+                            </p>
                         </div>
 
                         <p class="block mb-1">
@@ -3197,26 +3251,37 @@ export default {
                         </p>
 
                         <div class="field mb-1">
-                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
-                                <input type="checkbox" v-model="webcam.mutual" :disabled="!webcam.active">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.mutual">
                                 People must be sharing their own camera before they can open mine
                             </label>
                         </div>
 
                         <div class="field mb-1">
-                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
-                                <input type="checkbox" v-model="webcam.mutualOpen" :disabled="!webcam.active">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.mutualOpen">
                                 When someone opens my camera, I also open their camera automatically
                             </label>
                         </div>
 
-                        <div class="field" v-if="isVIP">
-                            <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
-                                <input type="checkbox" v-model="webcam.vipOnly" :disabled="!webcam.active">
+                        <div class="field mb-1" v-if="isVIP">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.vipOnly">
                                 Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
                                     :class="config.VIP.Icon"></sup>
                                 members can see that my camera is broadcasting
                             </label>
+                        </div>
+
+                        <div class="field">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.rememberExpresslyClosed">
+                                Don't (automatically) reopen cameras that I have expressly closed
+                            </label>
+                            <p class="help">
+                                If I click the 'X' button to expressly close a webcam, that video won't
+                                auto-open again in case that person reopened my camera.
+                            </p>
                         </div>
 
                         <h3 class="subtitle mb-2" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
@@ -3365,11 +3430,22 @@ export default {
                         </label>
                     </div>
 
-                    <div class="field">
+                    <div class="field mb-1">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.mutualOpen">
                             When someone opens my camera, I also open their camera automatically
                         </label>
+                    </div>
+
+                    <div class="field">
+                        <label class="checkbox">
+                            <input type="checkbox" v-model="webcam.nonExplicit">
+                            I prefer not to see Explicit cameras from other chatters
+                        </label>
+                        <p class="help">
+                            Don't auto-open explicit cameras when they open mine; and automatically
+                            close a camera I am watching if it toggles to become explicit.
+                        </p>
                     </div>
 
                     <div class="field" v-if="isVIP">

@@ -40,7 +40,7 @@ VideoFlag: {
     Active:         1 << 0,  // or 00000001 in binary
     NSFW:           1 << 1,  // or 00000010
     Muted:          1 << 2,  // or 00000100, etc.
-    IsTalking:      1 << 3,
+    NonExplicit:    1 << 3,
     MutualRequired: 1 << 4,
     MutualOpen:     1 << 5,
 }

@@ -14,6 +14,8 @@ const keys = {
     'videoAutoMute': Boolean,
     'videoVipOnly': Boolean,
     'videoExplicit': Boolean,  // whether the user turns explicit on by default
+    'videoNonExplicit': Boolean,  // user prefers not to see explicit
+    'rememberExpresslyClosed': Boolean,
 
     // Booleans
     'joinMessages': Boolean,
