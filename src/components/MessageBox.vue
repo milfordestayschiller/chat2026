@@ -4,20 +4,21 @@ import 'vue3-emoji-picker/css';
 
 export default {
     props: {
-        message: Object,    // chat Message object
-        appearance: String, // message style appearance (cards, compact, etc.)
-        user: Object,       // User object of the Message author
-        isOffline: Boolean, // user is not currently online
-        username: String,   // current username logged in
-        websiteUrl: String, // Base URL to website (for profile/avatar URLs)
-        isDnd: Boolean,     // user is not accepting DMs
-        isMuted: Boolean,   // user is muted by current user
-        reactions: Object,  // emoji reactions on the message
+        message: Object,     // chat Message object
+        isPresence: Boolean, // presence message (joined/left room, kicked, etc.)
+        appearance: String,  // message style appearance (cards, compact, etc.)
+        user: Object,        // User object of the Message author
+        isOffline: Boolean,  // user is not currently online
+        username: String,    // current username logged in
+        websiteUrl: String,  // Base URL to website (for profile/avatar URLs)
+        isDnd: Boolean,      // user is not accepting DMs
+        isMuted: Boolean,    // user is muted by current user
+        reactions: Object,   // emoji reactions on the message
         reportEnabled: Boolean, // Report Message webhook is available
-        position: Number,   // position of the message (0 to n), for the emoji menu to know which side to pop
-        isDm: Boolean,      // is in a DM thread (hide DM buttons)
-        isOp: Boolean,      // current user is Operator (always show takeback button)
-        noButtons: Boolean, // hide all message buttons (e.g. for Report Modal)
+        position: Number,    // position of the message (0 to n), for the emoji menu to know which side to pop
+        isDm: Boolean,       // is in a DM thread (hide DM buttons)
+        isOp: Boolean,       // current user is Operator (always show takeback button)
+        noButtons: Boolean,  // hide all message buttons (e.g. for Report Modal)
     },
     components: {
         EmojiPicker,
@@ -172,8 +173,40 @@ export default {
 </script>
 
 <template>
+    <!-- Presence message banners -->
+    <div v-if="isPresence" class="notification is-success is-light py-1 px-3 mb-2">
+
+        <!-- Tiny avatar next to name and action buttons -->
+        <div class="columns is-mobile">
+            <div class="column is-narrow pr-0 pt-4">
+                <a :href="profileURL"
+                    @click.prevent="openProfile()"
+                    :class="{ 'cursor-default': !profileURL }">
+                    <figure class="image is-16x16">
+                        <img v-if="avatarURL" :src="avatarURL">
+                        <img v-else src="/static/img/shy.png">
+                    </figure>
+                </a>
+            </div>
+            <div class="column">
+                <!-- Timestamp on the right -->
+                <span class="float-right is-size-7" :title="message.at">
+                    {{ prettyDate(message.at) }}
+                </span>
+
+                <span @click="openProfile()" class="cursor-pointer">
+                    <strong>{{ nickname }}</strong>
+                    <span v-if="isOffline" class="ml-1">(offline)</span>
+                    <small v-else class="ml-1">(@{{ message.username }})</small>
+                </span>
+                {{ message.message }}
+            </div>
+        </div>
+
+    </div>
+
     <!-- Card Style (default) -->
-    <div v-if="appearance === 'cards' || !appearance" class="box mb-2 px-4 pt-3 pb-1 position-relative">
+    <div v-else-if="appearance === 'cards' || !appearance" class="box mb-2 px-4 pt-3 pb-1 position-relative">
         <div class="media mb-0">
             <div class="media-left">
                 <a :href="profileURL"

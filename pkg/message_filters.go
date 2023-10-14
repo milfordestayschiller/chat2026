@@ -134,8 +134,6 @@ func pushMessageContext(sub *Subscriber, channel string, msg messages.Message) {
 		strings.TrimSpace(msg.Message),
 	))
 
-	fmt.Printf("Context %s:\n%+v\n", channel, messageContexts[channel])
-
 	// Trim the context to recent messages only.
 	if len(messageContexts[channel]) > messageContextSize {
 		messageContexts[channel] = messageContexts[channel][len(messageContexts[channel])-messageContextSize:]

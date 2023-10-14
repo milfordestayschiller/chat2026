@@ -967,6 +967,7 @@ export default {
 
         // WhoList updates.
         onWho(msg) {
+            let sendMe = false;  // re-send our 'me' at the end
             this.whoList = msg.whoList;
             this.whoOnline = {};
 
@@ -974,14 +975,20 @@ export default {
                 this.whoList = [];
             }
 
-            // If we had a camera open with any of these and they have gone
-            // off camera, close our side of the connection.
             for (let row of this.whoList) {
                 this.whoMap[row.username] = row;
                 this.whoOnline[row.username] = true;
+
+                // If we had a camera open with any of these and they have gone
+                // off camera, close our side of the connection.
                 if (this.WebRTC.streams[row.username] != undefined &&
                     !(row.video & this.VideoFlag.Active)) {
                     this.closeVideo(row.username, "offerer");
+                }
+
+                // If the server disagrees with our current status, send our status back.
+                if (row.username === this.username && row.status !== this.status) {
+                    sendMe = true;
                 }
             }
 
@@ -992,6 +999,11 @@ export default {
             // Has the back-end server forgotten we are on video? This can
             // happen if we disconnect/reconnect while we were streaming.
             if (this.webcam.active && !(this.whoMap[this.username]?.video & this.VideoFlag.Active)) {
+                sendMe = true;
+            }
+
+            // Do we need to set our me status again?
+            if (sendMe) {
                 this.sendMe();
             }
         },
@@ -1670,7 +1682,7 @@ export default {
         },
         isUserOffline(username) {
             // Return if the username is not presently online in the chat.
-            return this.whoOnline[username] !== true;
+            return this.whoOnline[username] !== true && username !== 'ChatServer' && username !== 'ChatClient';
         },
         avatarForUsername(username) {
             if (this.whoMap[username] != undefined && this.whoMap[username].avatar) {
@@ -1703,9 +1715,6 @@ export default {
                 if (nick) {
                     return nick;
                 }
-            } else if (this.whoMap[username] == undefined && username !== 'ChatServer' && username !== 'ChatClient') {
-                // User is not even logged in! Add this note to their name
-                username += " (offline)";
             }
             return username;
         },
@@ -3751,37 +3760,10 @@ export default {
                         </div>
 
                         <div v-for="(msg, i) in chatHistory" v-bind:key="i">
-                            <!-- Enter chat presence messages draw as a short banner -->
-                            <div v-if="msg.action === 'presence'" class="notification is-success is-light py-1 px-3 mb-2">
 
-                                <!-- Tiny avatar next to name and action buttons -->
-                                <div class="columns is-mobile">
-                                    <div class="column is-narrow pr-0 pt-4">
-                                        <figure class="image is-16x16">
-                                            <img v-if="avatarForUsername(msg.username)"
-                                                :src="avatarForUsername(msg.username)">
-                                            <img v-else src="/static/img/shy.png">
-                                        </figure>
-                                    </div>
-                                    <div class="column">
-                                        <!-- Timestamp on the right -->
-                                        <span class="float-right is-size-7" :title="msg.at">
-                                            {{ prettyDate(msg.at) }}
-                                        </span>
-
-                                        <strong>{{ nicknameForUsername(msg.username) }}</strong>
-                                        <span v-if="isUserOffline(msg.username)" class="ml-1">(offline)</span>
-                                        <small v-else class="ml-1">(@{{ msg.username }})</small>
-                                        {{ msg.message }}
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <!-- Normal chat message: full size card w/ avatar -->
                             <MessageBox
-                                v-else
                                 :message="msg"
+                                :is-presence="msg.action === 'presence'"
                                 :appearance="messageStyle"
                                 :position="i"
                                 :user="getUser(msg.username)"
