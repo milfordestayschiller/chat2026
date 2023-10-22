@@ -2717,17 +2717,6 @@ export default {
             });
         },
 
-        // Format a datetime nicely for chat timestamp.
-        prettyDate(date) {
-            if (date == undefined) return '';
-            let hours = date.getHours(),
-                minutes = String(date.getMinutes()).padStart(2, '0'),
-                ampm = hours >= 11 ? "pm" : "am";
-
-            let hour = hours % 12 || 12;
-            return `${(hour)}:${minutes} ${ampm}`;
-        },
-
         // CSS classes for the profile button (color coded genders)
         profileButtonClass(user) {
             // VIP background.

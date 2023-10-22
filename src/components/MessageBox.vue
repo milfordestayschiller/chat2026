@@ -156,7 +156,7 @@ export default {
             if (date == undefined) return '';
             let hours = date.getHours(),
                 minutes = String(date.getMinutes()).padStart(2, '0'),
-                ampm = hours >= 11 ? "pm" : "am";
+                ampm = hours >= 12 ? "pm" : "am";
 
             let hour = hours % 12 || 12;
             return `${(hour)}:${minutes} ${ampm}`;
