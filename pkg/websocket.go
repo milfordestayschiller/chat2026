@@ -229,7 +229,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 				var token string
 				if sub.JWTClaims != nil {
 					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
-						log.Error("ReSign JWT token for %s: %s", sub.Username, err)
+						log.Error("ReSign JWT token for %s#%d: %s", sub.Username, sub.ID, err)
 					} else {
 						token = jwt
 					}
@@ -279,6 +279,7 @@ func (s *Server) DeleteSubscriber(sub *Subscriber) {
 
 	// Cancel its context to clean up the for-loop goroutine.
 	if sub.cancel != nil {
+		log.Info("Calling sub.cancel() on subscriber: %s#%d", sub.Username, sub.ID)
 		sub.cancel()
 	}
 

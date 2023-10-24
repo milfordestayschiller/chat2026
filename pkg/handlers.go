@@ -62,7 +62,8 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 				other.SendJSON(messages.Message{
 					Action: messages.ActionKick,
 				})
-				s.DeleteSubscriber(other)
+				other.authenticated = false
+				other.Username = ""
 			}
 
 			// They will take over their original username.

@@ -152,7 +152,8 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		other.SendJSON(messages.Message{
 			Action: messages.ActionKick,
 		})
-		s.DeleteSubscriber(other)
+		other.authenticated = false
+		other.Username = ""
 		sub.ChatServer("%s has been kicked from the room", username)
 
 		// Broadcast it to everyone.
@@ -200,7 +201,8 @@ func (s *Server) KickAllCommand() {
 			continue
 		}
 
-		s.DeleteSubscriber(sub)
+		sub.authenticated = false
+		sub.Username = ""
 	}
 }
 
@@ -245,7 +247,8 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 		other.SendJSON(messages.Message{
 			Action: messages.ActionKick,
 		})
-		s.DeleteSubscriber(other)
+		other.authenticated = false
+		other.Username = ""
 		sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
 	}
 }

@@ -1283,7 +1283,7 @@ export default {
                 }
 
                 if (!this.disconnect) {
-                    if (ev.code !== 1001) {
+                    if (ev.code !== 1001 && ev.code !== 1000) {
                         this.ChatClient("Reconnecting in 5s");
                         setTimeout(this.dial, 5000);
                     }
@@ -1376,7 +1376,10 @@ export default {
                         });
                         break;
                     case "disconnect":
+                        this.onWho({ whoList: [] });
                         this.disconnect = true;
+                        this.ws.connected = false;
+                        this.ws.conn.close(1000, "server asked to close the connection");
                         break;
                     case "ping":
                         // New JWT token?
