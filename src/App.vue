@@ -3753,22 +3753,9 @@ export default {
                         <div class="column">
                             {{ channelName }}
                         </div>
-                        <div class="column is-narrow">
-                            <!-- If a DM thread and the user has a profile URL -->
-                            <button type="button" v-if="channel.indexOf('@') === 0 && profileURLForUsername(channel)"
-                                class="button is-small is-outlined is-light mr-1" @click="openProfile({ username: channel })">
-                                <i class="fa fa-user"></i>
-                            </button>
-
-                            <!-- DMs: Leave convo button -->
-                            <button type="button" v-if="channel.indexOf('@') === 0"
-                                class="float-right button is-small is-warning is-outlined" @click="leaveDM()">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
 
                         <!-- Easy video zoom buttons -->
-                        <div class="column is-narrow" v-if="anyVideosOpen">
+                        <div class="column is-narrow is-hidden-mobile" v-if="anyVideosOpen">
                             <button type="button" class="button is-small is-outlined"
                                 :disabled="webcam.videoScale === 'x4'"
                                 @click="scaleVideoSize(true)">
@@ -3779,6 +3766,21 @@ export default {
                                 :disabled="webcam.videoScale === ''"
                                 @click="scaleVideoSize(false)">
                                 <i class="fa fa-magnifying-glass-minus"></i>
+                            </button>
+                        </div>
+
+                        <!-- DM thread buttons -->
+                        <div class="column is-narrow" v-if="channel.indexOf('@') === 0">
+                            <!-- If the user has a profile URL -->
+                            <button type="button" v-if="profileURLForUsername(channel)"
+                                class="button is-small is-outlined is-light mr-1" @click="openProfile({ username: channel })">
+                                <i class="fa fa-user"></i>
+                            </button>
+
+                            <!-- DMs: Leave convo button -->
+                            <button type="button"
+                                class="float-right button is-small is-warning is-outlined" @click="leaveDM()">
+                                <i class="fa fa-trash"></i>
                             </button>
                         </div>
 
