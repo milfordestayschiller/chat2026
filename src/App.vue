@@ -574,6 +574,10 @@ export default {
             if (this.webcam.vipOnly && this.isVIP) status |= this.VideoFlag.VipOnly;
             return status;
         },
+        anyVideosOpen() {
+            // Return if any videos are open.
+            return this.webcam.active || this.numVideosOpen > 0;
+        },
         numVideosOpen() {
             // Return the count of other peoples videos we have open.
             return Object.keys(this.WebRTC.streams).length;
@@ -2800,6 +2804,35 @@ export default {
             }
         },
 
+        // Scale the video zoom setting up or down.
+        scaleVideoSize(bigger) {
+            // Find the current size index.
+            let currentSize = 0;
+            for (let option of this.webcam.videoScaleOptions) {
+                if (option[0] === this.webcam.videoScale) {
+                    break;
+                }
+                currentSize++;
+            }
+
+            // Adjust it.
+            if (bigger) {
+                currentSize++;
+            } else {
+                currentSize--;
+            }
+
+            // Constrain it.
+            if (currentSize < 0) {
+                currentSize = 0;
+            } else if (currentSize >= this.webcam.videoScaleOptions.length) {
+                currentSize = this.webcam.videoScale.length - 1;
+            }
+
+            // Set it.
+            this.webcam.videoScale = this.webcam.videoScaleOptions[currentSize][0];
+        },
+
         /**
          * Sound effect concerns.
          */
@@ -3731,6 +3764,21 @@ export default {
                             <button type="button" v-if="channel.indexOf('@') === 0"
                                 class="float-right button is-small is-warning is-outlined" @click="leaveDM()">
                                 <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+
+                        <!-- Easy video zoom buttons -->
+                        <div class="column is-narrow" v-if="anyVideosOpen">
+                            <button type="button" class="button is-small is-outlined"
+                                :disabled="webcam.videoScale === 'x4'"
+                                @click="scaleVideoSize(true)">
+                                <i class="fa fa-magnifying-glass-plus"></i>
+                            </button>
+
+                            <button type="button" class="button is-small is-outlined"
+                                :disabled="webcam.videoScale === ''"
+                                @click="scaleVideoSize(false)">
+                                <i class="fa fa-magnifying-glass-minus"></i>
                             </button>
                         </div>
 
