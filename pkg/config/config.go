@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 9
+var currentVersion = 10
 
 // Config for your BareRTC app.
 type Config struct {
