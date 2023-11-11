@@ -14,7 +14,7 @@ import (
 
 // IsLoggingUsername checks whether the app is currently configured to log a user's DMs.
 func IsLoggingUsername(sub *Subscriber) bool {
-	if !config.Current.Logging.Enabled {
+	if !config.Current.Logging.Enabled || sub == nil {
 		return false
 	}
 
@@ -49,7 +49,7 @@ func IsLoggingChannel(channel string) bool {
 
 // LogMessage appends to a user's conversation log.
 func LogMessage(sub *Subscriber, otherUsername, senderUsername string, msg messages.Message) {
-	if !sub.log {
+	if sub == nil || !sub.log {
 		return
 	}
 
