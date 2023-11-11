@@ -50,6 +50,8 @@ type Config struct {
 	VIP VIP
 
 	MessageFilters []*MessageFilter
+
+	Logging Logging
 }
 
 type TurnConfig struct {
@@ -97,6 +99,14 @@ type WebhookURL struct {
 	Name    string
 	Enabled bool
 	URL     string
+}
+
+// Logging configs to monitor channels or usernames.
+type Logging struct {
+	Enabled   bool
+	Directory string
+	Channels  []string
+	Usernames []string
 }
 
 // Current loaded configuration.
@@ -174,6 +184,11 @@ func DefaultConfig() Config {
 				CensorMessage:      true,
 				ChatServerResponse: "Watch your language.",
 			},
+		},
+		Logging: Logging{
+			Directory: "./logs",
+			Channels:  []string{"lobby", "offtopic"},
+			Usernames: []string{},
 		},
 	}
 	c.JWT.Strict = true

@@ -1,6 +1,7 @@
 package barertc
 
 import (
+	"io"
 	"net/http"
 	"sync"
 )
@@ -16,6 +17,9 @@ type Server struct {
 	// Connected WebSocket subscribers.
 	subscribersMu sync.RWMutex
 	subscribers   map[*Subscriber]struct{}
+
+	// Cached filehandles for channel logging.
+	logfh map[string]io.Writer
 }
 
 // NewServer initializes the Server.

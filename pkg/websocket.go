@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -44,6 +45,10 @@ type Subscriber struct {
 	// Record which message IDs belong to this user.
 	midMu      sync.Mutex
 	messageIDs map[int64]struct{}
+
+	// Logging.
+	log   bool
+	logfh map[string]io.Writer
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.

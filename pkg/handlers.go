@@ -220,10 +220,24 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 			return
 		}
 
+		// Log this conversation?
+		if IsLoggingUsername(sub) {
+			// The sender of this message is being logged.
+			LogMessage(sub, rcpt.Username, sub.Username, msg)
+		} else if IsLoggingUsername(rcpt) {
+			// The recipient of this message is being logged.
+			LogMessage(rcpt, sub.Username, sub.Username, msg)
+		}
+
 		if err := s.SendTo(msg.Channel, message); err != nil {
 			sub.ChatServer("Your message could not be delivered: %s", err)
 		}
 		return
+	}
+
+	// Are we logging this public channel?
+	if IsLoggingChannel(msg.Channel) {
+		LogChannel(s, msg.Channel, sub.Username, msg)
 	}
 
 	// Broadcast a chat message to the room.
