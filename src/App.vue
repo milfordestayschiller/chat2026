@@ -445,7 +445,7 @@ export default {
                 }
             }
         },
-        "webcam.rememberExpresslyClosed": function() {
+        "webcam.rememberExpresslyClosed": function () {
             LocalStorage.set('rememberExpresslyClosed', this.webcam.rememberExpresslyClosed);
         },
 
@@ -895,6 +895,28 @@ export default {
                 } else {
                     this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
                 }
+                this.message = "";
+                return;
+            }
+
+            // DEBUGGING: print WebRTC statistics
+            if (this.message.toLowerCase().indexOf("/debug-webrtc") === 0) {
+                let lines = [
+                    "<strong>WebRTC PeerConnections:</strong>"
+                ];
+                for (let username of Object.keys(this.WebRTC.pc)) {
+                    let pc = this.WebRTC.pc[username];
+                    let line = `${username}: `;
+                    if (pc.offerer != undefined) {
+                        line += "offerer; ";
+                    }
+                    if (pc.answerer != undefined) {
+                        line += "answerer; ";
+                    }
+                    lines.push(line);
+                }
+
+                this.ChatClient(lines.join("<br>"));
                 this.message = "";
                 return;
             }
@@ -1633,6 +1655,7 @@ export default {
             // The user has closed our video feed.
             delete (this.webcam.watching[msg.username]);
             this.playSound("Unwatch");
+            this.cleanupPeerConnections();
         },
         sendWatch(username, watching) {
             // Send the watch or unwatch message to backend.
@@ -2108,7 +2131,7 @@ export default {
 
             // If the local user had expressly closed this user's camera before, forget
             // this action because the user now is expressly OPENING this camera on purpose.
-            delete(this.WebRTC.expresslyClosed[user.username]);
+            delete (this.WebRTC.expresslyClosed[user.username]);
 
             // Debounce so we don't spam too much for the same user.
             if (this.WebRTC.debounceOpens[user.username]) return;
@@ -2174,20 +2197,38 @@ export default {
                 delete (this.WebRTC.streams[username]);
                 delete (this.WebRTC.muted[username]);
                 delete (this.WebRTC.poppedOut[username]);
+
+                // Should we close the WebRTC PeerConnection? If they were watching our video back, closing
+                // the connection MAY cause our video to freeze on their side: if we have the "auto-open my viewer's
+                // camera" option set, and our viewer sent their video on their open request, and they still have
+                // our camera open, do not close the connection so we don't freeze their side of the video.
                 if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].offerer != undefined) {
-                    this.WebRTC.pc[username].offerer.close();
-                    delete (this.WebRTC.pc[username]);
+                    if (this.webcam.mutualOpen && this.isWatchingMe(username)) {
+                        console.log(`OFFERER(${username}): Close video locally only: do not hang up the connection.`);
+                    } else {
+                        this.WebRTC.pc[username].offerer.close();
+                        delete (this.WebRTC.pc[username]);
+                    }
                 }
 
                 // Inform backend we have closed it.
                 this.sendWatch(username, false);
+                this.cleanupPeerConnections();
                 return;
             } else if (name === "answerer") {
-                // We have turned off our camera, kick off viewers.
+                // Should we close the WebRTC PeerConnection? If they were watching our video back, closing
+                // the connection MAY cause our video to freeze on their side: if we have the "auto-open my viewer's
+                // camera" option set, and our viewer sent their video on their open request, and they still have
+                // our camera open, do not close the connection so we don't freeze their side of the video.
                 if (this.WebRTC.pc[username] != undefined && this.WebRTC.pc[username].answerer != undefined) {
-                    this.WebRTC.pc[username].answerer.close();
-                    delete (this.WebRTC.pc[username]);
+                    if (this.webcam.mutualOpen && this.isWatchingMe(username)) {
+                        console.log(`ANSWERER(${username}): Close video locally only: do not hang up the connection.`);
+                    } else {
+                        this.WebRTC.pc[username].answerer.close();
+                        delete (this.WebRTC.pc[username]);
+                    }
                 }
+                this.cleanupPeerConnections();
                 return;
             }
 
@@ -2215,6 +2256,7 @@ export default {
 
             // Inform backend we have closed it.
             this.sendWatch(username, false);
+            this.cleanupPeerConnections();
         },
         expresslyCloseVideo(username, name) {
             // Like closeVideo but communicates the user's intent to expressly
@@ -2228,6 +2270,43 @@ export default {
             // Close all videos open of other users.
             for (let username of Object.keys(this.WebRTC.streams)) {
                 this.closeVideo(username, "offerer");
+            }
+        },
+        cleanupPeerConnections() {
+            // Helper function to check and clean up WebRTC PeerConnections.
+            //
+            // This is fired on Unwatch and CloseVideo events, to double check
+            // which videos the local user has open + who online is watching our
+            // video, to close out any lingering WebRTC connections.
+            for (let username of Object.keys(this.WebRTC.pc)) {
+                let pc = this.WebRTC.pc[username];
+
+                // Is their video on our screen?
+                if (this.WebRTC.streams[username] != undefined) {
+                    continue;
+                }
+
+                // Are they watching us?
+                if (this.isWatchingMe(username)) {
+                    continue;
+                }
+
+                // Are they an admin that we booted?
+                if (this.isBootedAdmin(username)) {
+                    continue;
+                }
+
+                // The WebRTC connections should be closed out.
+                if (pc.answerer != undefined) {
+                    console.log("Clean up WebRTC answerer connection with " + username);
+                    pc.answerer.close();
+                    delete (this.WebRTC.pc[username]);
+                }
+                if (pc.offerer != undefined) {
+                    console.log("Clean up WebRTC offerer connection with " + username);
+                    pc.offerer.close();
+                    delete (this.WebRTC.pc[username]);
+                }
             }
         },
         muteAllVideos() {
@@ -2357,7 +2436,7 @@ export default {
                 }
 
                 this.sendUnboot(username);
-                delete(this.WebRTC.booted[username]);
+                delete (this.WebRTC.booted[username]);
 
                 return;
             }
@@ -2379,7 +2458,7 @@ export default {
             }
 
             // Remove them from our list.
-            delete(this.webcam.watching[username]);
+            delete (this.webcam.watching[username]);
 
             this.ChatClient(
                 `You have booted ${username} off your camera. They will no longer be able ` +
@@ -2612,8 +2691,8 @@ export default {
             }
 
             // Were we at mentioned in this message?
-            if (message.indexOf("@"+this.username) > -1) {
-                let re = new RegExp("@"+this.username+"\\b", "ig");
+            if (message.indexOf("@" + this.username) > -1) {
+                let re = new RegExp("@" + this.username + "\\b", "ig");
                 message = message.replace(re, `<strong class="has-background-at-mention">@${this.username}</strong>`);
             }
 
@@ -3097,7 +3176,8 @@ export default {
                                     <div class="control">
                                         <div class="select is-fullwidth">
                                             <select v-model="messageStyle">
-                                                <option v-for="s in config.messageStyleSettings" v-bind:key="s[0]" :value="s[0]">
+                                                <option v-for="s in config.messageStyleSettings" v-bind:key="s[0]"
+                                                    :value="s[0]">
                                                     {{ s[1] }}
                                                 </option>
                                             </select>
@@ -3325,8 +3405,7 @@ export default {
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.videoDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
-                                        <option v-for="(d, i) in webcam.videoDevices" :value="d.id"
-                                            v-bind:key="i">
+                                        <option v-for="(d, i) in webcam.videoDevices" :value="d.id" v-bind:key="i">
                                             {{ d.label || `Camera ${i}` }}
                                         </option>
                                     </select>
@@ -3338,8 +3417,7 @@ export default {
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.audioDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
-                                        <option v-for="(d, i) in webcam.audioDevices" :value="d.id"
-                                            v-bind:key="i">
+                                        <option v-for="(d, i) in webcam.audioDevices" :value="d.id" v-bind:key="i">
                                             {{ d.label || `Microphone ${i}` }}
                                         </option>
                                     </select>
@@ -3483,8 +3561,8 @@ export default {
                     </div>
 
                     <!-- Device Pickers: just in case the user had granted video permission in the past,
-                         and we are able to enumerate their device names, we can show them here before they
-                         go on this time.-->
+                                                                                     and we are able to enumerate their device names, we can show them here before they
+                                                                                     go on this time.-->
                     <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                         <div class="column">
@@ -3525,35 +3603,20 @@ export default {
     </div>
 
     <!-- NSFW Modal: before user views a NSFW camera the first time -->
-    <ExplicitOpenModal :visible="nsfwModalView.visible"
-        :user="nsfwModalView.user"
-        @accept="openVideo(nsfwModalView.user, true)"
-        @cancel="nsfwModalView.visible=false"
+    <ExplicitOpenModal :visible="nsfwModalView.visible" :user="nsfwModalView.user"
+        @accept="openVideo(nsfwModalView.user, true)" @cancel="nsfwModalView.visible = false"
         @dont-show-again="setSkipNSFWModal()"></ExplicitOpenModal>
 
     <!-- Report Modal -->
-    <ReportModal :visible="reportModal.visible"
-        :busy="reportModal.busy"
-        :user="reportModal.user"
-        :message="reportModal.message"
-        @accept="doReport"
-        @cancel="reportModal.visible=false"></ReportModal>
+    <ReportModal :visible="reportModal.visible" :busy="reportModal.busy" :user="reportModal.user"
+        :message="reportModal.message" @accept="doReport" @cancel="reportModal.visible = false"></ReportModal>
 
     <!-- Profile Modal (profile cards popup) -->
-    <ProfileModal :visible="profileModal.visible"
-        :user="profileModal.user"
-        :username="username"
-        :jwt="jwt.token"
-        :website-url="config.website"
-        :is-dnd="isUsernameDND(profileModal.username)"
-        :is-muted="isMutedUser(profileModal.username)"
-        :is-booted="isBooted(profileModal.username)"
-        :profile-webhook-enabled="isWebhookEnabled('profile')"
-        :vip-config="config.VIP"
-        @send-dm="openDMs"
-        @mute-user="muteUser"
-        @boot-user="bootUser"
-        @cancel="profileModal.visible=false"></ProfileModal>
+    <ProfileModal :visible="profileModal.visible" :user="profileModal.user" :username="username" :jwt="jwt.token"
+        :website-url="config.website" :is-dnd="isUsernameDND(profileModal.username)"
+        :is-muted="isMutedUser(profileModal.username)" :is-booted="isBooted(profileModal.username)"
+        :profile-webhook-enabled="isWebhookEnabled('profile')" :vip-config="config.VIP" @send-dm="openDMs"
+        @mute-user="muteUser" @boot-user="bootUser" @cancel="profileModal.visible = false"></ProfileModal>
 
     <div class="chat-container">
 
@@ -3608,8 +3671,7 @@ export default {
                     <!-- Note: the onclick for the previous div is handled in index.html -->
 
                     <div class="dropdown-trigger">
-                        <button type="button" class="button is-small is-link px-2"
-                            aria-haspopup="true"
+                        <button type="button" class="button is-small is-link px-2" aria-haspopup="true"
                             aria-controls="chat-settings-menu">
                             <span>
                                 <i class="fa fa-bars"></i>
@@ -3623,13 +3685,11 @@ export default {
                                 <i class="fa fa-gear mr-1"></i> Chat Settings
                             </a>
 
-                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0"
-                                @click.prevent="closeOpenVideos()">
+                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0" @click.prevent="closeOpenVideos()">
                                 <i class="fa fa-video-slash mr-1"></i> Close all cameras
                             </a>
 
-                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0"
-                                @click.prevent="muteAllVideos()">
+                            <a href="#" class="dropdown-item" v-if="numVideosOpen > 0" @click.prevent="muteAllVideos()">
                                 <i class="fa fa-microphone-slash mr-1"></i> Mute all cameras
                             </a>
 
@@ -3669,7 +3729,8 @@ export default {
 
                         <ul class="menu-list">
                             <li v-for="c in activeChannels()" v-bind:key="c.ID">
-                                <a :href="'#' + c.ID" @click.prevent="setChannel(c)" :class="{ 'is-active': c.ID == channel }">
+                                <a :href="'#' + c.ID" @click.prevent="setChannel(c)"
+                                    :class="{ 'is-active': c.ID == channel }">
                                     {{ c.Name }}
                                     <span v-if="hasUnread(c.ID)" class="tag is-success">
                                         {{ hasUnread(c.ID) }}
@@ -3716,9 +3777,7 @@ export default {
                     <!-- Close new DMs toggle -->
                     <div class="tag mt-2">
                         <label class="checkbox">
-                            <input type="checkbox"
-                                v-model="prefs.closeDMs"
-                                :value="true">
+                            <input type="checkbox" v-model="prefs.closeDMs" :value="true">
                             Ignore unsolicited DMs
 
                             <a href="#"
@@ -3756,14 +3815,12 @@ export default {
 
                         <!-- Easy video zoom buttons -->
                         <div class="column is-narrow is-hidden-mobile" v-if="anyVideosOpen">
-                            <button type="button" class="button is-small is-outlined"
-                                :disabled="webcam.videoScale === 'x4'"
+                            <button type="button" class="button is-small is-outlined" :disabled="webcam.videoScale === 'x4'"
                                 @click="scaleVideoSize(true)">
                                 <i class="fa fa-magnifying-glass-plus"></i>
                             </button>
 
-                            <button type="button" class="button is-small is-outlined"
-                                :disabled="webcam.videoScale === ''"
+                            <button type="button" class="button is-small is-outlined" :disabled="webcam.videoScale === ''"
                                 @click="scaleVideoSize(false)">
                                 <i class="fa fa-magnifying-glass-minus"></i>
                             </button>
@@ -3773,13 +3830,14 @@ export default {
                         <div class="column is-narrow" v-if="channel.indexOf('@') === 0">
                             <!-- If the user has a profile URL -->
                             <button type="button" v-if="profileURLForUsername(channel)"
-                                class="button is-small is-outlined is-light mr-1" @click="openProfile({ username: channel })">
+                                class="button is-small is-outlined is-light mr-1"
+                                @click="openProfile({ username: channel })">
                                 <i class="fa fa-user"></i>
                             </button>
 
                             <!-- DMs: Leave convo button -->
-                            <button type="button"
-                                class="float-right button is-small is-warning is-outlined" @click="leaveDM()">
+                            <button type="button" class="float-right button is-small is-warning is-outlined"
+                                @click="leaveDM()">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>
@@ -3798,56 +3856,41 @@ export default {
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <VideoFeed
-                        v-show="webcam.active"
-                        :local-video="true"
-                        :username="username"
-                        :popped-out="WebRTC.poppedOut[username]"
-                        :is-explicit="webcam.nsfw"
-                        :is-muted="webcam.muted"
-                        :is-source-muted="webcam.muted"
-                        @mute-video="muteMe()"
-                        @popout="popoutVideo"
+                    <VideoFeed v-show="webcam.active" :local-video="true" :username="username"
+                        :popped-out="WebRTC.poppedOut[username]" :is-explicit="webcam.nsfw" :is-muted="webcam.muted"
+                        :is-source-muted="webcam.muted" @mute-video="muteMe()" @popout="popoutVideo"
                         @set-volume="setVideoVolume">
                     </VideoFeed>
 
                     <!-- Others' videos -->
-                    <VideoFeed
-                        v-for="(stream, username) in WebRTC.streams"
-                        v-bind:key="username"
-                        :username="username"
-                        :popped-out="WebRTC.poppedOut[username]"
-                        :is-explicit="isUsernameCamNSFW(username)"
-                        :is-source-muted="isSourceMuted(username)"
-                        :is-muted="isMuted(username)"
-                        :is-watching-me="isWatchingMe(username)"
-                        :is-frozen="WebRTC.frozenStreamDetected[username]"
-                        @reopen-video="openVideoByUsername"
-                        @mute-video="muteVideo"
-                        @popout="popoutVideo"
-                        @close-video="expresslyCloseVideo"
-                        @set-volume="setVideoVolume">
+                    <VideoFeed v-for="(stream, username) in WebRTC.streams" v-bind:key="username" :username="username"
+                        :popped-out="WebRTC.poppedOut[username]" :is-explicit="isUsernameCamNSFW(username)"
+                        :is-source-muted="isSourceMuted(username)" :is-muted="isMuted(username)"
+                        :is-watching-me="isWatchingMe(username)" :is-frozen="WebRTC.frozenStreamDetected[username]"
+                        @reopen-video="openVideoByUsername" @mute-video="muteVideo" @popout="popoutVideo"
+                        @close-video="expresslyCloseVideo" @set-volume="setVideoVolume">
                     </VideoFeed>
 
                     <!-- Debugging - copy a lot of these to simulate more videos -->
 
                     <!-- <div class="feed">
-                        hi
-                    </div>
-                    <div class="feed">
-                        hi
-                    </div>
-                    <div class="feed">
-                        hi
-                    </div>
-                    <div class="feed">
-                        hi
-                    </div> -->
+                                                                                    hi
+                                                                                </div>
+                                                                                <div class="feed">
+                                                                                    hi
+                                                                                </div>
+                                                                                <div class="feed">
+                                                                                    hi
+                                                                                </div>
+                                                                                <div class="feed">
+                                                                                    hi
+                                                                                </div> -->
 
                 </div>
-                <div class="card-content" id="chatHistory"
-                    :class="{ 'has-background-dm': isDM,
-                              'p-1 pb-5': messageStyle.indexOf('compact') === 0 }">
+                <div class="card-content" id="chatHistory" :class="{
+                    'has-background-dm': isDM,
+                    'p-1 pb-5': messageStyle.indexOf('compact') === 0
+                }">
 
                     <div class="autoscroll-field tag">
                         <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
@@ -3879,29 +3922,14 @@ export default {
 
                         <div v-for="(msg, i) in chatHistory" v-bind:key="i">
 
-                            <MessageBox
-                                :message="msg"
-                                :is-presence="msg.action === 'presence'"
-                                :appearance="messageStyle"
-                                :position="i"
-                                :user="getUser(msg.username)"
-                                :is-offline="isUserOffline(msg.username)"
-                                :username="username"
-                                :website-url="config.website"
-                                :is-dnd="isUsernameDND(msg.username)"
-                                :is-muted="isMutedUser(msg.username)"
-                                :reactions="getReactions(msg)"
-                                :report-enabled="isWebhookEnabled('report')"
-                                :is-dm="isDM"
-                                :is-op="isOp"
-                                @open-profile="showProfileModal"
-                                @send-dm="openDMs"
-                                @mute-user="muteUser"
-                                @takeback="takeback"
-                                @remove="removeMessage"
-                                @report="reportMessage"
-                                @react="sendReact"
-                            ></MessageBox>
+                            <MessageBox :message="msg" :is-presence="msg.action === 'presence'" :appearance="messageStyle"
+                                :position="i" :user="getUser(msg.username)" :is-offline="isUserOffline(msg.username)"
+                                :username="username" :website-url="config.website" :is-dnd="isUsernameDND(msg.username)"
+                                :is-muted="isMutedUser(msg.username)" :reactions="getReactions(msg)"
+                                :report-enabled="isWebhookEnabled('report')" :is-dm="isDM" :is-op="isOp"
+                                @open-profile="showProfileModal" @send-dm="openDMs" @mute-user="muteUser"
+                                @takeback="takeback" @remove="removeMessage" @report="reportMessage" @react="sendReact">
+                            </MessageBox>
 
                         </div>
 
@@ -3936,11 +3964,7 @@ export default {
                             <form @submit.prevent="sendMessage()">
 
                                 <!-- At Mentions -->
-                                <Mentionable
-                                    :keys="['@']"
-                                    :items="atMentionItems"
-                                    offset="12"
-                                    insert-space>
+                                <Mentionable :keys="['@']" :items="atMentionItems" offset="12" insert-space>
 
                                     <!-- My text box -->
                                     <input type="text" class="input" id="messageBox" v-model="message"
@@ -3966,29 +3990,22 @@ export default {
                             </form>
                         </div>
                         <div class="column px-1 is-narrow dropdown is-right is-up" :class="{ 'is-active': showEmojiPicker }"
-                            @click="showEmojiPicker=true">
+                            @click="showEmojiPicker = true">
                             <!-- Emoji picker for messages -->
                             <div class="dropdown-trigger">
-                                <button type="button" class="button"
-                                    aria-haspopup="true"
-                                    aria-controls="input-emoji-picker"
+                                <button type="button" class="button" aria-haspopup="true" aria-controls="input-emoji-picker"
                                     @click="hideEmojiPicker()">
                                     <span>
                                         <i class="fa-regular fa-smile"></i>
                                     </span>
                                 </button>
                             </div>
-                            <div class="dropdown-menu" id="input-emoji-picker" role="menu"
-                                style="z-index: 9000">
+                            <div class="dropdown-menu" id="input-emoji-picker" role="menu" style="z-index: 9000">
                                 <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
-                                     label on the chat history panel -->
+                                                                                                 label on the chat history panel -->
                                 <div class="dropdown-content p-0">
-                                    <EmojiPicker
-                                        :native="true"
-                                        :display-recent="true"
-                                        :disable-skin-tones="true"
-                                        theme="auto"
-                                        @select="onSelectEmoji">
+                                    <EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
+                                        theme="auto" @select="onSelectEmoji">
                                     </EmojiPicker>
                                 </div>
                             </div>
@@ -4091,43 +4108,22 @@ export default {
                     <!-- Who Is Online -->
                     <ul class="menu-list" v-if="whoTab === 'online'">
                         <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
-                            <WhoListRow
-                                :user="u"
-                                :username="username"
-                                :website-url="config.website"
-                                :is-dnd="isUsernameDND(u.username)"
-                                :is-muted="isMutedUser(u.username)"
-                                :is-booted="isBooted(u.username)"
-                                :is-op="isOp"
-                                :is-video-not-allowed="isVideoNotAllowed(u)"
-                                :video-icon-class="webcamIconClass(u)"
-                                :vip-config="config.VIP"
-                                @send-dm="openDMs"
-                                @mute-user="muteUser"
-                                @open-video="openVideo"
-                                @open-profile="showProfileModal"></WhoListRow>
+                            <WhoListRow :user="u" :username="username" :website-url="config.website"
+                                :is-dnd="isUsernameDND(u.username)" :is-muted="isMutedUser(u.username)"
+                                :is-booted="isBooted(u.username)" :is-op="isOp" :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)" :vip-config="config.VIP" @send-dm="openDMs"
+                                @mute-user="muteUser" @open-video="openVideo" @open-profile="showProfileModal"></WhoListRow>
                         </li>
                     </ul>
 
                     <!-- Watching My Webcam -->
                     <ul class="menu-list" v-if="whoTab === 'watching'">
                         <li v-for="(u, i) in sortedWatchingList" v-bind:key="username">
-                            <WhoListRow
-                                :is-watching-tab="true"
-                                :user="u"
-                                :username="username"
-                                :website-url="config.website"
-                                :is-dnd="isUsernameDND(username)"
-                                :is-muted="isMutedUser(username)"
-                                :is-booted="isBooted(u.username)"
-                                :is-op="isOp"
-                                :is-video-not-allowed="isVideoNotAllowed(u)"
-                                :video-icon-class="webcamIconClass(u)"
-                                :vip-config="config.VIP"
-                                @send-dm="openDMs"
-                                @mute-user="muteUser"
-                                @open-video="openVideo"
-                                @boot-user="bootUser"
+                            <WhoListRow :is-watching-tab="true" :user="u" :username="username" :website-url="config.website"
+                                :is-dnd="isUsernameDND(username)" :is-muted="isMutedUser(username)"
+                                :is-booted="isBooted(u.username)" :is-op="isOp" :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)" :vip-config="config.VIP" @send-dm="openDMs"
+                                @mute-user="muteUser" @open-video="openVideo" @boot-user="bootUser"
                                 @open-profile="showProfileModal"></WhoListRow>
                         </li>
                     </ul>

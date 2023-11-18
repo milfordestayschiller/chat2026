@@ -48,7 +48,7 @@ type Subscriber struct {
 
 	// Logging.
 	log   bool
-	logfh map[string]io.Writer
+	logfh map[string]io.WriteCloser
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -287,6 +287,9 @@ func (s *Server) DeleteSubscriber(sub *Subscriber) {
 		log.Info("Calling sub.cancel() on subscriber: %s#%d", sub.Username, sub.ID)
 		sub.cancel()
 	}
+
+	// Clean up any log files.
+	sub.teardownLogs()
 
 	s.subscribersMu.Lock()
 	delete(s.subscribers, sub)

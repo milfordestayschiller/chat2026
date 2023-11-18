@@ -32,11 +32,6 @@ export default {
             return this.localVideo ? 'localVideo' : `videofeed-${this.username}`;
         },
     },
-    watch: {
-        mouseOver() {
-            console.log("mouse over:", this.mouseOver);
-        },
-    },
     methods: {
         closeVideo() {
             // Note: closeVideo only available for OTHER peoples cameras.
@@ -85,7 +80,7 @@ export default {
     <div class="feed" :class="{
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
-    }" @mouseover="mouseOver=true" @mouseleave="mouseOver=false">
+    }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
         <video class="feed" :id="videoID" autoplay :muted="localVideo"></video>
 
         <!-- Caption -->
@@ -93,23 +88,19 @@ export default {
             'has-text-camera-blue': !isExplicit,
             'has-text-camera-red': isExplicit,
         }">
-            <i class="fa fa-microphone-slash mr-1 has-text-grey"
-                v-if="isSourceMuted"></i>
+            <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="isSourceMuted"></i>
             {{ username }}
-            <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7"
-                :title="username + ' is watching your camera too'"
+            <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7" :title="username + ' is watching your camera too'"
                 v-if="isWatchingMe"></i>
 
             <!-- Frozen stream detection -->
-            <a class="fa fa-mountain ml-1" href="#" v-if="!localVideo && isFrozen"
-                style="color: #00FFFF" @click.prevent="reopenVideo()"
-                title="Frozen video detected!"></a>
+            <a class="fa fa-mountain ml-1" href="#" v-if="!localVideo && isFrozen" style="color: #00FFFF"
+                @click.prevent="reopenVideo()" title="Frozen video detected!"></a>
         </div>
 
         <!-- Close button (others' videos only) -->
         <div class="close" v-if="!localVideo">
-            <a href="#" class="has-text-danger" title="Close video"
-                @click.prevent="closeVideo()">
+            <a href="#" class="has-text-danger" title="Close video" @click.prevent="closeVideo()">
                 <i class="fa fa-close"></i>
             </a>
         </div>
@@ -117,31 +108,28 @@ export default {
         <!-- Controls -->
         <div class="controls">
             <!-- Mute Button -->
-            <button type="button" v-if="!isMuted"
-                class="button is-small is-success is-outlined ml-1 px-2"
+            <button type="button" v-if="!isMuted" class="button is-small is-success is-outlined ml-1 px-2"
                 @click="muteVideo()">
-                <i class="fa"
-                    :class="{'fa-microphone': localVideo,
-                             'fa-volume-high': !localVideo}"></i>
+                <i class="fa" :class="{
+                    'fa-microphone': localVideo,
+                    'fa-volume-high': !localVideo
+                }"></i>
             </button>
-            <button type="button" v-else
-                class="button is-small is-danger ml-1 px-2"
-                @click="muteVideo()">
-                <i class="fa"
-                    :class="{'fa-microphone-slash': localVideo,
-                            'fa-volume-xmark': !localVideo}"></i>
+            <button type="button" v-else class="button is-small is-danger ml-1 px-2" @click="muteVideo()">
+                <i class="fa" :class="{
+                    'fa-microphone-slash': localVideo,
+                    'fa-volume-xmark': !localVideo
+                }"></i>
             </button>
 
             <!-- Pop-out Video -->
-            <button type="button" class="button is-small is-light is-outlined p-2 ml-2"
-                title="Pop out"
+            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
                 @click="popoutVideo()">
                 <i class="fa fa-up-right-from-square"></i>
             </button>
 
             <!-- Full screen -->
-            <button type="button" class="button is-small is-light is-outlined p-2 ml-2"
-                title="Go full screen"
+            <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Go full screen"
                 @click="fullscreen()">
                 <i class="fa fa-expand"></i>
             </button>
@@ -149,16 +137,8 @@ export default {
 
         <!-- Volume slider -->
         <div class="volume-slider" v-show="!localVideo && !isMuted && mouseOver">
-            <Slider
-                v-model="volume"
-                color="#00FF00"
-                track-color="#006600"
-                :min="0"
-                :max="100"
-                :step="1"
-                :height="7"
-                orientation="vertical"
-                @change="volumeChanged">
+            <Slider v-model="volume" color="#00FF00" track-color="#006600" :min="0" :max="100" :step="1" :height="7"
+                orientation="vertical" @change="volumeChanged">
 
             </Slider>
         </div>

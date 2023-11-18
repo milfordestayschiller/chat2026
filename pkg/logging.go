@@ -87,8 +87,20 @@ func LogChannel(s *Server, channel string, username string, msg messages.Message
 	)
 }
 
+// Tear down log files for subscribers.
+func (s *Subscriber) teardownLogs() {
+	if s.logfh == nil {
+		return
+	}
+
+	for username, fh := range s.logfh {
+		log.Error("TeardownLogs(%s/%s)", s.Username, username)
+		fh.Close()
+	}
+}
+
 // Initialize a logging directory.
-func initLogFile(sub LogCacheable, components ...string) (io.Writer, error) {
+func initLogFile(sub LogCacheable, components ...string) (io.WriteCloser, error) {
 	// Initialize the logfh cache?
 	var logfh = sub.GetLogFilehandleCache()
 
@@ -126,19 +138,19 @@ func initLogFile(sub LogCacheable, components ...string) (io.Writer, error) {
 
 // Interface for objects that hold log filehandle caches.
 type LogCacheable interface {
-	GetLogFilehandleCache() map[string]io.Writer
+	GetLogFilehandleCache() map[string]io.WriteCloser
 }
 
 // Implementations of LogCacheable.
-func (sub *Subscriber) GetLogFilehandleCache() map[string]io.Writer {
+func (sub *Subscriber) GetLogFilehandleCache() map[string]io.WriteCloser {
 	if sub.logfh == nil {
-		sub.logfh = map[string]io.Writer{}
+		sub.logfh = map[string]io.WriteCloser{}
 	}
 	return sub.logfh
 }
-func (s *Server) GetLogFilehandleCache() map[string]io.Writer {
+func (s *Server) GetLogFilehandleCache() map[string]io.WriteCloser {
 	if s.logfh == nil {
-		s.logfh = map[string]io.Writer{}
+		s.logfh = map[string]io.WriteCloser{}
 	}
 	return s.logfh
 }

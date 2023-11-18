@@ -19,7 +19,7 @@ type Server struct {
 	subscribers   map[*Subscriber]struct{}
 
 	// Cached filehandles for channel logging.
-	logfh map[string]io.Writer
+	logfh map[string]io.WriteCloser
 }
 
 // NewServer initializes the Server.
