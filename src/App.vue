@@ -419,7 +419,7 @@ export default {
             }
         },
         "webcam.mutualOpen": function () {
-            LocalStorage.set('videoMutualOpen', this.webcam.videoMutualOpen);
+            LocalStorage.set('videoMutualOpen', this.webcam.mutualOpen);
             if (this.webcam.active) {
                 this.sendMe();
             }
@@ -3560,9 +3560,11 @@ export default {
                         </label>
                     </div>
 
-                    <!-- Device Pickers: just in case the user had granted video permission in the past,
-                                                                                     and we are able to enumerate their device names, we can show them here before they
-                                                                                     go on this time.-->
+                    <!--
+                        Device Pickers: just in case the user had granted video permission in the past,
+                        and we are able to enumerate their device names, we can show them here before they
+                        go on this time.
+                        -->
                     <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                         <div class="column">
@@ -3874,17 +3876,17 @@ export default {
                     <!-- Debugging - copy a lot of these to simulate more videos -->
 
                     <!-- <div class="feed">
-                                                                                    hi
-                                                                                </div>
-                                                                                <div class="feed">
-                                                                                    hi
-                                                                                </div>
-                                                                                <div class="feed">
-                                                                                    hi
-                                                                                </div>
-                                                                                <div class="feed">
-                                                                                    hi
-                                                                                </div> -->
+                                                                                                            hi
+                                                                                                        </div>
+                                                                                                        <div class="feed">
+                                                                                                            hi
+                                                                                                        </div>
+                                                                                                        <div class="feed">
+                                                                                                            hi
+                                                                                                        </div>
+                                                                                                        <div class="feed">
+                                                                                                            hi
+                                                                                                        </div> -->
 
                 </div>
                 <div class="card-content" id="chatHistory" :class="{
@@ -4002,7 +4004,7 @@ export default {
                             </div>
                             <div class="dropdown-menu" id="input-emoji-picker" role="menu" style="z-index: 9000">
                                 <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
-                                                                                                 label on the chat history panel -->
+                                                                                                                         label on the chat history panel -->
                                 <div class="dropdown-content p-0">
                                     <EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
                                         theme="auto" @select="onSelectEmoji">
