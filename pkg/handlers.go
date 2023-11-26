@@ -221,7 +221,11 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		}
 
 		// Log this conversation?
-		if IsLoggingUsername(sub) {
+		if IsLoggingUsername(sub) && IsLoggingUsername(rcpt) {
+			// Both sides are logged, copy it to both logs.
+			LogMessage(sub, rcpt.Username, sub.Username, msg)
+			LogMessage(rcpt, sub.Username, sub.Username, msg)
+		} else if IsLoggingUsername(sub) {
 			// The sender of this message is being logged.
 			LogMessage(sub, rcpt.Username, sub.Username, msg)
 		} else if IsLoggingUsername(rcpt) {
