@@ -179,9 +179,7 @@ export default {
         <!-- Tiny avatar next to name and action buttons -->
         <div class="columns is-mobile">
             <div class="column is-narrow pr-0 pt-4">
-                <a :href="profileURL"
-                    @click.prevent="openProfile()"
-                    :class="{ 'cursor-default': !profileURL }">
+                <a :href="profileURL" @click.prevent="openProfile()" :class="{ 'cursor-default': !profileURL }">
                     <figure class="image is-16x16">
                         <img v-if="avatarURL" :src="avatarURL">
                         <img v-else src="/static/img/shy.png">
@@ -209,13 +207,11 @@ export default {
     <div v-else-if="appearance === 'cards' || !appearance" class="box mb-2 px-4 pt-3 pb-1 position-relative">
         <div class="media mb-0">
             <div class="media-left">
-                <a :href="profileURL"
-                    @click.prevent="openProfile()">
+                <a :href="profileURL" @click.prevent="openProfile()">
                     <figure class="image is-48x48">
                         <img v-if="message.isChatServer" src="/static/img/server.png">
                         <img v-else-if="message.isChatClient" src="/static/img/client.png">
-                        <img v-else-if="avatarURL"
-                            :src="avatarURL">
+                        <img v-else-if="avatarURL" :src="avatarURL">
                         <img v-else src="/static/img/shy.png">
                     </figure>
                 </a>
@@ -245,9 +241,7 @@ export default {
                 <div class="columns is-mobile pt-0" v-if="(message.isChatClient || message.isChatServer)">
                     <div class="column is-narrow pt-0">
                         <small v-if="!(message.isChatClient || message.isChatServer)">
-                            <a v-if="profileURL"
-                                :href="profileURL" target="_blank"
-                                @click.prevent="openProfile()"
+                            <a v-if="profileURL" :href="profileURL" target="_blank" @click.prevent="openProfile()"
                                 class="has-text-grey">
                                 @{{ message.username }}
                             </a>
@@ -259,9 +253,7 @@ export default {
                 <div v-else class="columns is-mobile pt-0">
                     <div class="column is-narrow pt-0">
                         <small v-if="!(message.isChatClient || message.isChatServer)">
-                            <a :href="profileURL || '#'"
-                                target="_blank"
-                                @click.prevent="openProfile()"
+                            <a :href="profileURL || '#'" target="_blank" @click.prevent="openProfile()"
                                 class="has-text-grey">
                                 @{{ message.username }}
                             </a>
@@ -269,12 +261,10 @@ export default {
                         <small v-else class="has-text-grey">internal</small>
                     </div>
 
-                    <div class="column is-narrow pl-1 pt-0"
-                        v-if="!noButtons">
+                    <div class="column is-narrow pl-1 pt-0" v-if="!noButtons">
                         <!-- DMs button -->
                         <button type="button" v-if="!(message.username === username || isDm)"
-                            class="button is-grey is-outlined is-small px-2"
-                            @click="openDMs()"
+                            class="button is-grey is-outlined is-small px-2" @click="openDMs()"
                             :title="isDnd ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
                             :disabled="isDnd">
                             <i class="fa fa-comment"></i>
@@ -282,8 +272,7 @@ export default {
 
                         <!-- Mute button -->
                         <button type="button" v-if="!(message.username === username)"
-                            class="button is-grey is-outlined is-small px-2 ml-1"
-                            @click="muteUser()" title="Mute user">
+                            class="button is-grey is-outlined is-small px-2 ml-1" @click="muteUser()" title="Mute user">
                             <i class="fa fa-comment-slash" :class="{
                                 'has-text-success': isMuted,
                                 'has-text-danger': !isMuted
@@ -293,16 +282,14 @@ export default {
                         <!-- Owner or admin: take back the message -->
                         <button type="button" v-if="message.username === username || isOp"
                             class="button is-grey is-outlined is-small px-2 ml-1"
-                            title="Take back this message (delete it for everybody)"
-                            @click="takeback()">
+                            title="Take back this message (delete it for everybody)" @click="takeback()">
                             <i class="fa fa-rotate-left has-text-danger"></i>
                         </button>
 
                         <!-- Everyone else: can hide it locally -->
                         <button type="button" v-if="message.username !== username"
                             class="button is-grey is-outlined is-small px-2 ml-1"
-                            title="Hide this message (delete it only for your view)"
-                            @click="removeMessage()">
+                            title="Hide this message (delete it only for your view)" @click="removeMessage()">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -317,19 +304,18 @@ export default {
                 <button class="button is-small is-outlined mr-1" :class="{
                     'is-danger': !message.reported,
                     'has-text-grey': message.reported
-                }" title="Report this message"
-                    @click="reportMessage()">
+                }" title="Report this message" @click="reportMessage()">
                     <i class="fa fa-flag"></i>
                     <i class="fa fa-check ml-1" v-if="message.reported"></i>
                 </button>
             </div>
 
-            <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
-                @click="showEmojiPicker=true">
+            <div class="column dropdown is-right"
+                :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': showEmojiPicker }"
+                @click="showEmojiPicker = true">
                 <div class="dropdown-trigger">
                     <button type="button" class="button is-small px-2" aria-haspopup="true"
-                        :aria-controls="`react-menu-${message.msgID}`"
-                        @click="hideEmojiPicker()">
+                        :aria-controls="`react-menu-${message.msgID}`" @click="hideEmojiPicker()">
                         <span>
                             <i class="fa fa-heart has-text-grey"></i>
                             <i class="fa fa-plus has-text-grey pl-1"></i>
@@ -339,15 +325,9 @@ export default {
                 <div class="dropdown-menu" :id="`react-menu-${message.msgID}`" role="menu">
                     <div class="dropdown-content p-0">
                         <!-- Emoji reactions menu -->
-                        <EmojiPicker
-                            v-if="showEmojiPicker"
-                            :native="true"
-                            :display-recent="true"
-                            :disable-skin-tones="true"
-                            :additional-groups="customEmojiGroups"
-                            :group-names="{ frequently_used: 'Frequently Used' }"
-                            theme="auto"
-                            @select="onSelectEmoji"></EmojiPicker>
+                        <EmojiPicker v-if="showEmojiPicker" :native="true" :display-recent="true" :disable-skin-tones="true"
+                            :additional-groups="customEmojiGroups" :group-names="{ frequently_used: 'Frequently Used' }"
+                            theme="auto" @select="onSelectEmoji"></EmojiPicker>
                     </div>
                 </div>
             </div>
@@ -360,9 +340,7 @@ export default {
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mt-1">
-                <span v-for="(users, emoji) in reactions"
-                    v-bind:key="emoji"
-                    class="tag is-secondary mr-1 cursor-pointer"
+                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }} <small class="ml-1">{{ users.length }}</small>
@@ -381,9 +359,7 @@ export default {
 
         <!-- Avatar icon -->
         <div class="column is-narrow px-1">
-            <a :href="profileURL"
-                @click.prevent="openProfile()"
-                class="p-0">
+            <a :href="profileURL" @click.prevent="openProfile()" class="p-0">
                 <img v-if="avatarURL" :src="avatarURL" width="16" height="16" alt="">
                 <img v-else src="/static/img/shy.png" width="16" height="16">
             </a>
@@ -392,31 +368,27 @@ export default {
         <!-- Name/username/message -->
         <div class="column px-1">
             <div class="content mb-2">
-                <strong
-                    :class="{
-                                'has-text-success is-dark': message.isChatServer,
-                                'has-text-warning is-dark': message.isAdmin,
-                                'has-text-danger': message.isChatClient
-                            }">
-                    [<a :href="profileURL"
-                        @click.prevent="openProfile()"
-                        class="has-text-dark"
+                <strong :class="{
+                    'has-text-success is-dark': message.isChatServer,
+                    'has-text-warning is-dark': message.isAdmin,
+                    'has-text-danger': message.isChatClient
+                }">
+                    [<a :href="profileURL" @click.prevent="openProfile()" class="has-text-dark"
                         :class="{ 'cursor-default': !profileURL }">
                         <!-- Display name? -->
                         <span v-if="(message.isChatServer || message.isChatClient || message.isAdmin)
-                                    || (appearance === 'compact' && nickname !== message.username)"
-                            :class="{
-                                'has-text-success is-dark': message.isChatServer,
-                                'has-text-warning is-dark': message.isAdmin,
-                                'has-text-danger': message.isChatClient
-                            }">
+                            || (appearance === 'compact' && nickname !== message.username)" :class="{
+        'has-text-success is-dark': message.isChatServer,
+        'has-text-warning is-dark': message.isAdmin,
+        'has-text-danger': message.isChatClient
+    }">
                             {{ nickname }}
                         </span>
 
                         <small class="has-text-grey"
-                            :class="{'ml-1': appearance === 'compact' && nickname !== message.username}"
-                            v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)"
-                        >@{{ message.username }}</small>
+                            :class="{ 'ml-1': appearance === 'compact' && nickname !== message.username }"
+                            v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)">@{{ message.username
+                            }}</small>
                     </a>]
                 </strong>
 
@@ -425,9 +397,7 @@ export default {
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mb-2">
-                <span v-for="(users, emoji) in reactions"
-                    v-bind:key="emoji"
-                    class="tag is-secondary mr-1 cursor-pointer"
+                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }} <small class="ml-1">{{ users.length }}</small>
@@ -440,8 +410,9 @@ export default {
 
             <div class="columns is-mobile is-gapless mb-0">
                 <!-- More buttons menu (DM, mute, report, etc.) -->
-                <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': menuVisible }"
-                    @click="menuVisible=!menuVisible">
+                <div class="column dropdown is-right"
+                    :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': menuVisible }"
+                    @click="menuVisible = !menuVisible">
                     <div class="dropdown-trigger">
                         <button type="button" class="button is-small px-2 mr-1" aria-haspopup="true"
                             :aria-controls="`msg-menu-${message.msgID}`">
@@ -482,8 +453,7 @@ export default {
                             <!-- Report button -->
                             <a href="#" class="dropdown-item" v-if="reportEnabled && message.username !== username"
                                 @click.prevent="reportMessage()">
-                                <i class="fa fa-flag mr-1"
-                                    :class="{'has-text-danger': !message.reported}"></i>
+                                <i class="fa fa-flag mr-1" :class="{ 'has-text-danger': !message.reported }"></i>
                                 <span v-if="message.reported">Reported</span>
                                 <span v-else>Report</span>
                             </a>
@@ -492,12 +462,12 @@ export default {
                 </div>
 
                 <!-- Emoji reactions -->
-                <div class="column dropdown is-right" :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
-                    @click="showEmojiPicker=true">
+                <div class="column dropdown is-right"
+                    :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': showEmojiPicker }"
+                    @click="showEmojiPicker = true">
                     <div class="dropdown-trigger">
                         <button type="button" class="button is-small px-2" aria-haspopup="true"
-                            :aria-controls="`react-menu-${message.msgID}`"
-                            @click="hideEmojiPicker()">
+                            :aria-controls="`react-menu-${message.msgID}`" @click="hideEmojiPicker()">
                             <small>
                                 <i class="fa fa-heart has-text-grey"></i>
                             </small>
@@ -506,15 +476,10 @@ export default {
                     <div class="dropdown-menu" :id="`react-menu-${message.msgID}`" role="menu">
                         <div class="dropdown-content p-0">
                             <!-- Emoji reactions menu -->
-                            <EmojiPicker
-                                v-if="showEmojiPicker"
-                                :native="true"
-                                :display-recent="true"
-                                :disable-skin-tones="true"
-                                :additional-groups="customEmojiGroups"
-                                :group-names="{ frequently_used: 'Frequently Used' }"
-                                theme="auto"
-                                @select="onSelectEmoji"></EmojiPicker>
+                            <EmojiPicker v-if="showEmojiPicker" :native="true" :display-recent="true"
+                                :disable-skin-tones="true" :additional-groups="customEmojiGroups"
+                                :group-names="{ frequently_used: 'Frequently Used' }" theme="auto" @select="onSelectEmoji">
+                            </EmojiPicker>
                         </div>
                     </div>
                 </div>
@@ -524,5 +489,4 @@ export default {
     </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

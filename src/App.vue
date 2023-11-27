@@ -3561,10 +3561,10 @@ export default {
                     </div>
 
                     <!--
-                        Device Pickers: just in case the user had granted video permission in the past,
-                        and we are able to enumerate their device names, we can show them here before they
-                        go on this time.
-                        -->
+                    Device Pickers: just in case the user had granted video permission in the past,
+                    and we are able to enumerate their device names, we can show them here before they
+                    go on this time.
+                    -->
                     <div class="columns is-mobile" v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                         <div class="column">
@@ -3876,17 +3876,17 @@ export default {
                     <!-- Debugging - copy a lot of these to simulate more videos -->
 
                     <!-- <div class="feed">
-                                                                                                            hi
-                                                                                                        </div>
-                                                                                                        <div class="feed">
-                                                                                                            hi
-                                                                                                        </div>
-                                                                                                        <div class="feed">
-                                                                                                            hi
-                                                                                                        </div>
-                                                                                                        <div class="feed">
-                                                                                                            hi
-                                                                                                        </div> -->
+                        hi
+                    </div>
+                    <div class="feed">
+                        hi
+                    </div>
+                    <div class="feed">
+                        hi
+                    </div>
+                    <div class="feed">
+                        hi
+                    </div> -->
 
                 </div>
                 <div class="card-content" id="chatHistory" :class="{
@@ -3906,10 +3906,31 @@ export default {
                         <!-- Disclaimer at the top of DMs -->
                         <!-- TODO: make this disclaimer configurable for other sites to modify -->
                         <div class="notification is-warning is-light" v-if="isDM">
-                            <i class="fa fa-info-circle mr-1"></i>
-                            <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.
-                            Please refer to <span v-html="config.branding"></span>'s Privacy Policy or Terms of Service with
-                            regard to DMs.
+                            <!-- If reporting is enabled -->
+                            <div v-if="isWebhookEnabled('report')">
+                                <div class="block">
+                                    <i class="fa fa-info-circle mr-1"></i>
+                                    <strong>PSA:</strong> If you see something, say something!
+                                </div>
+                                <div class="block">
+                                    If you encounter an inappropriate, abusive or criminal message in chat, please flag it
+                                    by clicking the red
+                                    <i class="fa fa-flag has-text-danger mx-1"></i> icon to report the message and
+                                    let your website administrator know. Server-side chat filters are engaged
+                                    to help flag messages automatically, but we appreciate our members helping to flag
+                                    messages in case the automated filters missed any.
+                                </div>
+                                <div class="block">
+                                    Do your part to help keep this website great! <i class="fa-regular fa-star"></i>
+                                </div>
+                            </div>
+                            <div v-else>
+                                <i class="fa fa-info-circle mr-1"></i>
+                                <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.
+                                Please refer to <span v-html="config.branding"></span>'s Privacy Policy or Terms of Service
+                                with
+                                regard to DMs.
+                            </div>
                         </div>
 
                         <!-- No history? -->
@@ -4004,7 +4025,7 @@ export default {
                             </div>
                             <div class="dropdown-menu" id="input-emoji-picker" role="menu" style="z-index: 9000">
                                 <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
-                                                                                                                         label on the chat history panel -->
+                                    label on the chat history panel -->
                                 <div class="dropdown-content p-0">
                                     <EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
                                         theme="auto" @select="onSelectEmoji">
