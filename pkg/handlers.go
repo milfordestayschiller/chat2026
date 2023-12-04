@@ -207,6 +207,10 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		if err == nil && rcpt.Mutes(sub.Username) && !sub.IsAdmin() {
 			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
 			return
+		} else if err != nil {
+			// Recipient was no longer online: the message won't be sent.
+			sub.ChatServer("Could not deliver your message: %s appears not to be online.", msg.Channel)
+			return
 		}
 
 		// If the sender already mutes the recipient, reply back with the error.
