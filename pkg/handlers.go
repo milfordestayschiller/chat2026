@@ -412,6 +412,14 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 		return
 	}
 
+	// Enforce whether the viewer has permission to see this camera.
+	if ok, reason := s.IsVideoNotAllowed(sub, other); !ok {
+		sub.ChatServer(
+			"Could not open that video: %s", reason,
+		)
+		return
+	}
+
 	// Make up a WebRTC shared secret and send it to both of them.
 	secret := util.RandomString(16)
 	log.Info("WebRTC: %s opens %s with secret %s", sub.Username, other.Username, secret)
@@ -438,6 +446,49 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 		Username:   other.Username,
 		OpenSecret: secret,
 	})
+}
+
+// IsVideoNotAllowed verifies whether a viewer can open a broadcaster's camera.
+//
+// Returns a boolean and an error message to return if false.
+func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, string) {
+	var (
+		ourVideoActive      = (sub.VideoStatus & messages.VideoFlagActive) == messages.VideoFlagActive
+		theirVideoActive    = (other.VideoStatus & messages.VideoFlagActive) == messages.VideoFlagActive
+		theirMutualRequired = (other.VideoStatus & messages.VideoFlagMutualRequired) == messages.VideoFlagMutualRequired
+		theirVIPRequired    = (other.VideoStatus & messages.VideoFlagOnlyVIP) == messages.VideoFlagOnlyVIP
+	)
+
+	// Conditions in which we can not watch their video.
+	var conditions = []struct {
+		If    bool
+		Error string
+	}{
+		{
+			If:    !theirVideoActive,
+			Error: "Their video is not currently enabled.",
+		},
+		{
+			If:    theirMutualRequired && !ourVideoActive,
+			Error: fmt.Sprintf("%s has requested that you should share your own camera too before opening theirs.", other.Username),
+		},
+		{
+			If:    theirVIPRequired && !sub.IsVIP(),
+			Error: "You do not have permission to view that camera.",
+		},
+		{
+			If:    other.Mutes(sub.Username) || other.Blocks(sub),
+			Error: "You do not have permission to view that camera.",
+		},
+	}
+
+	for _, c := range conditions {
+		if c.If {
+			return false, c.Error
+		}
+	}
+
+	return true, ""
 }
 
 // OnBoot is a user kicking you off their video stream.
