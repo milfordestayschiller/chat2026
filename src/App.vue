@@ -13,6 +13,7 @@ import WhoListRow from './components/WhoListRow.vue';
 import VideoFeed from './components/VideoFeed.vue';
 import ProfileModal from './components/ProfileModal.vue';
 
+import ChatClient from './lib/ChatClient';
 import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
@@ -129,10 +130,8 @@ export default {
             idleThreshold: 300, // number of seconds you must be idle
 
             // WebSocket connection.
-            ws: {
-                conn: null,
-                connected: false,
-            },
+            // Initialized in the dial() function.
+            client: {},
 
             // Who List for the room.
             whoList: [],
@@ -828,7 +827,7 @@ export default {
                 return;
             }
 
-            if (!this.ws.connected) {
+            if (!this.client.connected()) {
                 this.ChatClient("You are not connected to the server.");
                 return;
             }
@@ -842,12 +841,12 @@ export default {
                 // If they do it twice, kick them from the room.
                 if (this.spamWarningCount >= 1) {
                     // Walk of shame.
-                    this.ws.conn.send(JSON.stringify({
+                    this.client.send({
                         action: "message",
                         channel: "lobby",
                         message: "**(Message of Shame)** I have been naughty and posted spam in chat despite being warned, " +
                             "and I am now being kicked from the room in shame. ☹️",
-                    }));
+                    });
 
                     this.ChatServer(
                         "It is <strong>not allowed</strong> to promote your Onlyfans (or similar) " +
@@ -861,9 +860,9 @@ export default {
                         action: "presence",
                     });
                     this.disconnect = true;
-                    this.ws.connected = false;
+                    this.client.ws.connected = false;
                     setTimeout(() => {
-                        this.ws.conn.close();
+                        this.client.disconnect();
                     }, 1000);
                     return;
                 }
@@ -922,11 +921,11 @@ export default {
             }
 
             // console.debug("Send message: %s", this.message);
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "message",
                 channel: this.channel,
                 message: this.message,
-            }));
+            });
 
             this.message = "";
         },
@@ -937,11 +936,11 @@ export default {
 
         // Emoji reactions
         sendReact(message, emoji) {
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: 'react',
                 msgID: message.msgID,
                 message: emoji,
-            }));
+            });
         },
         onReact(msg) {
             // Search all channels for this message ID and append the reaction.
@@ -980,13 +979,13 @@ export default {
         // Sync the current user state (such as video broadcasting status) to
         // the backend, which will reload everybody's Who List.
         sendMe() {
-            if (!this.ws.connected) return;
-            this.ws.conn.send(JSON.stringify({
+            if (!this.client.connected()) return;
+            this.client.send({
                 action: "me",
                 video: this.myVideoFlag,
                 status: this.status,
                 dnd: this.prefs.closeDMs,
-            }));
+            });
         },
         onMe(msg) {
             // We have had settings pushed to us by the server, such as a change
@@ -1145,10 +1144,10 @@ export default {
             }
         },
         sendMute(username, mute) {
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: mute ? "mute" : "unmute",
                 username: username,
-            }));
+            });
         },
         isMutedUser(username) {
             return this.muted[this.normalizeUsername(username)] != undefined;
@@ -1169,30 +1168,30 @@ export default {
             }
 
             // Send the username list to the server.
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "blocklist",
                 usernames: blocklist,
-            }))
+            });
         },
 
         // Send a video request to access a user's camera.
         sendOpen(username) {
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "open",
                 username: username,
-            }));
+            });
         },
         sendBoot(username) {
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "boot",
                 username: username,
-            }));
+            });
         },
         sendUnboot(username) {
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "unboot",
                 username: username,
-            }));
+            });
         },
         onOpen(msg) {
             // Response for the opener to begin WebRTC connection.
@@ -1291,139 +1290,38 @@ export default {
         dial() {
             this.ChatClient("Establishing connection to server...");
 
-            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-            const conn = new WebSocket(`${proto}://${location.host}/ws`);
+            // Set up the ChatClient connection.
+            this.client = new ChatClient({
+                onClientError: this.ChatClient,
 
-            conn.addEventListener("close", ev => {
-                // Lost connection to server - scrub who list.
-                this.onWho({ whoList: [] });
-                this.muted = {};
+                jwt: this.jwt,
+                prefs: this.prefs,
 
-                this.ws.connected = false;
-                this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
+                onWho: this.onWho,
+                onMe: this.onMe,
+                onMessage: this.onMessage,
+                onTakeback: this.onTakeback,
+                onReact: this.onReact,
+                onPresence: this.onPresence,
+                onRing: this.onRing,
+                onOpen: this.onOpen,
+                onCandidate: this.onCandidate,
+                onSDP: this.onSDP,
+                onWatch: this.onWatch,
+                onUnwatch: this.onUnwatch,
+                onBlock: this.onBlock,
 
-                this.disconnectCount++;
-                if (this.disconnectCount > this.disconnectLimit) {
-                    this.ChatClient(`It seems there's a problem connecting to the server. Please try some other time.`);
-                    return;
-                }
-
-                if (!this.disconnect) {
-                    if (ev.code !== 1001 && ev.code !== 1000) {
-                        this.ChatClient("Reconnecting in 5s");
-                        setTimeout(this.dial, 5000);
-                    }
-                }
-            });
-
-            conn.addEventListener("open", ev => {
-                this.ws.connected = true;
-                this.ChatClient("Websocket connected!");
-
-                // Upload our blocklist to the server before login. This resolves a bug where if a block
-                // was added recently (other user still online in chat), that user would briefly see your
-                // "has entered the room" message followed by you immediately not being online.
-                this.bulkMuteUsers();
-
-                // Tell the server our username.
-                this.ws.conn.send(JSON.stringify({
-                    action: "login",
-                    username: this.username,
-                    jwt: this.jwt.token,
-                    dnd: this.prefs.closeDMs,
-                }));
-
-                // Focus the message entry box.
-                window.requestAnimationFrame(() => {
+                bulkMuteUsers: this.bulkMuteUsers,
+                focusMessageBox: () => {
                     this.messageBox.focus();
-                });
+                },
+                pushHistory: this.pushHistory,
+                onNewJWT: jwt => {
+                    this.jwt.token = msg.jwt;
+                },
             });
 
-            conn.addEventListener("message", ev => {
-                if (typeof ev.data !== "string") {
-                    console.error("unexpected message type", typeof ev.data);
-                    return;
-                }
-
-                let msg = JSON.parse(ev.data);
-                try {
-                    // Cast timestamp to date.
-                    msg.at = new Date(msg.at);
-                } catch (e) {
-                    console.error("Parsing timestamp '%s' on msg: %s", msg.at, e);
-                }
-
-                switch (msg.action) {
-                    case "who":
-                        this.onWho(msg);
-                        break;
-                    case "me":
-                        this.onMe(msg);
-                        break;
-                    case "message":
-                        this.onMessage(msg);
-                        break;
-                    case "takeback":
-                        this.onTakeback(msg);
-                        break;
-                    case "react":
-                        this.onReact(msg);
-                        break;
-                    case "presence":
-                        this.onPresence(msg);
-                        break;
-                    case "ring":
-                        this.onRing(msg);
-                        break;
-                    case "open":
-                        this.onOpen(msg);
-                        break;
-                    case "candidate":
-                        this.onCandidate(msg);
-                        break;
-                    case "sdp":
-                        this.onSDP(msg);
-                        break;
-                    case "watch":
-                        this.onWatch(msg);
-                        break;
-                    case "unwatch":
-                        this.onUnwatch(msg);
-                        break;
-                    case "block":
-                        this.onBlock(msg);
-                        break;
-                    case "error":
-                        this.pushHistory({
-                            channel: msg.channel,
-                            username: msg.username || 'Internal Server Error',
-                            message: msg.message,
-                            isChatServer: true,
-                        });
-                        break;
-                    case "disconnect":
-                        this.onWho({ whoList: [] });
-                        this.disconnect = true;
-                        this.ws.connected = false;
-                        this.ws.conn.close(1000, "server asked to close the connection");
-                        break;
-                    case "ping":
-                        // New JWT token?
-                        if (msg.jwt) {
-                            this.jwt.token = msg.jwt;
-                        }
-
-                        // Reset disconnect retry counter: if we were on long enough to get
-                        // a ping, we're well connected and can reconnect no matter how many
-                        // times the chat server is rebooted.
-                        this.disconnectCount = 0;
-                        break;
-                    default:
-                        console.error("Unexpected action: %s", JSON.stringify(msg));
-                }
-            });
-
-            this.ws.conn = conn;
+            this.client.dial();
         },
 
         /**
@@ -1462,11 +1360,11 @@ export default {
             // message to the other peer through the signaling server.
             pc.onicecandidate = event => {
                 if (event.candidate) {
-                    this.ws.conn.send(JSON.stringify({
+                    this.client.send({
                         action: "candidate",
                         username: username,
                         candidate: JSON.stringify(event.candidate),
-                    }));
+                    });
                 }
             };
 
@@ -1587,11 +1485,11 @@ export default {
         localDescCreated(pc, username) {
             return (desc) => {
                 pc.setLocalDescription(desc).then(() => {
-                    this.ws.conn.send(JSON.stringify({
+                    this.client.send({
                         action: "sdp",
                         username: username,
                         description: JSON.stringify(pc.localDescription),
-                    }));
+                    });
                 }).catch(e => {
                     console.error(`Error sending WebRTC negotiation message (SDP): ${e}`);
                 });
@@ -1659,10 +1557,10 @@ export default {
         },
         sendWatch(username, watching) {
             // Send the watch or unwatch message to backend.
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: watching ? "watch" : "unwatch",
                 username: username,
-            }));
+            });
         },
         isWatchingMe(username) {
             // Return whether the user is watching your camera
@@ -1825,10 +1723,10 @@ export default {
                 "Do you want to take this message back? Doing so will remove this message from everybody's view in the chat room."
             )) return;
 
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "takeback",
                 msgID: msg.msgID,
-            }));
+            });
         },
         removeMessage(msg) {
             if (!window.confirm(
@@ -2863,10 +2761,9 @@ export default {
                     // Attach the file to the message.
                     msg.message = file.name;
                     msg.bytes = fileByteArray;
-                    msg = JSON.stringify(msg);
 
                     // Send it to the chat server.
-                    this.ws.conn.send(msg);
+                    this.client.send(msg);
                 };
 
                 reader.readAsArrayBuffer(file);
@@ -3066,7 +2963,7 @@ export default {
 
             let msg = this.reportModal.message;
 
-            this.ws.conn.send(JSON.stringify({
+            this.client.send({
                 action: "report",
                 channel: msg.channel,
                 username: msg.username,
@@ -3074,7 +2971,7 @@ export default {
                 reason: classification,
                 message: msg.message,
                 comment: comment,
-            }));
+            });
 
             this.reportModal.busy = false;
             this.reportModal.visible = false;
@@ -3992,7 +3889,7 @@ export default {
                                     <!-- My text box -->
                                     <input type="text" class="input" id="messageBox" v-model="message"
                                         placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
-                                        :disabled="!ws.connected">
+                                        :disabled="!client.connected">
 
                                     <!-- At Mention templates-->
                                     <template #no-result>
