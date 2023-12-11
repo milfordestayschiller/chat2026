@@ -11,6 +11,7 @@ class ChatClient {
         usePolling=false,
         onClientError,
 
+        username,
         jwt,   // JWT token for authorization
         prefs, // User preferences for 'me' action (close DMs, etc)
 
@@ -40,6 +41,7 @@ class ChatClient {
         // Pointer to the 'ChatClient(message)' command from the main app.
         this.ChatClient = onClientError;
 
+        this.username = username;
         this.jwt = jwt;
         this.prefs = prefs;
 
@@ -67,13 +69,25 @@ class ChatClient {
         this.ws = {
             conn: null,
             connected: false,
+
+            // Disconnect spamming: don't retry too many times.
+            reconnect: true, // unless told to go away
+            disconnectLimit: 2,
+            disconnectCount: 0,
         };
+
+        // Polling connection.
+        this.polling = {
+            username: "",
+            sessionID: "",
+            timeout: null, // setTimeout for next poll.
+        }
     }
 
     // Connected polls if the client is connected.
     connected() {
         if (this.usePolling) {
-            return true;
+            return this.polling.timeout != null && this.polling.sessionID != "";
         }
         return this.ws.connected;
     }
@@ -81,16 +95,47 @@ class ChatClient {
     // Disconnect from the server.
     disconnect() {
         if (this.usePolling) {
-            throw new Exception("Not implemented");
+            this.polling.sessionID = "";
+            this.polling.username = "";
+            this.stopPolling();
+            this.ChatClient("You have disconnected from the server.");
+            return;
         }
-        this.ws.conn.close();
+
+        this.ws.connected = false;
+        this.ws.conn.close(1000, "server asked to close the connection");
     }
 
     // Common function to send a message to the server. The message
     // is a JSON object before stringify.
     send(message) {
         if (this.usePolling) {
-            throw new Exception("Not implemented");
+            fetch("/poll", {
+                method: "POST",
+                mode: "same-origin",
+                cache: "no-cache",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username: this.polling.username,
+                    session_id: this.polling.sessionID,
+                    msg: message,
+                })
+            }).then(resp => resp.json()).then(resp => {
+                console.log(resp);
+
+                // Store sessionID information.
+                this.polling.sessionID = resp.session_id;
+                this.polling.username  = resp.username;
+                for (let msg of resp.messages) {
+                    this.handle(msg);
+                }
+            }).catch(err => {
+                this.ChatClient("Error from polling API: " + err);
+            });
+            return;
         }
 
         if (!this.ws.connected) {
@@ -98,7 +143,6 @@ class ChatClient {
             return;
         }
 
-        console.log("send:", message);
         if (typeof(message) !== "string") {
             message = JSON.stringify(message);
         }
@@ -157,9 +201,8 @@ class ChatClient {
                 break;
             case "disconnect":
                 this.onWho({ whoList: [] });
-                this.disconnect = true;
-                this.ws.connected = false;
-                this.ws.conn.close(1000, "server asked to close the connection");
+                this.ws.reconnect = false;
+                this.disconnect();
                 break;
             case "ping":
                 // New JWT token?
@@ -170,7 +213,7 @@ class ChatClient {
                 // Reset disconnect retry counter: if we were on long enough to get
                 // a ping, we're well connected and can reconnect no matter how many
                 // times the chat server is rebooted.
-                this.disconnectCount = 0;
+                this.ws.disconnectCount = 0;
                 break;
             default:
                 console.error("Unexpected action: %s", JSON.stringify(msg));
@@ -179,6 +222,21 @@ class ChatClient {
 
     // Dial the WebSocket.
     dial() {
+        // Polling API?
+        if (this.usePolling) {
+            this.ChatClient("Connecting to the server via polling API...");
+            this.startPolling();
+
+            // Log in now.
+            this.send({
+                action: "login",
+                username: this.username,
+                jwt: this.jwt.token,
+                dnd: this.prefs.closeDMs,
+            });
+            return;
+        }
+
         this.ChatClient("Establishing connection to server...");
 
         const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -191,16 +249,22 @@ class ChatClient {
             this.ws.connected = false;
             this.ChatClient(`WebSocket Disconnected code: ${ev.code}, reason: ${ev.reason}`);
 
-            this.disconnectCount++;
-            if (this.disconnectCount > this.disconnectLimit) {
-                this.ChatClient(`It seems there's a problem connecting to the server. Please try some other time.`);
+            this.ws.disconnectCount++;
+            if (this.ws.disconnectCount > this.ws.disconnectLimit) {
+                this.ChatClient(
+                    `It seems there's a problem connecting to the server. Please try some other time.<br><br>` +
+                    `If you experience this problem frequently, try going into the Chat Settings 'Misc' tab ` +
+                    `and switch to the 'Polling' Server Connection method.`
+                );
                 return;
             }
 
-            if (!this.disconnect) {
+            if (this.ws.reconnect) {
                 if (ev.code !== 1001 && ev.code !== 1000) {
                     this.ChatClient("Reconnecting in 5s");
-                    setTimeout(this.dial, 5000);
+                    setTimeout(() => {
+                        this.dial();
+                    }, 5000);
                 }
             }
         });
@@ -239,6 +303,36 @@ class ChatClient {
         });
 
         this.ws.conn = conn;
+    }
+
+    // Start the polling interval.
+    startPolling() {
+        if (!this.usePolling) return;
+        this.stopPolling();
+
+        this.polling.timeout = setTimeout(() => {
+            this.poll();
+            this.startPolling();
+        }, 5000);
+    }
+
+    // Poll the API.
+    poll() {
+        if (!this.usePolling) {
+            this.stopPolling();
+            return;
+        }
+        this.send({
+            action: "ping",
+        });
+        this.startPolling();
+    }
+
+    // Stop polling.
+    stopPolling() {
+        if (this.polling.timeout != null) {
+            clearTimeout(this.polling.timeout);
+        }
     }
 }
 

@@ -18,6 +18,7 @@ const keys = {
     'rememberExpresslyClosed': Boolean,
 
     // Booleans
+    'usePolling': Boolean,  // use the polling API instead of WebSocket
     'joinMessages': Boolean,
     'exitMessages': Boolean,
     'watchNotif': Boolean,

@@ -31,11 +31,19 @@ type Subscriber struct {
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
 	loginAt       time.Time
-	conn          *websocket.Conn
-	ctx           context.Context
-	cancel        context.CancelFunc
-	messages      chan []byte
-	closeSlow     func()
+
+	// Connection details (WebSocket).
+	conn      *websocket.Conn // WebSocket user
+	ctx       context.Context
+	cancel    context.CancelFunc
+	messages  chan []byte
+	closeSlow func()
+
+	// Polling API users.
+	usePolling  bool
+	sessionID   string
+	lastPollAt  time.Time
+	lastPollJWT time.Time // give a new JWT once in a while
 
 	muteMu  sync.RWMutex
 	booted  map[string]struct{} // usernames booted off your camera
@@ -49,6 +57,100 @@ type Subscriber struct {
 	// Logging.
 	log   bool
 	logfh map[string]io.WriteCloser
+}
+
+// NewSubscriber initializes a connected chat user.
+func (s *Server) NewSubscriber(ctx context.Context, cancelFunc func()) *Subscriber {
+	return &Subscriber{
+		ctx:        ctx,
+		cancel:     cancelFunc,
+		messages:   make(chan []byte, s.subscriberMessageBuffer),
+		booted:     make(map[string]struct{}),
+		muted:      make(map[string]struct{}),
+		blocked:    make(map[string]struct{}),
+		messageIDs: make(map[int64]struct{}),
+		ChatStatus: "online",
+	}
+}
+
+// NewWebSocketSubscriber returns a new subscriber with a WebSocket connection.
+func (s *Server) NewWebSocketSubscriber(ctx context.Context, conn *websocket.Conn, cancelFunc func()) *Subscriber {
+	sub := s.NewSubscriber(ctx, cancelFunc)
+	sub.conn = conn
+	sub.closeSlow = func() {
+		conn.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
+	}
+	return sub
+}
+
+// NewPollingSubscriber returns a new subscriber using the polling API.
+func (s *Server) NewPollingSubscriber(ctx context.Context, cancelFunc func()) *Subscriber {
+	sub := s.NewSubscriber(ctx, cancelFunc)
+	sub.usePolling = true
+	sub.lastPollAt = time.Now()
+	sub.lastPollJWT = time.Now()
+	sub.closeSlow = func() {
+		// Their outbox is filled up, disconnect them.
+		log.Error("Polling subscriber %s#%d: inbox is filled up!", sub.Username, sub.ID)
+
+		// Send an exit message.
+		if sub.authenticated && sub.ChatStatus != "hidden" {
+			sub.authenticated = false
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionPresence,
+				Username: sub.Username,
+				Message:  "has exited the room!",
+			})
+			s.SendWhoList()
+		}
+
+		s.DeleteSubscriber(sub)
+	}
+	return sub
+}
+
+// OnClientMessage handles a chat protocol message from the user's WebSocket or polling API.
+func (s *Server) OnClientMessage(sub *Subscriber, msg messages.Message) {
+	// What action are they performing?
+	switch msg.Action {
+	case messages.ActionLogin:
+		s.OnLogin(sub, msg)
+	case messages.ActionMessage:
+		s.OnMessage(sub, msg)
+	case messages.ActionFile:
+		s.OnFile(sub, msg)
+	case messages.ActionMe:
+		s.OnMe(sub, msg)
+	case messages.ActionOpen:
+		s.OnOpen(sub, msg)
+	case messages.ActionBoot:
+		s.OnBoot(sub, msg, true)
+	case messages.ActionUnboot:
+		s.OnBoot(sub, msg, false)
+	case messages.ActionMute, messages.ActionUnmute:
+		s.OnMute(sub, msg, msg.Action == messages.ActionMute)
+	case messages.ActionBlock:
+		s.OnBlock(sub, msg)
+	case messages.ActionBlocklist:
+		s.OnBlocklist(sub, msg)
+	case messages.ActionCandidate:
+		s.OnCandidate(sub, msg)
+	case messages.ActionSDP:
+		s.OnSDP(sub, msg)
+	case messages.ActionWatch:
+		s.OnWatch(sub, msg)
+	case messages.ActionUnwatch:
+		s.OnUnwatch(sub, msg)
+	case messages.ActionTakeback:
+		s.OnTakeback(sub, msg)
+	case messages.ActionReact:
+		s.OnReact(sub, msg)
+	case messages.ActionReport:
+		s.OnReport(sub, msg)
+	case messages.ActionPing:
+	default:
+		sub.ChatServer("Unsupported message type.")
+	}
 }
 
 // ReadLoop spawns a goroutine that reads from the websocket connection.
@@ -88,45 +190,8 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 				log.Debug("Read(%d=%s): %s", sub.ID, sub.Username, data)
 			}
 
-			// What action are they performing?
-			switch msg.Action {
-			case messages.ActionLogin:
-				s.OnLogin(sub, msg)
-			case messages.ActionMessage:
-				s.OnMessage(sub, msg)
-			case messages.ActionFile:
-				s.OnFile(sub, msg)
-			case messages.ActionMe:
-				s.OnMe(sub, msg)
-			case messages.ActionOpen:
-				s.OnOpen(sub, msg)
-			case messages.ActionBoot:
-				s.OnBoot(sub, msg, true)
-			case messages.ActionUnboot:
-				s.OnBoot(sub, msg, false)
-			case messages.ActionMute, messages.ActionUnmute:
-				s.OnMute(sub, msg, msg.Action == messages.ActionMute)
-			case messages.ActionBlock:
-				s.OnBlock(sub, msg)
-			case messages.ActionBlocklist:
-				s.OnBlocklist(sub, msg)
-			case messages.ActionCandidate:
-				s.OnCandidate(sub, msg)
-			case messages.ActionSDP:
-				s.OnSDP(sub, msg)
-			case messages.ActionWatch:
-				s.OnWatch(sub, msg)
-			case messages.ActionUnwatch:
-				s.OnUnwatch(sub, msg)
-			case messages.ActionTakeback:
-				s.OnTakeback(sub, msg)
-			case messages.ActionReact:
-				s.OnReact(sub, msg)
-			case messages.ActionReport:
-				s.OnReport(sub, msg)
-			default:
-				sub.ChatServer("Unsupported message type.")
-			}
+			// Handle their message.
+			s.OnClientMessage(sub, msg)
 		}
 	}()
 }
@@ -202,20 +267,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		// ctx := c.CloseRead(r.Context())
 		ctx, cancel := context.WithCancel(r.Context())
 
-		sub := &Subscriber{
-			conn:     c,
-			ctx:      ctx,
-			cancel:   cancel,
-			messages: make(chan []byte, s.subscriberMessageBuffer),
-			closeSlow: func() {
-				c.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
-			},
-			booted:     make(map[string]struct{}),
-			muted:      make(map[string]struct{}),
-			blocked:    make(map[string]struct{}),
-			messageIDs: make(map[int64]struct{}),
-			ChatStatus: "online",
-		}
+		sub := s.NewWebSocketSubscriber(ctx, c, cancel)
 
 		s.AddSubscriber(sub)
 		defer s.DeleteSubscriber(sub)
@@ -280,6 +332,10 @@ func (s *Server) GetSubscriber(username string) (*Subscriber, error) {
 
 // DeleteSubscriber removes a subscriber from the server.
 func (s *Server) DeleteSubscriber(sub *Subscriber) {
+	if sub == nil {
+		return
+	}
+
 	log.Error("DeleteSubscriber: %s", sub.Username)
 
 	// Cancel its context to clean up the for-loop goroutine.

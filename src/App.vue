@@ -143,6 +143,7 @@ export default {
 
             // Misc. user preferences (TODO: move all of them here)
             prefs: {
+                usePolling: false,   // use the polling API instead of WebSockets.
                 joinMessages: true,  // show "has entered the room" in public channels
                 exitMessages: false, // hide exit messages by default in public channels
                 watchNotif: true,    // notify in chat about cameras being watched
@@ -461,6 +462,12 @@ export default {
         "prefs.muteSounds": function () {
             LocalStorage.set('muteSounds', this.prefs.muteSounds);
         },
+        "prefs.usePolling": function () {
+            LocalStorage.set('usePolling', this.prefs.usePolling);
+
+            // Reset the chat client on change.
+            this.resetChatClient();
+        },
         "prefs.closeDMs": function () {
             LocalStorage.set('closeDMs', this.prefs.closeDMs);
 
@@ -469,6 +476,12 @@ export default {
         },
     },
     computed: {
+        connected() {
+            if (this.client.connected != undefined) {
+                return this.client.connected();
+            }
+            return false;
+        },
         chatHistory() {
             if (this.channels[this.channel] == undefined) {
                 return [];
@@ -772,6 +785,9 @@ export default {
             }
 
             // Misc preferences
+            if (settings.usePolling != undefined) {
+                this.prefs.usePolling = settings.usePolling === true;
+            }
             if (settings.joinMessages != undefined) {
                 this.prefs.joinMessages = settings.joinMessages === true;
             }
@@ -827,7 +843,7 @@ export default {
                 return;
             }
 
-            if (!this.client.connected()) {
+            if (!this.connected) {
                 this.ChatClient("You are not connected to the server.");
                 return;
             }
@@ -979,7 +995,7 @@ export default {
         // Sync the current user state (such as video broadcasting status) to
         // the backend, which will reload everybody's Who List.
         sendMe() {
-            if (!this.client.connected()) return;
+            if (!this.connected) return;
             this.client.send({
                 action: "me",
                 video: this.myVideoFlag,
@@ -1288,12 +1304,12 @@ export default {
 
         // Dial the WebSocket connection.
         dial() {
-            this.ChatClient("Establishing connection to server...");
-
             // Set up the ChatClient connection.
             this.client = new ChatClient({
+                usePolling: this.prefs.usePolling,
                 onClientError: this.ChatClient,
 
+                username: this.username,
                 jwt: this.jwt,
                 prefs: this.prefs,
 
@@ -1317,11 +1333,27 @@ export default {
                 },
                 pushHistory: this.pushHistory,
                 onNewJWT: jwt => {
-                    this.jwt.token = msg.jwt;
+                    this.ChatClient("new jwt: " + jwt);
+                    this.jwt.token = jwt;
                 },
             });
 
             this.client.dial();
+        },
+        resetChatClient() {
+            if (!this.connected) return;
+
+            // Reset the ChatClient, e.g. when toggling between WebSocket vs. Polling methods.
+            this.ChatClient(
+                "Your connection method to the chat server has been updated; attempting to reconnect now.",
+            );
+
+            window.requestAnimationFrame(() => {
+                this.client.disconnect();
+                setTimeout(() => {
+                    this.dial();
+                }, 1000);
+            });
         },
 
         /**
@@ -3364,6 +3396,31 @@ export default {
                                 If you check this box, other chatters may not initiate DMs with you: their messages
                                 will be (silently) ignored. You may still initiate DM chats with others, unless they
                                 also have closed their DMs with this setting.
+                            </p>
+                        </div>
+
+                        <div class="field">
+                            <label class="label mb-0">
+                                Server Connection Method
+                            </label>
+                            <label class="checkbox">
+                                <input type="radio" v-model="prefs.usePolling" :value="false">
+                                WebSockets (realtime connection; recommended for most people)
+                            </label>
+                            <label class="checkbox">
+                                <input type="radio" v-model="prefs.usePolling" :value="true">
+                                Polling (check for new messages every 5 seconds)
+                            </label>
+                            <p class="help">
+                                By default the chat server requires a constant WebSockets connection to stay online.
+                                If you are experiencing frequent disconnects (e.g. because you are on a slow or
+                                unstable network connection), try switching to the "Polling" method which will be
+                                more robust, at the cost of up to 5-seconds latency to receive new messages.
+
+                                <!-- If disconnected currently, tell them to refresh. -->
+                                <span v-if="!connected" class="has-text-danger">
+                                    Notice: you may need to refresh the chat page after changing this setting.
+                                </span>
                             </p>
                         </div>
 

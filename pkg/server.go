@@ -38,6 +38,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/about", AboutPage())
 	mux.Handle("/logout", LogoutPage())
 	mux.Handle("/ws", s.WebSocket())
+	mux.Handle("/poll", s.PollingAPI())
 	mux.Handle("/api/statistics", s.Statistics())
 	mux.Handle("/api/blocklist", s.BlockList())
 	mux.Handle("/api/block/now", s.BlockNow())
@@ -54,5 +55,7 @@ func (s *Server) Setup() error {
 
 // ListenAndServe starts the web server.
 func (s *Server) ListenAndServe(address string) error {
+	// Run the polling user idle kicker.
+	go s.KickIdlePollUsers()
 	return http.ListenAndServe(address, s.mux)
 }
