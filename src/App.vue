@@ -1333,7 +1333,6 @@ export default {
                 },
                 pushHistory: this.pushHistory,
                 onNewJWT: jwt => {
-                    this.ChatClient("new jwt: " + jwt);
                     this.jwt.token = jwt;
                 },
             });
