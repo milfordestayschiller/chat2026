@@ -229,14 +229,11 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 
 	log.Info("Operator %s bans %s for %d hours", sub.Username, username, duration/time.Hour)
 
-	other, err := s.GetSubscriber(username)
-	if err != nil {
-		sub.ChatServer("/ban: username not found: %s", username)
-	} else {
-		// Ban them.
-		BanUser(username, duration)
+	// Add them to the ban list.
+	BanUser(username, duration)
 
-		// Broadcast it to everyone.
+	// If the target user is currently online, disconnect them and broadcast the ban to everybody.
+	if other, err := s.GetSubscriber(username); err == nil {
 		s.Broadcast(messages.Message{
 			Action:   messages.ActionPresence,
 			Username: username,
@@ -249,8 +246,9 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 		})
 		other.authenticated = false
 		other.Username = ""
-		sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
 	}
+
+	sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
 }
 
 // UnbanCommand handles the `/unban` operator command.

@@ -1277,12 +1277,22 @@ export default {
                 isJoin = true;
             }
 
-            // Push it to the history of all public channels (depending on user preference).
+            // Push it to the history of the public channels (respecting user preferences).
             if ((isJoin && this.prefs.joinMessages) || (isLeave && this.prefs.exitMessages)
                 || (!isJoin && !isLeave)) {
-                for (let channel of this.config.channels) {
+                // Always put them in the first public channel.
+                let channel = this.config.channels[0];
+                this.pushHistory({
+                    channel: channel.ID,
+                    action: msg.action,
+                    username: msg.username,
+                    message: msg.message,
+                });
+
+                // If the current user is focused on another public channel, also post it there.
+                if (!this.isDM && this.channel !== channel.ID) {
                     this.pushHistory({
-                        channel: channel.ID,
+                        channel: this.channel.ID,
                         action: msg.action,
                         username: msg.username,
                         message: msg.message,

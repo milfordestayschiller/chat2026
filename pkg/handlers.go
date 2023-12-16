@@ -83,7 +83,6 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 		sub.SendJSON(messages.Message{
 			Action: messages.ActionKick,
 		})
-		s.DeleteSubscriber(sub)
 		return
 	}
 
