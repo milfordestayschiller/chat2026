@@ -1430,6 +1430,11 @@ export default {
                     }
                 }
 
+                // A booted admin?
+                if (this.isBootedAdmin(username)) {
+                    return;
+                }
+
                 // We've received a video! If we had an "open camera spinner timeout",
                 // clear it before it expires.
                 if (this.WebRTC.openTimeouts[username] != undefined) {
