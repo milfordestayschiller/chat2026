@@ -936,6 +936,13 @@ export default {
                 return;
             }
 
+            // DEBUGGING: reconnect to the server
+            if (this.message.toLowerCase().indexOf("/reconnect") === 0) {
+                this.resetChatClient();
+                this.message = "";
+                return;
+            }
+
             // console.debug("Send message: %s", this.message);
             this.client.send({
                 action: "message",
@@ -1171,23 +1178,39 @@ export default {
         bulkMuteUsers() {
             // On page load, if the website sent you a CachedBlocklist, mute all
             // of these users in bulk when the server connects.
-            // this.ChatClient("BulkMuteUsers: sending our blocklist " + this.config.CachedBlocklist);
 
-            if (this.config.CachedBlocklist.length === 0) {
-                return; // nothing to do
+            // If we have a blocklist from the main website, sync it to the server now.
+            let mapBlockedUsers = {}; // usernames on our website blocklist
+            if (this.config.CachedBlocklist.length > 0) {
+                // Set the client side mute.
+                let blocklist = this.config.CachedBlocklist;
+                for (let username of blocklist) {
+                    mapBlockedUsers[username] = true;
+                    this.muted[username] = true;
+                }
+
+                // Send the username list to the server.
+                this.client.send({
+                    action: "blocklist",
+                    usernames: blocklist,
+                });
             }
 
-            // Set the client side mute.
-            let blocklist = this.config.CachedBlocklist;
-            for (let username of blocklist) {
-                this.muted[username] = true;
+            // While we're here, also re-sync our Boot list. e.g.: we were on webcam and we
+            // booted someone off, then we got temporarily disconnected. The server has forgotten who
+            // we booted and that person could then see our cam again.
+            for (let username of Object.keys(this.WebRTC.booted)) {
+                // Boot them again.
+                this.sendBoot(username);
             }
 
-            // Send the username list to the server.
-            this.client.send({
-                action: "blocklist",
-                usernames: blocklist,
-            });
+            // Apply any temporary mutes that we had before the reconnect. Note: these are distinct
+            // from blocks - blocks will make people invisible both ways to each other, mutes only
+            // suppress messages but their Who List presence is maintained to each other.
+            for (let username of Object.keys(this.muted)) {
+                if (mapBlockedUsers[username]) continue;
+                this.sendMute(username, true);
+            }
         },
 
         // Send a video request to access a user's camera.
