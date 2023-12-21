@@ -3543,7 +3543,7 @@ export default {
                     </div>
 
                     <div class="field" v-if="isVIP">
-                        <label class="checkbox" :class="{ 'cursor-notallowed': !webcam.active }">
+                        <label class="checkbox">
                             <input type="checkbox" v-model="webcam.vipOnly">
                             Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
                                 :class="config.VIP.Icon"></sup>
