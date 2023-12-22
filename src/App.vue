@@ -315,6 +315,7 @@ export default {
     mounted() {
         this.setupConfig(); // localSettings persisted settings
         this.setupIdleDetection();
+        this.setupDropZone(); // file upload drag/drop
 
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
@@ -2793,8 +2794,48 @@ export default {
          * Image sharing in chat
          */
 
-        // The image upload button handler.
-        uploadFile() {
+        // Set up the HTML5 drag/drop handlers.
+        setupDropZone() {
+            let $dropArea = document.querySelector("#drop-modal");
+            let $body = document.querySelector("body");
+
+            // Set up drag/drop file upload events.
+            $body.addEventListener("dragenter", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dropArea.classList.add("is-active");
+            });
+            $body.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dropArea.classList.add("is-active");
+            });
+            $body.addEventListener("dragleave", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dropArea.classList.remove("is-active");
+            });
+            $body.addEventListener("drop", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dropArea.classList.remove("is-active");
+
+                // Grab the file.
+                let dt = e.dataTransfer;
+                let file = dt.files[0];
+
+                this.onFileUpload(file);
+            });
+        },
+
+        // Common file selection handler for drag/drop or manual upload.
+        onFileUpload(file) {
+            // Validate they can upload it here.
+            if (!this.canUploadFile) {
+                this.ChatClient("Photo sharing in DMs is not available.");
+                return;
+            }
+
             // Prepare the message now so the channel name will be correct,
             // in case they upload a fat file and switch to a wrong channel
             // before the data is ready to send.
@@ -2803,39 +2844,44 @@ export default {
                 channel: this.channel,
             };
 
+            if (file.size > FileUploadMaxSize) {
+                this.ChatClient(`Please share an image smaller than ${FileUploadMaxSize / 1024 / 1024} MB in size!`);
+                return;
+            }
+
+            this.ChatClient(`<em>Uploading file to chat: ${file.name} - ${file.size} bytes, ${file.type} format.</em>`);
+
+            // Get image file data.
+            let reader = new FileReader();
+            let rawData = new ArrayBuffer();
+            reader.onload = e => {
+                rawData = e.target.result;
+
+                let fileByteArray = [],
+                    u8array = new Uint8Array(rawData);
+                for (let i = 0; i < u8array.length; i++) {
+                    fileByteArray.push(u8array[i]);
+                }
+
+                // Attach the file to the message.
+                msg.message = file.name;
+                msg.bytes = fileByteArray;
+
+                // Send it to the chat server.
+                this.client.send(msg);
+            };
+
+            reader.readAsArrayBuffer(file);
+        },
+
+        // The image upload button handler.
+        uploadFile() {
             let input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
             input.onchange = e => {
                 let file = e.target.files[0];
-                if (file.size > FileUploadMaxSize) {
-                    this.ChatClient(`Please share an image smaller than ${FileUploadMaxSize / 1024 / 1024} MB in size!`);
-                    return;
-                }
-
-                this.ChatClient(`<em>Uploading file to chat: ${file.name} - ${file.size} bytes, ${file.type} format.</em>`);
-
-                // Get image file data.
-                let reader = new FileReader();
-                let rawData = new ArrayBuffer();
-                reader.onload = e => {
-                    rawData = e.target.result;
-
-                    let fileByteArray = [],
-                        u8array = new Uint8Array(rawData);
-                    for (let i = 0; i < u8array.length; i++) {
-                        fileByteArray.push(u8array[i]);
-                    }
-
-                    // Attach the file to the message.
-                    msg.message = file.name;
-                    msg.bytes = fileByteArray;
-
-                    // Send it to the chat server.
-                    this.client.send(msg);
-                };
-
-                reader.readAsArrayBuffer(file);
+                this.onFileUpload(file);
             };
             input.click();
         },
@@ -3055,6 +3101,16 @@ export default {
 <template>
     <!-- Sign In modal -->
     <LoginModal :visible="loginModal.visible" @sign-in="signIn"></LoginModal>
+
+    <!-- Photo Drag/Drop Modal -->
+    <div class="modal" id="drop-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box content has-text-centered">
+                <h1><i class="fa fa-upload mr-2"></i> Drop image to share it on chat</h1>
+            </div>
+        </div>
+    </div>
 
     <!-- Settings modal -->
     <div class="modal" :class="{ 'is-active': settingsModal.visible }">
