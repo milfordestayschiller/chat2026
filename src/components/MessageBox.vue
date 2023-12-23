@@ -311,7 +311,7 @@ export default {
             </div>
 
             <div class="column dropdown is-right"
-                :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': showEmojiPicker }"
+                :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
                 @click="showEmojiPicker = true">
                 <div class="dropdown-trigger">
                     <button type="button" class="button is-small px-2" aria-haspopup="true"
@@ -411,7 +411,7 @@ export default {
             <div class="columns is-mobile is-gapless mb-0">
                 <!-- More buttons menu (DM, mute, report, etc.) -->
                 <div class="column dropdown is-right"
-                    :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': menuVisible }"
+                    :class="{ 'is-up': position >= 2, 'is-active': menuVisible }"
                     @click="menuVisible = !menuVisible">
                     <div class="dropdown-trigger">
                         <button type="button" class="button is-small px-2 mr-1" aria-haspopup="true"
@@ -463,7 +463,7 @@ export default {
 
                 <!-- Emoji reactions -->
                 <div class="column dropdown is-right"
-                    :class="{ 'is-up': position >= 2 || reportEnabled, 'is-active': showEmojiPicker }"
+                    :class="{ 'is-up': position >= 2, 'is-active': showEmojiPicker }"
                     @click="showEmojiPicker = true">
                     <div class="dropdown-trigger">
                         <button type="button" class="button is-small px-2" aria-haspopup="true"

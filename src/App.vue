@@ -2800,6 +2800,13 @@ export default {
             let $body = document.querySelector("body");
 
             // Set up drag/drop file upload events.
+            $body.addEventListener("dragstart", (e) => {
+                // Nothing ON the page should begin being draggable. Prevents on-page images from
+                // being dragged and then dropped (and sent as files on chat), but still allows
+                // their click handler to view in the lightbox modal.
+                e.preventDefault();
+                return false;
+            })
             $body.addEventListener("dragenter", (e) => {
                 e.preventDefault();
                 e.stopPropagation();

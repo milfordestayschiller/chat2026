@@ -9,7 +9,13 @@ body {
 /* No dragging images - it plays wrongly with the drag/drop image sharing feature
    and users can accidentally share in chat by dragging an on-page image */
 img {
-    pointer-events: none;
+    /* https://stackoverflow.com/questions/12906789/preventing-an-image-from-being-draggable-or-selectable-without-using-js */
+    user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 
 .float-right {
