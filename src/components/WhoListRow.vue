@@ -14,6 +14,7 @@ export default {
         isVideoNotAllowed: Boolean,  // whether opening this camera is not allowed
         videoIconClass: String,      // CSS class for the open video icon
         isWatchingTab: Boolean, // is the "Watching" tab (replace video button w/ boot)
+        statusMessage: Object, // StatusMessage controller
     },
     data() {
         return {
@@ -101,6 +102,19 @@ export default {
         hasReactions() {
             return this.reactions != undefined && Object.keys(this.reactions).length > 0;
         },
+
+        // Status icons
+        hasStatusIcon() {
+            return this.user.status !== 'online' && this.statusMessage != undefined;
+        },
+        statusIconClass() {
+            let status = this.statusMessage.getStatus(this.user.status);
+            return status.icon;
+        },
+        statusLabel() {
+            let status = this.statusMessage.getStatus(this.user.status);
+            return `${status.emoji} ${status.label}`;
+        },
     },
     methods: {
         openProfile() {
@@ -157,34 +171,9 @@ export default {
                 <img v-else src="/static/img/shy.png" width="24" height="24">
 
                 <!-- Away symbol -->
-                <div v-if="user.status !== 'online'" class="status-away-icon">
-                    <i v-if="user.status === 'away'" class="fa fa-clock has-text-light"
-                        title="Status: Away"></i>
-                    <i v-else-if="user.status === 'lunch'" class="fa fa-utensils has-text-light"
-                        title="Status: Out to lunch"></i>
-                    <i v-else-if="user.status === 'call'" class="fa fa-phone-volume has-text-light"
-                        title="Status: On the phone"></i>
-                    <i v-else-if="user.status === 'brb'" class="fa fa-stopwatch-20 has-text-light"
-                        title="Status: Be right back"></i>
-                    <i v-else-if="user.status === 'busy'" class="fa fa-briefcase has-text-light"
-                        title="Status: Working"></i>
-                    <i v-else-if="user.status === 'book'" class="fa fa-book has-text-light"
-                        title="Status: Studying"></i>
-                    <i v-else-if="user.status === 'gaming'"
-                        class="fa fa-gamepad who-status-wide-icon-2 has-text-light"
-                        title="Status: Gaming"></i>
-                    <i v-else-if="user.status === 'idle'" class="fa-regular fa-moon has-text-light"
-                        title="Status: Idle"></i>
-                    <i v-else-if="user.status === 'horny'" class="fa fa-fire has-text-light"
-                        title="Status: Horny"></i>
-                    <i v-else-if="user.status === 'chatty'" class="fa fa-comment has-text-light"
-                        title="Status: Chatty and sociable"></i>
-                    <i v-else-if="user.status === 'introverted'" class="fa fa-spoon has-text-light"
-                        title="Status: Introverted and quiet"></i>
-                    <i v-else-if="user.status === 'exhibitionist'"
-                        class="fa-regular fa-eye who-status-wide-icon-1 has-text-light"
-                        title="Status: Watch me"></i>
-                    <i v-else class="fa fa-clock has-text-light" :title="'Status: ' + user.status"></i>
+                <div v-if="hasStatusIcon" class="status-away-icon">
+                    <i :class="statusIconClass" class="has-text-light"
+                        :title="'Status: ' + statusLabel"></i>
                 </div>
             </a>
         </div>

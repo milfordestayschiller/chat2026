@@ -16,6 +16,7 @@ import ProfileModal from './components/ProfileModal.vue';
 import ChatClient from './lib/ChatClient';
 import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
+import StatusMessage from './lib/StatusMessage';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
 import { isAppleWebkit } from './lib/browsers';
 
@@ -121,6 +122,7 @@ export default {
             messageBox: null, // HTML element for message entry box
             typingNotifDebounce: null,
             status: "online", // away/idle status
+            StatusMessage: StatusMessage,
 
             // Emoji picker visible for messages
             showEmojiPicker: false,
@@ -316,6 +318,15 @@ export default {
         this.setupConfig(); // localSettings persisted settings
         this.setupIdleDetection();
         this.setupDropZone(); // file upload drag/drop
+
+        // Configure the StatusMessage controller.
+        StatusMessage.nsfw = this.config.permitNSFW;
+        StatusMessage.currentStatus = () => {
+            return this.status;
+        };
+        StatusMessage.isAdmin = () => {
+            return this.isOp;
+        };
 
         this.webcam.elem = document.querySelector("#localVideo");
         this.historyScrollbox = document.querySelector("#chatHistory");
@@ -544,6 +555,27 @@ export default {
         isDM() {
             // Is the current channel a DM?
             return this.channel.indexOf("@") === 0;
+        },
+        chatPartnerStatusMessage() {
+            // In a DM thread, returns your chat partner's status message.
+            if (!this.isDM) {
+                return null;
+            }
+
+            let username = this.normalizeUsername(this.channel),
+                user = this.whoMap[username];
+            if (user == undefined || this.isUserOffline(username)) {
+                return this.StatusMessage.offline();
+            }
+
+            return this.StatusMessage.getStatus(user.status);
+        },
+        isChatPartnerAway() {
+            // In a DM thread, returns if your chat partner's status is anything
+            // other than "online".
+            if (!this.isDM) return false;
+            let status = this.chatPartnerStatusMessage;
+            return status === null || status.name !== "online";
         },
         canUploadFile() {
             // Public channels: OK
@@ -3948,6 +3980,15 @@ export default {
                     'p-1 pb-5': messageStyle.indexOf('compact') === 0
                 }">
 
+                    <!-- Show your chat partner's status message in DMs -->
+                    <div class="user-status-dm-field tag is-info" v-if="isChatPartnerAway">
+                        <strong class="mr-2 has-text-light">Status:</strong>
+                        <span v-if="chatPartnerStatusMessage">
+                            {{ chatPartnerStatusMessage.emoji }} {{ chatPartnerStatusMessage.label }}
+                        </span>
+                        <em v-else>undefined</em>
+                    </div>
+
                     <div class="autoscroll-field tag">
                         <label class="checkbox is-size-6" title="Automatically scroll when new chat messages come in.">
                             <input type="checkbox" v-model="autoscroll" :value="true">
@@ -4016,8 +4057,7 @@ export default {
                     <div v-if="isDM && isMutedUser(channel)" class="has-text-danger">
                         <i class="fa fa-comment-slash"></i>
                         <strong>{{ channel }}</strong> is currently <strong>muted</strong> so you have not been seeing their
-                        recent
-                        chat messages or DMs.
+                        recent chat messages or DMs.
                         <a href="#" v-on:click.prevent="muteUser(channel)">Unmute them?</a>
                     </div>
 
@@ -4121,24 +4161,14 @@ export default {
                         <div class="column">
                             <div class="select is-small is-fullwidth">
                                 <select v-model="status">
-                                    <optgroup label="Status">
-                                        <option value="online">☀️ Active</option>
-                                        <option value="away">🕒 Away</option>
-                                        <option value="brb">⏰ Be right back</option>
-                                        <option value="lunch">🍴 Out to lunch</option>
-                                        <option value="call">📞 On the phone</option>
-                                        <option value="busy">💼 Working</option>
-                                        <option value="book">📖 Studying</option>
-                                        <option value="gaming">🎮 Gaming</option>
-                                        <option value="idle" v-show="status === 'idle'">🕒 Idle</option>
-                                        <option value="hidden" v-if="jwt.claims != undefined && jwt.claims.op">🕵️ Hidden
+                                    <optgroup v-for="group in StatusMessage.iterSelectOptGroups()"
+                                        v-bind:key="group.category"
+                                        :label="group.category">
+                                        <option v-for="item in StatusMessage.iterSelectOptions(group.category)"
+                                            v-bind:key="item.name"
+                                            :value="item.name">
+                                            {{ item.emoji }} {{ item.label }}
                                         </option>
-                                    </optgroup>
-                                    <optgroup label="Mood">
-                                        <option value="chatty">🗨️ Chatty and sociable</option>
-                                        <option value="introverted">🥄 Introverted and quiet</option>
-                                        <option value="horny" v-if="config.permitNSFW">🔥 Horny</option>
-                                        <option value="exhibitionist" v-if="config.permitNSFW">👀 Watch me</option>
                                     </optgroup>
                                 </select>
                             </div>
@@ -4185,23 +4215,48 @@ export default {
                     <!-- Who Is Online -->
                     <ul class="menu-list" v-if="whoTab === 'online'">
                         <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
-                            <WhoListRow :user="u" :username="username" :website-url="config.website"
-                                :is-dnd="isUsernameDND(u.username)" :is-muted="isMutedUser(u.username)"
-                                :is-booted="isBooted(u.username)" :is-op="isOp" :is-video-not-allowed="isVideoNotAllowed(u)"
-                                :video-icon-class="webcamIconClass(u)" :vip-config="config.VIP" @send-dm="openDMs"
-                                @mute-user="muteUser" @open-video="openVideo" @open-profile="showProfileModal"></WhoListRow>
+                            <WhoListRow
+                                :user="u"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(u.username)"
+                                :is-muted="isMutedUser(u.username)"
+                                :is-booted="isBooted(u.username)"
+                                :is-op="isOp"
+                                :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)"
+                                :vip-config="config.VIP"
+                                :status-message="StatusMessage"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @open-video="openVideo"
+                                @open-profile="showProfileModal">
+                            </WhoListRow>
                         </li>
                     </ul>
 
                     <!-- Watching My Webcam -->
                     <ul class="menu-list" v-if="whoTab === 'watching'">
                         <li v-for="(u, i) in sortedWatchingList" v-bind:key="username">
-                            <WhoListRow :is-watching-tab="true" :user="u" :username="username" :website-url="config.website"
-                                :is-dnd="isUsernameDND(username)" :is-muted="isMutedUser(username)"
-                                :is-booted="isBooted(u.username)" :is-op="isOp" :is-video-not-allowed="isVideoNotAllowed(u)"
-                                :video-icon-class="webcamIconClass(u)" :vip-config="config.VIP" @send-dm="openDMs"
-                                @mute-user="muteUser" @open-video="openVideo" @boot-user="bootUser"
-                                @open-profile="showProfileModal"></WhoListRow>
+                            <WhoListRow
+                                :is-watching-tab="true"
+                                :user="u"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(username)"
+                                :is-muted="isMutedUser(username)"
+                                :is-booted="isBooted(u.username)"
+                                :is-op="isOp"
+                                :is-video-not-allowed="isVideoNotAllowed(u)"
+                                :video-icon-class="webcamIconClass(u)"
+                                :vip-config="config.VIP"
+                                :status-message="StatusMessage"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @open-video="openVideo"
+                                @boot-user="bootUser"
+                                @open-profile="showProfileModal">
+                            </WhoListRow>
                         </li>
                     </ul>
 

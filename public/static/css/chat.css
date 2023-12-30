@@ -122,6 +122,14 @@ img {
     bottom: 4px;
 }
 
+/* User status indicator in the lower left corner of DMs */
+.user-status-dm-field {
+    position: absolute;
+    z-index: 38; /* below auto-scroll checkbox */
+    left: 12px;
+    bottom: 4px;
+}
+
 /* Footer row: message entry box */
 .chat-container > .chat-footer {
     grid-column: 1 / 4;
