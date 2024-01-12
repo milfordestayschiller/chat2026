@@ -151,6 +151,7 @@ export default {
                 watchNotif: true,    // notify in chat about cameras being watched
                 closeDMs: false,     // ignore unsolicited DMs
                 muteSounds: false,   // mute all sound effects
+                appleCompat: isAppleWebkit(), // Apple browser compatibility mode
             },
 
             // My video feed.
@@ -490,6 +491,9 @@ export default {
             // Tell ChatServer if we have gone to/from DND.
             this.sendMe();
         },
+        "prefs.appleCompat": function () {
+            LocalStorage.set('appleCompat', this.prefs.appleCompat);
+        },
     },
     computed: {
         connected() {
@@ -765,6 +769,11 @@ export default {
             // Default ordering from ChatServer = a-z
             return result;
         },
+        isAppleWebkit() {
+            // Return whether we are detected to be an iPad or iPhone,
+            // or if the appleCompat seting is enabled.
+            return isAppleWebkit() || this.prefs.appleCompat;
+        },
     },
     methods: {
         // Load user prefs from localStorage, called on startup
@@ -842,6 +851,9 @@ export default {
             }
             if (settings.closeDMs != undefined) {
                 this.prefs.closeDMs = settings.closeDMs === true;
+            }
+            if (this.prefs.appleCompat != undefined) {
+                this.prefs.appleCompat = settings.appleCompat === true;
             }
             if (settings.whoSort != undefined) {
                 this.whoSort = settings.whoSort;
@@ -945,7 +957,7 @@ export default {
 
             // DEBUGGING: test whether the page thinks you're Apple Webkit.
             if (this.message.toLowerCase().indexOf("/ipad") === 0) {
-                if (isAppleWebkit()) {
+                if (this.isAppleWebkit) {
                     this.ChatClient("I have detected that you are probably an iPad or iPhone browser.");
                 } else {
                     this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
@@ -1579,20 +1591,28 @@ export default {
             // is also the only way that iPads/iPhones/Safari browsers can make a call
             // (two-way video is the only option for them; send-only/receive-only channels seem
             // not to work in Safari).
-            if (isOfferer &&
-                (this.whoMap[username].video & this.VideoFlag.MutualOpen) // They auto-open us
-                && this.webcam.active             // Our camera is active (to add it)
-                && !this.isBooted(username)       // We had not booted them off ours before
-                && !this.isMutedUser(username)    // We had not muted them before
+            if (isOfferer) {
+                let shouldOfferVideo = (
+                    (this.whoMap[username].video & this.VideoFlag.MutualOpen) // They auto-open us
+                    && this.webcam.active             // Our camera is active (to add it)
+                    && !this.isBooted(username)       // We had not booted them off ours before
+                    && !this.isMutedUser(username)    // We had not muted them before
 
-                // If our webcam is NSFW and the viewer prefers not to see explicit,
-                // do not send our camera on this offer.
-                && (!this.webcam.nsfw || !(this.whoMap[username].video & this.VideoFlag.NonExplicit))
-            ) {
-                let stream = this.webcam.stream;
-                stream.getTracks().forEach(track => {
-                    pc.addTrack(track, stream)
-                });
+                    // If our webcam is NSFW and the viewer prefers not to see explicit,
+                    // do not send our camera on this offer.
+                    && (!this.webcam.nsfw || !(this.whoMap[username].video & this.VideoFlag.NonExplicit))
+                );
+
+                // Attach our video on the outgoing offer, so that on the answerer's side our
+                // local video pops up on their screen.
+                // NOTE: on Apple devices, always send your video to satisfy the two-way video call
+                //       constraint imposed by Safari's WebRTC implementation.
+                if (shouldOfferVideo || this.isAppleWebkit) {
+                    let stream = this.webcam.stream;
+                    stream.getTracks().forEach(track => {
+                        pc.addTrack(track, stream)
+                    });
+                }
             }
 
             // If we are the offerer, begin the connection.
@@ -2184,7 +2204,7 @@ export default {
             this.WebRTC.openTimeouts[user.username] = setTimeout(() => {
                 // It timed out. If they are on an iPad, offer additional hints on
                 // how to have better luck connecting their cameras.
-                if (isAppleWebkit()) {
+                if (this.isAppleWebkit) {
                     this.ChatClient(
                         `There was an error opening <strong>${user.username}</strong>'s camera.<br><br>` +
                         "<strong>Advice:</strong> You appear to be on an iPad-style browser. Webcam sharing " +
@@ -2386,15 +2406,9 @@ export default {
             // iPad test: they will have very limited luck opening videos unless
             // A) the iPad camera is already on, and
             // B) the person they want to watch has mutual auto-open enabled.
-            if (isAppleWebkit()) {
+            if (this.isAppleWebkit) {
                 if (!this.webcam.active) {
                     return 'fa-video-slash';  // can not open any cam w/o local video on
-                }
-                if (!(this.whoMap[user.username].video & this.VideoFlag.MutualOpen)) {
-                    // the user must have mutual auto-open on: the iPad has to offer
-                    // their video which will force open their cam on the other side,
-                    // and this is only if the user expects it.
-                    return 'fa-video-slash';
                 }
             }
 
@@ -3584,6 +3598,24 @@ export default {
                             </p>
                         </div>
 
+                        <div class="field">
+                            <label class="label mb-0">
+                                Advanced
+                            </label>
+                            <label class="checkbox">
+                                <input type="checkbox"
+                                    v-model="prefs.appleCompat"
+                                    :value="true">
+                                Apple compatibility mode (iPad, iPhone, Safari)
+                            </label>
+                            <p class="help">
+                                If you experience difficulty opening cameras and you are on an Apple device (iPad,
+                                iPhone, or the Safari browser on macOS) try enabling this option and see if it will
+                                help. <strong>Note:</strong> You will need to share your webcam first before you can
+                                open successfully open others', due to limitations in Apple's WebRTC implementation.
+                            </p>
+                        </div>
+
                     </div>
 
                 </div>
@@ -3931,6 +3963,11 @@ export default {
 
                         <!-- Easy video zoom buttons -->
                         <div class="column is-narrow is-hidden-mobile" v-if="anyVideosOpen">
+                            <button type="button" class="button is-small is-outlined mr-1" :disabled="webcam.videoScale === 'x4'"
+                                @click="settingsModal.tab='webcam'; showSettings()">
+                                <i class="fa fa-gear"></i>
+                            </button>
+
                             <button type="button" class="button is-small is-outlined" :disabled="webcam.videoScale === 'x4'"
                                 @click="scaleVideoSize(true)">
                                 <i class="fa fa-magnifying-glass-plus"></i>

@@ -25,6 +25,7 @@ const keys = {
     'watchNotif': Boolean,
     'muteSounds': Boolean,
     'closeDMs': Boolean,      // close unsolicited DMs
+    'appleCompat': Boolean,  // Apple browser compatibility mode
 
     // Don't Show Again on NSFW modals.
     'skip-nsfw-modal': Boolean,
