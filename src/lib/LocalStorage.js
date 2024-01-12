@@ -16,6 +16,7 @@ const keys = {
     'videoExplicit': Boolean,  // whether the user turns explicit on by default
     'videoNonExplicit': Boolean,  // user prefers not to see explicit
     'rememberExpresslyClosed': Boolean,
+    'autoMuteWebcams': Boolean, // automatically mute other peoples' webcam audio feeds
 
     // Booleans
     'usePolling': Boolean,  // use the polling API instead of WebSocket

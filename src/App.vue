@@ -167,6 +167,7 @@ export default {
                 nonExplicit: false, // user prefers not to see explicit cameras
                 vipOnly: false, // only show camera to fellow VIP users
                 rememberExpresslyClosed: true,  // remember cams we expressly closed
+                autoMuteWebcams: false, // auto-mute other cameras' audio channels
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -459,6 +460,9 @@ export default {
         },
         "webcam.rememberExpresslyClosed": function () {
             LocalStorage.set('rememberExpresslyClosed', this.webcam.rememberExpresslyClosed);
+        },
+        "webcam.autoMuteWebcams": function () {
+            LocalStorage.set('autoMuteWebcams', this.webcam.autoMuteWebcams);
         },
 
         // Misc preference watches
@@ -815,6 +819,9 @@ export default {
             }
             if (settings.rememberExpresslyClosed === false) {
                 this.webcam.rememberExpresslyClosed = false;
+            }
+            if (settings.autoMuteWebcams === true) {
+                this.webcam.autoMuteWebcams = true;
             }
 
             // Misc preferences
@@ -1474,6 +1481,14 @@ export default {
 
             // When a remote stream arrives.
             pc.ontrack = event => {
+                // If we were not expecting to receive this video (e.g. somebody is requesting our
+                // cam and sending their video on the offer, but we don't want to auto-open their
+                // video, so don't use it)
+                if (!isOfferer && !this.webcam.mutualOpen) {
+                    console.log(`The offerer ${username} gave us a video, but we don't auto-open their video.`);
+                    return;
+                }
+
                 const stream = event.streams[0];
 
                 // Had we expressly closed this user's cam before? e.g.: if we have auto-open their
@@ -1508,6 +1523,12 @@ export default {
                 window.requestAnimationFrame(() => {
                     let $ref = document.getElementById(`videofeed-${username}`);
                     $ref.srcObject = stream;
+
+                    // Are we muting their videos by default?
+                    if (this.webcam.autoMuteWebcams) {
+                        this.WebRTC.muted[username] = true;
+                        $ref.muted = true;
+                    }
                 });
 
                 // Inform them they are being watched.
@@ -3427,6 +3448,13 @@ export default {
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.mutualOpen">
                                 When someone opens my camera, I also open their camera automatically
+                            </label>
+                        </div>
+
+                        <div class="field mb-1">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.autoMuteWebcams">
+                                <i class="fa fa-microphone-slash mx-1"></i> Automatically mute audio on other peoples' webcams
                             </label>
                         </div>
 
