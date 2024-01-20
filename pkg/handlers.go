@@ -584,6 +584,12 @@ func (s *Server) OnReport(sub *Subscriber, msg messages.Message) {
 		return
 	}
 
+	// Attach recent message context to DMs.
+	if strings.HasPrefix(msg.Channel, "@") {
+		context := getDirectMessageContext(sub.Username, msg.Username)
+		msg.Message += "\n\nRecent message context:\n\n" + context
+	}
+
 	// Post to the report webhook.
 	if _, err := PostWebhook(WebhookReport, WebhookRequest{
 		Action: WebhookReport,

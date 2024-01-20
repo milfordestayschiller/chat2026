@@ -113,7 +113,7 @@ func (s *Server) reportFilteredMessage(sub *Subscriber, msg messages.Message) er
 var (
 	messageContexts    = map[string][]string{}
 	messageContextMu   sync.RWMutex
-	messageContextSize = 10
+	messageContextSize = 30
 )
 
 // Push a message onto the recent messages context.
