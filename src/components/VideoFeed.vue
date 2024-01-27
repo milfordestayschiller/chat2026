@@ -100,7 +100,7 @@ export default {
 
         <!-- Close button (others' videos only) -->
         <div class="close" v-if="!localVideo">
-            <a href="#" class="has-text-danger" title="Close video" @click.prevent="closeVideo()">
+            <a href="#" class="button is-small is-danger is-outlined px-2" title="Close video" @click.prevent="closeVideo()">
                 <i class="fa fa-close"></i>
             </a>
         </div>
