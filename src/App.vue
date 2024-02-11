@@ -58,6 +58,7 @@ export default {
     data() {
         return {
             // busy: false, // TODO: not used
+            pageTitle: document.title,
             disconnect: false,    // don't try to reconnect (e.g. kicked)
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
@@ -353,6 +354,12 @@ export default {
         window.addEventListener("focus", () => {
             this.windowFocused = true;
             this.windowFocusedAt = new Date();
+
+            // If the current channel has unread indicators, clear them.
+            let channel = this.channel;
+            if (this.channels[channel].unread > 0) {
+                this.channels[channel].unread = 0;
+            }
         });
         window.addEventListener("blur", () => {
             this.windowFocused = false;
@@ -417,6 +424,9 @@ export default {
         status() {
             // Send presence updates to the server.
             this.sendMe();
+        },
+        pageTitleUnreadPrefix() {
+            document.title = this.pageTitleUnreadPrefix + this.pageTitle;
         },
 
         // Webcam preferences that the user can edit while live.
@@ -563,6 +573,19 @@ export default {
         isDM() {
             // Is the current channel a DM?
             return this.channel.indexOf("@") === 0;
+        },
+        pageTitleUnreadPrefix() {
+            // When the page is not focused, put count of unread DMs in the title bar.
+            if (this.windowFocused) return "";
+
+            let count = 0;
+            for (let channel of Object.keys(this.channels)) {
+                if (channel.indexOf("@") === 0 && this.channels[channel].unread > 0) {
+                    count += this.channels[channel].unread;
+                }
+            }
+
+            return count > 0 ? `(${count}) ` : "";
         },
         chatPartnerStatusMessage() {
             // In a DM thread, returns your chat partner's status message.
@@ -2758,7 +2781,7 @@ export default {
             this.scrollHistory(channel);
 
             // Mark unread notifiers if this is not our channel.
-            if (this.channel !== channel) {
+            if (this.channel !== channel || !this.windowFocused) {
                 // Don't notify about presence broadcasts.
                 if (action !== "presence" && !isChatServer) {
                     this.channels[channel].unread++;
