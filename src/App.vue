@@ -2746,6 +2746,9 @@ export default {
                         </a>
                         <div id="img-${collapseID}" style="display: none">${message}</div>`;
                 }
+
+                // Disable right click. TODO: move to server side.
+                message = message.replace(/<img /g, `<img oncontextmenu="return false" `);
             }
 
             // Were we at mentioned in this message?
