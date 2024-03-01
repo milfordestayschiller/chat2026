@@ -18,7 +18,7 @@
       <div class="modal-background" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></div>
       <div class="modal-content photo-modal">
           <div class="image is-fullwidth">
-              <img id="modalImage">
+              <img id="modalImage" oncontextmenu="return false">
           </div>
       </div>
       <button class="modal-close is-large" aria-label="close" onclick="document.querySelector('#photo-modal').classList.remove('is-active')"></button>
