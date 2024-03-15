@@ -97,7 +97,7 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 	s.Broadcast(messages.Message{
 		Action:   messages.ActionPresence,
 		Username: msg.Username,
-		Message:  "has joined the room!",
+		Message:  messages.PresenceJoined,
 	})
 
 	// Send the user back their settings.
@@ -379,14 +379,14 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 			s.Broadcast(messages.Message{
 				Action:   messages.ActionPresence,
 				Username: sub.Username,
-				Message:  "has exited the room!",
+				Message:  messages.PresenceExited,
 			})
 		} else if sub.ChatStatus == "hidden" && msg.ChatStatus != "hidden" {
 			// Leaving hidden - fake join message
 			s.Broadcast(messages.Message{
 				Action:   messages.ActionPresence,
 				Username: sub.Username,
-				Message:  "has joined the room!",
+				Message:  messages.PresenceJoined,
 			})
 		}
 	} else if msg.ChatStatus == "hidden" {

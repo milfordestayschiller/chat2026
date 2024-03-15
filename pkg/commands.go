@@ -160,7 +160,7 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		s.Broadcast(messages.Message{
 			Action:   messages.ActionPresence,
 			Username: username,
-			Message:  "has been kicked from the room!",
+			Message:  messages.PresenceKicked,
 		})
 	}
 }
@@ -237,7 +237,7 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 		s.Broadcast(messages.Message{
 			Action:   messages.ActionPresence,
 			Username: username,
-			Message:  "has been banned!",
+			Message:  messages.PresenceBanned,
 		})
 
 		other.ChatServer("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour)

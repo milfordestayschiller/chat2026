@@ -99,7 +99,7 @@ func (s *Server) NewPollingSubscriber(ctx context.Context, cancelFunc func()) *S
 			s.Broadcast(messages.Message{
 				Action:   messages.ActionPresence,
 				Username: sub.Username,
-				Message:  "has exited the room!",
+				Message:  messages.PresenceExited,
 			})
 			s.SendWhoList()
 		}
@@ -167,7 +167,7 @@ func (sub *Subscriber) ReadLoop(s *Server) {
 					s.Broadcast(messages.Message{
 						Action:   messages.ActionPresence,
 						Username: sub.Username,
-						Message:  "has exited the room!",
+						Message:  messages.PresenceExited,
 					})
 					s.SendWhoList()
 				}

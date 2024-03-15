@@ -131,3 +131,12 @@ const (
 	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
 	VideoFlagOnlyVIP                        // can only shows as active to VIP members
 )
+
+// Presence message templates.
+const (
+	PresenceJoined   = "has joined the room!"
+	PresenceExited   = "has exited the room!"
+	PresenceKicked   = "has been kicked from the room!"
+	PresenceBanned   = "has been banned!"
+	PresenceTimedOut = "has timed out!"
+)

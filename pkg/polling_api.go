@@ -65,7 +65,7 @@ func (s *Server) KickIdlePollUsers() {
 					s.Broadcast(messages.Message{
 						Action:   messages.ActionPresence,
 						Username: sub.Username,
-						Message:  "has timed out!",
+						Message:  messages.PresenceTimedOut,
 					})
 					s.SendWhoList()
 				}

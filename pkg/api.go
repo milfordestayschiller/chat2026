@@ -468,6 +468,134 @@ func (s *Server) BlockNow() http.HandlerFunc {
 	})
 }
 
+// DisconnectNow (/api/disconnect/now) allows your website to remove a user from
+// the chat room if they are currently online.
+//
+// For example: a user on your website has deactivated their account, and so
+// should not be allowed to remain in the chat room.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"APIKey": "from settings.toml",
+//		"Usernames": [ "alice", "bob" ],
+//		"Message": "An optional ChatServer message to send them first.",
+//		"Kick": false,
+//	}
+//
+// The `Message` parameter, if provided, will be sent to that user as a
+// ChatServer error before they are removed from the room. You can use this
+// to provide them context as to why they are being kicked. For example:
+// "You have been logged out of chat because you deactivated your profile on
+// the main website."
+//
+// The `Kick` boolean is whether the removal should manifest to other users
+// in chat as a "kick" (sending a presence message of "has been kicked from
+// the room!"). By default (false), BareRTC will tell the user to disconnect
+// and it will manifest as a regular "has left the room" event to other online
+// chatters.
+func (s *Server) DisconnectNow() http.HandlerFunc {
+	type request struct {
+		APIKey    string
+		Usernames []string
+		Message   string
+		Kick      bool
+	}
+
+	type result struct {
+		OK      bool
+		Removed int
+		Error   string `json:",omitempty"`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Validate the API key.
+		if params.APIKey != config.Current.AdminAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Authentication denied.",
+			})
+			return
+		}
+
+		// Check if any of these users are online, and disconnect them from the chat.
+		var removed int
+		for _, username := range params.Usernames {
+			if sub, err := s.GetSubscriber(username); err == nil {
+				// Broadcast to everybody that the user left the chat.
+				message := messages.PresenceExited
+				if params.Kick {
+					message = messages.PresenceKicked
+				}
+				s.Broadcast(messages.Message{
+					Action:   messages.ActionPresence,
+					Username: username,
+					Message:  message,
+				})
+
+				// Custom message to send to them?
+				if params.Message != "" {
+					sub.ChatServer(params.Message)
+				}
+
+				// Disconnect them.
+				sub.SendJSON(messages.Message{
+					Action: messages.ActionKick,
+				})
+				sub.authenticated = false
+				sub.Username = ""
+
+				removed++
+			}
+		}
+
+		// If any changes to blocklists were made: send the Who List.
+		if removed > 0 {
+			s.SendWhoList()
+		}
+
+		enc.Encode(result{
+			OK:      true,
+			Removed: removed,
+		})
+	})
+}
+
 // UserProfile (/api/profile) fetches profile information about a user.
 //
 // This endpoint will proxy to your WebhookURL for the "profile" endpoint.
