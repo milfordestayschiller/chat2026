@@ -71,7 +71,7 @@ export default {
                         <label class="label" for="classification">Report classification:</label>
                         <div class="select is-fullwidth">
                             <select id="classification" v-model="classification" :disabled="busy">
-                                <option v-for="i in reportClassifications" :value="i">{{ i }}</option>
+                                <option v-for="i in reportClassifications" v-bind:key="i" :value="i">{{ i }}</option>
                             </select>
                         </div>
                     </div>

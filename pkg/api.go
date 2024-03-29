@@ -13,6 +13,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
+	"git.kirsle.net/apps/barertc/pkg/models"
 )
 
 // Statistics (/api/statistics) returns info about the users currently logged onto the chat,
@@ -745,6 +746,138 @@ func (s *Server) UserProfile() http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		enc.Encode(resp.Data)
+	})
+}
+
+// MessageHistory (/api/message/history) fetches past direct messages for a user.
+//
+// This endpoint looks up earlier chat messages between the current user and a target.
+// It will only run with a valid JWT auth token, to protect users' privacy.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"JWTToken": "the caller's jwt token",
+//		"Username": "other party",
+//		"BeforeID": 1234,
+//	}
+//
+// The "BeforeID" parameter is for pagination and is optional: by default the most
+// recent page of messages are returned. To retrieve an older page, the BeforeID will
+// contain the MessageID of the oldest message you received so far, so that the message
+// before that will be the first returned on the next page.
+//
+// The response JSON will look like the following:
+//
+//	{
+//		"OK": true,
+//		"Error": "only on error responses",
+//		"Messages": [
+//			{
+//				// Standard BareRTC Message objects...
+//				"MessageID": 1234,
+//				"Username": "other party",
+//				"Message": "hello!",
+//			}
+//		],
+//		"Remaining": 42,
+//	}
+//
+// The Remaining value is how many older messages still exist to be loaded.
+func (s *Server) MessageHistory() http.HandlerFunc {
+	type request struct {
+		JWTToken string
+		Username string
+		BeforeID int64
+	}
+
+	type result struct {
+		OK        bool
+		Error     string `json:",omitempty"`
+		Messages  []messages.Message
+		Remaining int
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Are JWT tokens enabled on the server?
+		if !config.Current.JWT.Enabled || params.JWTToken == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "JWT authentication is not available.",
+			})
+			return
+		}
+
+		// Validate the user's JWT token.
+		claims, _, err := jwt.ParseAndValidate(params.JWTToken)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Get the user from the chat roster.
+		sub, err := s.GetSubscriber(claims.Subject)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "You are not logged into the chat room.",
+			})
+			return
+		}
+
+		// Fetch a page of message history.
+		messages, remaining, err := models.PaginateDirectMessages(sub.Username, params.Username, params.BeforeID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		enc.Encode(result{
+			OK:        true,
+			Messages:  messages,
+			Remaining: remaining,
+		})
 	})
 }
 

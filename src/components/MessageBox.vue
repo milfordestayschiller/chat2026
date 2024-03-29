@@ -5,7 +5,7 @@ import 'vue3-emoji-picker/css';
 export default {
     props: {
         message: Object,     // chat Message object
-        isPresence: Boolean, // presence message (joined/left room, kicked, etc.)
+        action: String,      // presence, notification, or (default) normal chat message
         appearance: String,  // message style appearance (cards, compact, etc.)
         user: Object,        // User object of the Message author
         isOffline: Boolean,  // user is not currently online
@@ -174,7 +174,7 @@ export default {
 
 <template>
     <!-- Presence message banners -->
-    <div v-if="isPresence" class="notification is-success is-light py-1 px-3 mb-2">
+    <div v-if="action === 'presence'" class="notification is-success is-light py-1 px-3 mb-2">
 
         <!-- Tiny avatar next to name and action buttons -->
         <div class="columns is-mobile">
@@ -201,6 +201,11 @@ export default {
             </div>
         </div>
 
+    </div>
+
+    <!-- Notification message banners (e.g. DM disclaimer) -->
+    <div v-else-if="action === 'notification'" class="notification is-warning is-light mb-2">
+        <span v-html="message.message"></span>
     </div>
 
     <!-- Card Style (default) -->

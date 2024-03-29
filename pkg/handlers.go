@@ -11,6 +11,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
+	"git.kirsle.net/apps/barertc/pkg/models"
 	"git.kirsle.net/apps/barertc/pkg/util"
 )
 
@@ -236,6 +237,11 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 			LogMessage(rcpt, sub.Username, sub.Username, msg)
 		}
 
+		// Add it to the DM history SQLite database.
+		if err := (models.DirectMessage{}).LogMessage(sub.Username, rcpt.Username, message); err != nil && err != models.ErrNotInitialized {
+			log.Error("Logging DM history to SQLite: %s", err)
+		}
+
 		if err := s.SendTo(msg.Channel, message); err != nil {
 			sub.ChatServer("Your message could not be delivered: %s", err)
 		}
@@ -253,14 +259,26 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 
 // OnTakeback handles takebacks (delete your message for everybody)
 func (s *Server) OnTakeback(sub *Subscriber, msg messages.Message) {
+	// In case we're in a DM thread, remove this message ID from the history table
+	// if the username matches.
+	wasRemovedFromHistory, err := (models.DirectMessage{}).TakebackMessage(sub.Username, msg.MessageID, sub.IsAdmin())
+	if err != nil && err != models.ErrNotInitialized {
+		log.Error("Error taking back DM history message (%s, %d): %s", sub.Username, msg.MessageID, err)
+	}
+
 	// Permission check.
 	if sub.JWTClaims == nil || !sub.JWTClaims.IsAdmin {
 		sub.midMu.Lock()
 		_, ok := sub.messageIDs[msg.MessageID]
 		sub.midMu.Unlock()
+
 		if !ok {
-			sub.ChatServer("That is not your message to take back.")
-			return
+			// The messageID is not found in the current chat session, but did we remove
+			// it from past DM history for the correct current user?
+			if !wasRemovedFromHistory {
+				sub.ChatServer("That is not your message to take back.")
+				return
+			}
 		}
 	}
 

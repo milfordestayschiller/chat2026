@@ -230,3 +230,51 @@ The response JSON given to the chat page from /api/profile looks like:
     ]
 }
 ```
+
+## POST /api/message/history
+
+Load prior history in a Direct Message conversation with another party.
+
+Note: this API request is done by the BareRTC chat front-end page, as an
+ajax request for a current logged-in user.
+
+The request body payload looks like:
+
+```json
+{
+    "JWTToken": "the caller's chat jwt token",
+    "Username": "soandso",
+    "BeforeID": 1234
+}
+```
+
+The JWT token is the current chat user's token. This API only works when
+your BareRTC config requires the use of JWT tokens for authorization.
+
+The "BeforeID" parameter is for pagination, and is optional. By default,
+the first page of recent messages are returned. To get the next page, provide
+the "BeforeID" which matches the MessageID of the oldest message from that
+page. The endpoint will return messages having an ID before this ID.
+
+The response JSON given to the chat page from /api/profile looks like:
+
+```javascript
+{
+    "OK": true,
+    "Error": "only on error messages",
+    "Messages": [
+        {
+            // Standard BareRTC Messages.
+            "username": "soandso",
+            "message": "hello!",
+            "msgID": 1234,
+            "timestamp": "2024-01-01 11:22:33"
+        }
+    ],
+    "Remaining": 12
+}
+```
+
+The "Remaining" integer in the result shows how many older messages still
+remain to be retrieved, and tells the front-end page that it can request
+another page.

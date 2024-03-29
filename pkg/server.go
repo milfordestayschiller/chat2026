@@ -4,6 +4,10 @@ import (
 	"io"
 	"net/http"
 	"sync"
+
+	"git.kirsle.net/apps/barertc/pkg/config"
+	"git.kirsle.net/apps/barertc/pkg/log"
+	"git.kirsle.net/apps/barertc/pkg/models"
 )
 
 // Server is the primary back-end server struct for BareRTC, see main.go
@@ -32,6 +36,13 @@ func NewServer() *Server {
 
 // Setup the server: configure HTTP routes, etc.
 func (s *Server) Setup() error {
+	// Enable the SQLite database for DM history?
+	if config.Current.DirectMessageHistory.Enabled {
+		if err := models.Initialize(config.Current.DirectMessageHistory.SQLiteDatabase); err != nil {
+			log.Error("Error initializing SQLite database: %s", err)
+		}
+	}
+
 	var mux = http.NewServeMux()
 
 	mux.Handle("/", IndexPage())
@@ -46,6 +57,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/authenticate", s.Authenticate())
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
 	mux.Handle("/api/profile", s.UserProfile())
+	mux.Handle("/api/message/history", s.MessageHistory())
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("dist/assets"))))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("dist/static"))))
 

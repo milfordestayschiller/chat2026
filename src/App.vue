@@ -74,6 +74,7 @@ export default {
             config: {
                 branding: Branding,
                 channels: PublicChannels,
+                dmDisclaimer: DMDisclaimer,
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
                 webhookURLs: WebhookURLs,
@@ -241,7 +242,6 @@ export default {
             },
 
             // Chat history.
-            history: [],
             channels: {
                 // There will be values here like:
                 // "lobby": {
@@ -268,6 +268,17 @@ export default {
                 //        "username"  // users who reacted
                 //    ]
                 // }
+            },
+
+            // Loading older Direct Message chat history.
+            directMessageHistory: {
+                /* Will look like:
+                "username": {
+                    "busy": false,  // ajax request in flight
+                    "beforeID": 1234, // next page cursor
+                    "remaining": 50,  // number of older messages remaining
+                }
+                */
             },
 
             // Responsive CSS controls for mobile.
@@ -1324,6 +1335,8 @@ export default {
         onMessage(msg) {
             // Play sound effects if this is not the active channel or the window is not focused.
             if (msg.channel.indexOf("@") === 0) {
+                this.initDirectMessageHistory(msg.channel, msg.msgID);
+
                 if (msg.channel !== this.channel || !this.windowFocused) {
                     // If we are ignoring unsolicited DMs, don't play the sound effect here.
                     if (this.prefs.closeDMs && this.channels[msg.channel] == undefined) {
@@ -1786,6 +1799,7 @@ export default {
         openDMs(user) {
             let channel = "@" + user.username;
             this.initHistory(channel);
+            this.initDirectMessageHistory(channel);
             this.setChannel(channel);
 
             // Responsive CSS: switch back to chat panel upon opening a DM.
@@ -1881,6 +1895,7 @@ export default {
             let channel = this.channel;
             this.setChannel(this.config.channels[0].ID);
             delete (this.channels[channel]);
+            delete (this.directMessageHistory[channel]);
         },
 
         /* Take back messages (for everyone) or remove locally */
@@ -2711,10 +2726,17 @@ export default {
                 };
             }
         },
-        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient, messageID }) {
+        pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient, messageID, timestamp = null, unshift = false }) {
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
+            }
+
+            // Assign a timestamp locally?
+            if (timestamp === null) {
+                timestamp = new Date();
+            } else {
+                timestamp = new Date(timestamp);
             }
 
             // Are we ignoring DMs?
@@ -2761,17 +2783,22 @@ export default {
             message = message.replace(/@(here|all)\b/ig, `<strong class="has-background-at-mention">@$1</strong>`);
 
             // Append the message.
-            this.channels[channel].updated = new Date().getTime();
-            this.channels[channel].history.push({
+            let toAppend = {
                 action: action,
                 channel: channel,
                 username: username,
                 message: message,
                 msgID: messageID,
-                at: new Date(),
+                at: timestamp,
                 isChatServer,
                 isChatClient,
-            });
+            };
+            this.channels[channel].updated = new Date().getTime();
+            if (unshift) {
+                this.channels[channel].history.unshift(toAppend);
+            } else {
+                this.channels[channel].history.push(toAppend);
+            }
 
             // Trim the history per the scrollback buffer.
             if (this.scrollback > 0 && this.channels[channel].history.length > this.scrollback) {
@@ -2781,12 +2808,15 @@ export default {
                 );
             }
 
-            this.scrollHistory(channel);
+            // Scroll the history down.
+            if (!unshift) {
+                this.scrollHistory(channel);
+            }
 
             // Mark unread notifiers if this is not our channel.
             if (this.channel !== channel || !this.windowFocused) {
-                // Don't notify about presence broadcasts.
-                if (action !== "presence" && !isChatServer) {
+                // Don't notify about presence broadcasts or history-backfilled messages.
+                if (action !== "presence" && action !== "notification" && !isChatServer && !unshift) {
                     this.channels[channel].unread++;
                 }
             }
@@ -3134,6 +3164,110 @@ export default {
             if (this.status === "online") {
                 this.status = "idle";
             }
+        },
+
+        /*
+         * Direct Message History Loading
+         */
+        initDirectMessageHistory(channel, ignoreID) {
+            if (this.directMessageHistory[channel] == undefined) {
+                this.directMessageHistory[channel] = {
+                    busy: false,
+                    beforeID: 0,
+                    ignoreID: ignoreID,
+                    remaining: -1,
+                };
+
+                // Push the disclaimer message to the bottom of the chat history.
+                let disclaimer = this.config.dmDisclaimer;
+                this.pushHistory({
+                    channel: channel,
+                    username: "ChatServer",
+                    message: disclaimer,
+                    action: "notification",
+                });
+
+                // Immediately request the first page.
+                window.requestAnimationFrame(() => {
+                    this.loadDirectMessageHistory(channel).then(() => {
+                        setTimeout(() => {
+                            this.scrollHistory(channel);
+                        }, 200);
+                    });
+                });
+            }
+        },
+        async loadDirectMessageHistory(channel) {
+            if (!this.jwt.valid) return;
+            this.directMessageHistory[channel].busy = true;
+            return fetch("/api/message/history", {
+                method: "POST",
+                mode: "same-origin",
+                cache: "no-cache",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    "JWTToken": this.jwt.token,
+                    "Username": this.normalizeUsername(channel),
+                    "BeforeID": this.directMessageHistory[channel].beforeID,
+                }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.Error) {
+                    console.error("DirectMessageHistory: ", data.Error);
+                    return;
+                }
+
+                // No more messages?
+                if (data.Messages.length === 0) {
+                    this.directMessageHistory[channel].remaining = data.Remaining;
+                    return;
+                }
+
+                // If this is the first of historic messages, insert a dividing line
+                // (ChatServer presence message) to separate them.
+                if (this.directMessageHistory[channel].remaining === -1) {
+                    this.pushHistory({
+                        channel: channel,
+                        username: "ChatServer",
+                        action: "presence",
+                        message: "Messages from your past chat session are available above this line.",
+                        unshift: true,
+                    });
+                }
+
+                // Prepend these messages to the chat log.
+                let beforeID = 0;
+                for (let msg of data.Messages) {
+                    beforeID = msg.msgID;
+
+                    // Deduplicate: if this DM thread was opened because somebody sent us a message, their
+                    // message will appear on the history side of the banner as well as the current side.
+                    if (msg.msgID === this.directMessageHistory[channel].ignoreID) {
+                        continue;
+                    }
+
+                    this.pushHistory({
+                        channel: channel,
+                        username: msg.username,
+                        message: msg.message,
+                        messageID: msg.msgID,
+                        timestamp: msg.timestamp,
+                        unshift: true,
+                    });
+                }
+
+                // Update pagination state information.
+                this.directMessageHistory[channel].remaining = data.Remaining;
+                this.directMessageHistory[channel].beforeID = beforeID;
+            }).catch(resp => {
+                console.error("DirectMessageHistory: ", resp);
+            }).finally(() => {
+                this.directMessageHistory[channel].busy = false;
+            });
         },
 
         /*
@@ -4089,38 +4223,8 @@ export default {
 
                     <div :class="fontSizeClass">
 
-                        <!-- Disclaimer at the top of DMs -->
-                        <!-- TODO: make this disclaimer configurable for other sites to modify -->
-                        <div class="notification is-warning is-light" v-if="isDM">
-                            <!-- If reporting is enabled -->
-                            <div v-if="isWebhookEnabled('report')">
-                                <div class="block">
-                                    <i class="fa fa-info-circle mr-1"></i>
-                                    <strong>PSA:</strong> If you see something, say something!
-                                </div>
-                                <div class="block">
-                                    If you encounter an inappropriate, abusive or criminal message in chat, please flag it
-                                    by clicking the red
-                                    <i class="fa fa-flag has-text-danger mx-1"></i> icon to report the message and
-                                    let your website administrator know. Server-side chat filters are engaged
-                                    to help flag messages automatically, but we appreciate our members helping to flag
-                                    messages in case the automated filters missed any.
-                                </div>
-                                <div class="block">
-                                    Do your part to help keep this website great! <i class="fa-regular fa-star"></i>
-                                </div>
-                            </div>
-                            <div v-else>
-                                <i class="fa fa-info-circle mr-1"></i>
-                                <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.
-                                Please refer to <span v-html="config.branding"></span>'s Privacy Policy or Terms of Service
-                                with
-                                regard to DMs.
-                            </div>
-                        </div>
-
                         <!-- No history? -->
-                        <div v-if="chatHistory.length === 0">
+                        <div v-if="chatHistory.length === 0 || (chatHistory.length === 1 && chatHistory[0].action === 'notification')">
                             <em v-if="isDM">
                                 Starting a direct message chat with {{ channel }}. Type a message and say hello!
                             </em>
@@ -4129,9 +4233,25 @@ export default {
                             </em>
                         </div>
 
+                        <!-- Load more history link in DMs -->
+                        <div v-if="isDM && directMessageHistory[channel] != undefined && jwt.valid" class="mb-2">
+                            <div v-if="directMessageHistory[channel].busy" class="notification is-info is-light">
+                                <i class="fa fa-spinner fa-spin mr-1"></i>
+                                Loading...
+                            </div>
+                            <div v-else-if="directMessageHistory[channel].remaining !== 0">
+                                <a href="#" @click.prevent="loadDirectMessageHistory(channel)">
+                                    Load more messages
+                                    <span v-if="directMessageHistory[channel].remaining > 0">
+                                        ({{directMessageHistory[channel].remaining}} remaining)
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+
                         <div v-for="(msg, i) in chatHistory" v-bind:key="i">
 
-                            <MessageBox :message="msg" :is-presence="msg.action === 'presence'" :appearance="messageStyle"
+                            <MessageBox :message="msg" :action="msg.action" :appearance="messageStyle"
                                 :position="i" :user="getUser(msg.username)" :is-offline="isUserOffline(msg.username)"
                                 :username="username" :website-url="config.website" :is-dnd="isUsernameDND(msg.username)"
                                 :is-muted="isMutedUser(msg.username)" :reactions="getReactions(msg)"
