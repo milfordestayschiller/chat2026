@@ -4371,7 +4371,7 @@ export default {
                                     label on the chat history panel -->
                                 <div class="dropdown-content p-0">
                                     <EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
-                                        theme="auto" @select="onSelectEmoji">
+                                        :theme="prefs.theme !== 'auto' ? prefs.theme : 'auto'" @select="onSelectEmoji">
                                     </EmojiPicker>
                                 </div>
                             </div>

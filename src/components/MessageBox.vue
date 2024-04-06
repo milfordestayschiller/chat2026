@@ -1,5 +1,6 @@
 <script>
 import EmojiPicker from 'vue3-emoji-picker';
+import LocalStorage from '../lib/LocalStorage';
 import 'vue3-emoji-picker/css';
 
 export default {
@@ -81,7 +82,15 @@ export default {
         // Compactify a message (remove paragraph breaks added by Markdown renderer)
         compactMessage() {
             return this.message.message.replace(/<\/p>\s*<p>/g, "<br><br>").replace(/<\/?p>/g, "");
-        }
+        },
+
+        emojiPickerTheme() {
+            let theme = LocalStorage.get('theme');
+            if (theme === 'light' || theme === 'dark') {
+                return theme;
+            }
+            return 'auto';
+        },
     },
     methods: {
         openProfile() {
@@ -332,7 +341,7 @@ export default {
                         <!-- Emoji reactions menu -->
                         <EmojiPicker v-if="showEmojiPicker" :native="true" :display-recent="true" :disable-skin-tones="true"
                             :additional-groups="customEmojiGroups" :group-names="{ frequently_used: 'Frequently Used' }"
-                            theme="auto" @select="onSelectEmoji"></EmojiPicker>
+                            :theme="emojiPickerTheme" @select="onSelectEmoji"></EmojiPicker>
                     </div>
                 </div>
             </div>
