@@ -29,10 +29,10 @@ img {
 
 /* DM title and bg color */
 .has-background-private {
-    background-color: #b748c7;
+    background-color: #b748c7 !important;
 }
 .has-background-dm {
-    background-color: #fff9ff;
+    background-color: #fff9ff !important;
 }
 .has-background-at-mention {
     background-color: rgb(250, 250, 192);
