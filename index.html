@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/bulma-prefers-dark.css?{{.CacheHash}}">
+    <link rel="stylesheet" type="text/css" href="/static/css/bulma.min.css?{{.CacheHash}}">
     <link rel="stylesheet" href="/static/fontawesome-free-6.1.2-web/css/all.css">
     <link rel="stylesheet" type="text/css" href="/static/css/chat.css?{{.CacheHash}}">
     <title>{{.Config.Title}}</title>
@@ -40,6 +39,7 @@
       const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
       const UserJWTClaims = {{.JWTClaims.ToJSON}};
       const CachedBlocklist = {{.CachedBlocklist}};
+      const CacheHash = {{.CacheHash}};
 
       // Show the photo detail modal.
       function setModalImage(url) {

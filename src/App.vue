@@ -78,6 +78,7 @@ export default {
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
                 webhookURLs: WebhookURLs,
+                cacheHash: CacheHash,
                 VIP: VIP,
                 fontSizeClasses: [
                     ["x-2", "Very small chat room text"],
@@ -153,6 +154,7 @@ export default {
                 watchNotif: true,    // notify in chat about cameras being watched
                 closeDMs: false,     // ignore unsolicited DMs
                 muteSounds: false,   // mute all sound effects
+                theme: "auto",       // auto, light, dark theme
                 appleCompat: isAppleWebkit(), // Apple browser compatibility mode
             },
 
@@ -514,6 +516,9 @@ export default {
         },
         "prefs.appleCompat": function () {
             LocalStorage.set('appleCompat', this.prefs.appleCompat);
+        },
+        "prefs.theme": function() {
+            LocalStorage.set('theme', this.prefs.theme);
         },
     },
     computed: {
@@ -891,6 +896,9 @@ export default {
             }
             if (settings.whoSort != undefined) {
                 this.whoSort = settings.whoSort;
+            }
+            if (settings.theme != undefined) {
+                this.prefs.theme = settings.theme;
             }
         },
 
@@ -3386,6 +3394,36 @@ export default {
                     <div v-if="settingsModal.tab === 'prefs'">
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
+                                <label class="label">Theme</label>
+                            </div>
+                            <div class="field-body">
+                                <div class="field">
+                                    <div class="control">
+                                        <label class="radio">
+                                            <input type="radio"
+                                                v-model="prefs.theme"
+                                                value="auto">
+                                            Automatic
+                                        </label>
+                                        <label class="radio">
+                                            <input type="radio"
+                                                v-model="prefs.theme"
+                                                value="light">
+                                            Light
+                                        </label>
+                                        <label class="radio">
+                                            <input type="radio"
+                                                v-model="prefs.theme"
+                                                value="dark">
+                                            Dark
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field is-horizontal">
+                            <div class="field-label is-normal">
                                 <label class="label">Video size</label>
                             </div>
                             <div class="field-body">
@@ -3796,7 +3834,7 @@ export default {
         <div class="modal-content">
             <div class="card">
                 <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">Broadcast my webcam</p>
+                    <p class="card-header-title">Select Webcam Options</p>
                 </header>
                 <div class="card-content">
                     <p class="block mb-1">
@@ -3878,7 +3916,7 @@ export default {
                             <div class="select is-fullwidth">
                                 <select v-model="webcam.videoDeviceID">
                                     <option :value="null" disabled selected>Select default camera</option>
-                                    <option v-for="(d, i) in webcam.videoDevices" :value="d.id">
+                                    <option v-for="(d, i) in webcam.videoDevices" :value="d.id" v-bind:key="i">
                                         {{ d.label || `Camera ${i}` }}
                                     </option>
                                 </select>
@@ -3890,7 +3928,7 @@ export default {
                             <div class="select is-fullwidth">
                                 <select v-model="webcam.audioDeviceID">
                                     <option :value="null" disabled selected>Select default microphone</option>
-                                    <option v-for="(d, i) in webcam.audioDevices" :value="d.id">
+                                    <option v-for="(d, i) in webcam.audioDevices" :value="d.id" v-bind:key="i">
                                         {{ d.label || `Microphone ${i}` }}
                                     </option>
                                 </select>
@@ -3900,9 +3938,9 @@ export default {
 
                     <div class="field">
                         <div class="control has-text-centered">
-                            <button type="button" class="button is-link mr-4"
-                                @click="startVideo({ force: true }); nsfwModalCast.visible = false">Start webcam</button>
                             <button type="button" class="button" @click="nsfwModalCast.visible = false">Cancel</button>
+                            <button type="button" class="button is-success ml-2"
+                                @click="startVideo({ force: true }); nsfwModalCast.visible = false">Start webcam</button>
                         </div>
                     </div>
                 </div>
@@ -4019,8 +4057,8 @@ export default {
         <!-- Left Column: Channels & DMs -->
         <div class="left-column">
             <div class="card grid-card">
-                <header class="card-header has-background-success-dark">
-                    <div class="columns is-mobile card-header-title has-text-light">
+                <header class="card-header has-background-success">
+                    <div class="columns is-mobile card-header-title">
                         <div class="column is-narrow mobile-only">
                             <button type="button" class="button is-success px-2" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
@@ -4128,7 +4166,7 @@ export default {
                                 <i class="fa fa-gear"></i>
                             </button>
 
-                            <button type="button" class="button is-small is-outlined" :disabled="webcam.videoScale === 'x4'"
+                            <button type="button" class="button is-small is-outlined mr-1" :disabled="webcam.videoScale === 'x4'"
                                 @click="scaleVideoSize(true)">
                                 <i class="fa fa-magnifying-glass-plus"></i>
                             </button>
@@ -4353,8 +4391,8 @@ export default {
         <!-- Right Column: Who Is Online -->
         <div class="right-column">
             <div class="card grid-card">
-                <header class="card-header has-background-success-dark">
-                    <div class="columns is-mobile card-header-title has-text-light">
+                <header class="card-header has-background-success">
+                    <div class="columns is-mobile card-header-title">
                         <div class="column">Who Is Online</div>
                         <div class="column is-narrow mobile-only">
                             <button type="button" class="button is-success px-2" @click="openChatPanel">
@@ -4424,8 +4462,8 @@ export default {
                     </div>
 
                     <!-- Who Is Online -->
-                    <ul class="menu-list" v-if="whoTab === 'online'">
-                        <li v-for="(u, i) in sortedWhoList" v-bind:key="i">
+                    <div v-if="whoTab === 'online'">
+                        <div v-for="(u, i) in sortedWhoList" v-bind:key="i">
                             <WhoListRow
                                 :user="u"
                                 :username="username"
@@ -4443,12 +4481,12 @@ export default {
                                 @open-video="openVideo"
                                 @open-profile="showProfileModal">
                             </WhoListRow>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
 
                     <!-- Watching My Webcam -->
-                    <ul class="menu-list" v-if="whoTab === 'watching'">
-                        <li v-for="(u, i) in sortedWatchingList" v-bind:key="username">
+                    <div v-if="whoTab === 'watching'">
+                        <div v-for="(u, i) in sortedWatchingList" v-bind:key="i">
                             <WhoListRow
                                 :is-watching-tab="true"
                                 :user="u"
@@ -4468,13 +4506,23 @@ export default {
                                 @boot-user="bootUser"
                                 @open-profile="showProfileModal">
                             </WhoListRow>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
 
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Theme CSS (light/dark) -->
+    <link v-if="prefs.theme === 'light'"
+        rel="stylesheet" type="text/css"
+        href="/static/css/bulma-no-dark-mode.min.css?{{.config.cacheHash}}">
+    <link v-else-if="prefs.theme === 'dark'"
+        rel="stylesheet" type="text/css"
+        href="/static/css/bulma-dark-theme.css?{{.config.cacheHash}}">
+    <link v-else rel="stylesheet" type="text/css"
+        href="/static/css/chat-prefers-dark.css?{{.config.cacheHash}}">
 </template>
 
 <style>

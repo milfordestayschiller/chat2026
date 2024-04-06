@@ -87,13 +87,6 @@ img {
     grid-template-rows: auto 1fr auto;
 }
 
-@media (prefers-color-scheme: dark) {
-    .chat-container {
-        background: rgb(39, 39, 39);
-        background: linear-gradient(0deg, rgb(39, 39, 39) 0%, rgb(66, 66, 66) 100%);
-    }
-}
-
 /* Header row */
 .chat-container > .chat-header {
     grid-column: 1 / 4;
@@ -145,7 +138,7 @@ img {
 /* Responsive CSS styles */
 @media screen and (min-width: 1024px) {
     .mobile-only {
-        display: none;
+        display: none !important;
     }
 }
 @media screen and (max-width: 1024px) {

@@ -7,6 +7,7 @@ const keys = {
     'scrollback': Number,           // Scrollback buffer (int)
     'preferredDeviceNames': Object, // Webcam/mic device names (object, keys video,audio)
     'whoSort': String,              // user's preferred sort order for the Who List
+    'theme': String,                // light, dark, or auto theme
 
     // Webcam settings (booleans)
     'videoMutual': Boolean,
