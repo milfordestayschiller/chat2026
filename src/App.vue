@@ -3997,7 +3997,7 @@ export default {
                     </button>
 
                     <!-- Watchers button -->
-                    <button type="button" v-if="webcam.active" class="button is-small is-info is-outlined ml-1 px-1"
+                    <button type="button" v-if="webcam.active" class="button is-small is-link is-outlined ml-1 px-1"
                         @click="showViewers()">
                         <i class="fa fa-eye mr-2"></i>
                         {{ Object.keys(webcam.watching).length }}

@@ -58,7 +58,7 @@ export default {
             if ((this.user.video & VideoFlag.Active) && (this.user.video & VideoFlag.NSFW)) {
                 result += "is-danger is-outlined";
             } else if ((this.user.video & VideoFlag.Active) && !(this.user.video & VideoFlag.NSFW)) {
-                result += "is-info is-outlined";
+                result += "is-link is-outlined";
             } else if (this.isVideoNotAllowed) {
                 result += "cursor-notallowed";
             }
