@@ -21,6 +21,10 @@
     background-color: rgb(100, 90, 41) !important;
 }
 
+.has-background-at-mention {
+    background-color: rgb(65, 65, 48) !important;
+}
+
 /* note: this css file otherwise didn't override this, dark's always dark, brighten it! */
 .has-text-dark, .button.is-grey {
     color: #b5b5b5 !important;
