@@ -278,7 +278,7 @@ export default {
                     <div class="column is-narrow pl-1 pt-0" v-if="!noButtons">
                         <!-- DMs button -->
                         <button type="button" v-if="!(message.username === username || isDm)"
-                            class="button is-dark is-outlined is-small px-2" @click="openDMs()"
+                            class="button is-small px-2" @click="openDMs()"
                             :title="isDnd ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
                             :disabled="isDnd">
                             <i class="fa fa-comment"></i>
@@ -286,7 +286,7 @@ export default {
 
                         <!-- Mute button -->
                         <button type="button" v-if="!(message.username === username)"
-                            class="button is-dark is-outlined is-small px-2 ml-1" @click="muteUser()" title="Mute user">
+                            class="button is-small px-2 ml-1" @click="muteUser()" title="Mute user">
                             <i class="fa fa-comment-slash" :class="{
                                 'has-text-success': isMuted,
                                 'has-text-danger': !isMuted
@@ -295,14 +295,14 @@ export default {
 
                         <!-- Owner or admin: take back the message -->
                         <button type="button" v-if="message.username === username || isOp"
-                            class="button is-dark is-outlined is-small px-2 ml-1"
+                            class="button is-small px-2 ml-1"
                             title="Take back this message (delete it for everybody)" @click="takeback()">
                             <i class="fa fa-rotate-left has-text-danger"></i>
                         </button>
 
                         <!-- Everyone else: can hide it locally -->
                         <button type="button" v-if="message.username !== username"
-                            class="button is-dark is-outlined is-small px-2 ml-1"
+                            class="button is-small px-2 ml-1"
                             title="Hide this message (delete it only for your view)" @click="removeMessage()">
                             <i class="fa fa-trash"></i>
                         </button>
