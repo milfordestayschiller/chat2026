@@ -31,6 +31,9 @@ export default {
         videoID() {
             return this.localVideo ? 'localVideo' : `videofeed-${this.username}`;
         },
+        textColorClass() {
+            return this.isExplicit ? 'has-text-camera-red' : 'has-text-camera-blue';
+        },
     },
     methods: {
         closeVideo() {
@@ -42,6 +45,10 @@ export default {
         reopenVideo() {
             // Note: goes into openVideo(username, force)
             this.$emit('reopen-video', this.username, true);
+        },
+
+        openProfile() {
+            this.$emit('open-profile', this.username);
         },
 
         // Toggle the Mute button
@@ -84,12 +91,9 @@ export default {
         <video class="feed" :id="videoID" autoplay :muted="localVideo"></video>
 
         <!-- Caption -->
-        <div class="caption" :class="{
-            'has-text-camera-blue': !isExplicit,
-            'has-text-camera-red': isExplicit,
-        }">
+        <div class="caption" :class="textColorClass">
             <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="isSourceMuted"></i>
-            {{ username }}
+            <a href="#" @click.prevent="openProfile" :class="textColorClass">{{ username }}</a>
             <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7" :title="username + ' is watching your camera too'"
                 v-if="isWatchingMe"></i>
 

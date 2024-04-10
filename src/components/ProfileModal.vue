@@ -192,7 +192,7 @@ export default {
                     <div v-if="user.username !== username" class="mt-4">
                         <!-- DMs button -->
                         <button type="button"
-                            class="button is-dark is-outlined is-small px-2 mb-1"
+                            class="button is-small px-2 mb-1"
                             @click="openDMs()"
                             :title="isDnd ? 'This person is not accepting new DMs' : 'Open a Direct Message (DM) thread'"
                             :disabled="isDnd">
@@ -202,7 +202,7 @@ export default {
 
                         <!-- Mute button -->
                         <button type="button"
-                            class="button is-dark is-outlined is-small px-2 ml-1 mb-1"
+                            class="button is-small px-2 ml-1 mb-1"
                             @click="muteUser()" title="Mute user">
                             <i class="fa fa-comment-slash mr-1" :class="{
                                 'has-text-success': isMuted,
@@ -213,7 +213,7 @@ export default {
 
                         <!-- Boot button -->
                         <button type="button"
-                            class="button is-dark is-outlined is-small px-2 ml-1 mb-1"
+                            class="button is-small px-2 ml-1 mb-1"
                             @click="bootUser()" title="Boot user off your webcam">
                             <i class="fa fa-user-xmark mr-1" :class="{
                                 'has-text-danger': !isBooted,

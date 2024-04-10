@@ -4210,6 +4210,7 @@ export default {
                     <VideoFeed v-show="webcam.active" :local-video="true" :username="username"
                         :popped-out="WebRTC.poppedOut[username]" :is-explicit="webcam.nsfw" :is-muted="webcam.muted"
                         :is-source-muted="webcam.muted" @mute-video="muteMe()" @popout="popoutVideo"
+                        @open-profile="showProfileModal"
                         @set-volume="setVideoVolume">
                     </VideoFeed>
 
@@ -4219,7 +4220,8 @@ export default {
                         :is-source-muted="isSourceMuted(username)" :is-muted="isMuted(username)"
                         :is-watching-me="isWatchingMe(username)" :is-frozen="WebRTC.frozenStreamDetected[username]"
                         @reopen-video="openVideoByUsername" @mute-video="muteVideo" @popout="popoutVideo"
-                        @close-video="expresslyCloseVideo" @set-volume="setVideoVolume">
+                        @close-video="expresslyCloseVideo" @set-volume="setVideoVolume"
+                        @open-profile="showProfileModal">
                     </VideoFeed>
 
                     <!-- Debugging - copy a lot of these to simulate more videos -->
