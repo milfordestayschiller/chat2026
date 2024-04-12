@@ -278,3 +278,34 @@ The response JSON given to the chat page from /api/profile looks like:
 The "Remaining" integer in the result shows how many older messages still
 remain to be retrieved, and tells the front-end page that it can request
 another page.
+
+## POST /api/message/clear
+
+Clear stored direct message history for a user.
+
+This endpoint can be called by the user themself (using JWT token authorization),
+or by your website (using your admin APIKey) so your site can also clear chat
+history remotely (e.g., for when your user deleted their account).
+
+The request body payload looks like:
+
+```javascript
+{
+    // when called from the BareRTC frontend for the current user
+    "JWTToken": "the caller's chat jwt token",
+
+    // when called from your website
+    "APIKey": "your AdminAPIKey from settings.toml",
+    "Username": "soandso"
+}
+```
+
+The response JSON given to the chat page looks like:
+
+```javascript
+{
+    "OK": true,
+    "Error": "only on error messages",
+    "MessagesErased": 42
+}
+```

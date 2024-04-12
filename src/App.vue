@@ -282,6 +282,12 @@ export default {
                 }
                 */
             },
+            clearDirectMessages: {
+                busy: false,
+                ok: false,
+                messagesErased: 0,
+                timeout: null,
+            },
 
             // Responsive CSS controls for mobile.
             responsive: {
@@ -1033,6 +1039,13 @@ export default {
             // DEBUGGING: reconnect to the server
             if (this.message.toLowerCase().indexOf("/reconnect") === 0) {
                 this.resetChatClient();
+                this.message = "";
+                return;
+            }
+
+            // Clear user chat history.
+            if (this.message.toLowerCase().indexOf("/clear-history") === 0) {
+                this.clearMessageHistory();
                 this.message = "";
                 return;
             }
@@ -3277,6 +3290,65 @@ export default {
                 this.directMessageHistory[channel].busy = false;
             });
         },
+        async clearMessageHistory(prompt = false) {
+            if (!this.jwt.valid || this.clearDirectMessages.busy) return;
+
+            if (prompt) {
+                if (!window.confirm(
+                    "This will delete all of your DMs history stored on the server. People you have " +
+                    "chatted with will have their past messages sent to you erased as well.\n\n" +
+                    "Note: messages that are currently displayed on your chat partner's screen will " +
+                    "NOT be removed by this action -- if this is a concern and you want to 'take back' " +
+                    "a message from their screen, use the 'take back' button (red arrow circle) on the " +
+                    "message you sent to them. The 'clear history' button only clears the database, but " +
+                    "does not send takebacks to pull the message from everybody else's screen.\n\n" +
+                    "Are you sure you want to clear your stored DMs history on the server?",
+                )) {
+                    return;
+                }
+            }
+
+            if (this.clearDirectMessages.timeout !== null) {
+                clearTimeout(this.clearDirectMessages.timeout);
+            }
+
+            this.clearDirectMessages.busy = true;
+            return fetch("/api/message/clear", {
+                method: "POST",
+                mode: "same-origin",
+                cache: "no-cache",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    "JWTToken": this.jwt.token,
+                }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.Error) {
+                    console.error("ClearMessageHistory: ", data.Error);
+                    return;
+                }
+
+                this.clearDirectMessages.ok = true;
+                this.clearDirectMessages.messagesErased = data.MessagesErased;
+                this.clearDirectMessages.timeout = setTimeout(() => {
+                    this.clearDirectMessages.ok = false;
+                }, 15000);
+
+                this.ChatClient(
+                    "Your direct message history has been cleared from the server's database. "+
+                    "(" + data.MessagesErased + " messages erased)",
+                );
+            }).catch(resp => {
+                console.error("DirectMessageHistory: ", resp);
+                this.ChatClient("Error clearing your chat history: " + resp);
+            }).finally(() => {
+                this.clearDirectMessages.busy = false;
+            });
+        },
 
         /*
          * Webhook methods
@@ -3385,6 +3457,11 @@ export default {
                             <li :class="{ 'is-active': settingsModal.tab === 'misc' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'misc'">
                                     Misc
+                                </a>
+                            </li>
+                            <li :class="{ 'is-active': settingsModal.tab === 'advanced' }">
+                                <a href="#" @click.prevent="settingsModal.tab = 'advanced'">
+                                    Advanced
                                 </a>
                             </li>
                         </ul>
@@ -3760,7 +3837,7 @@ export default {
 
                         <div class="field">
                             <label class="label mb-0">Direct Messages</label>
-                            <label class="checkbox">
+                            <label class="checkbox mb-0">
                                 <input type="checkbox" v-model="prefs.closeDMs" :value="true">
                                 Ignore unsolicited DMs from others
                             </label>
@@ -3770,6 +3847,27 @@ export default {
                                 also have closed their DMs with this setting.
                             </p>
                         </div>
+
+                        <!-- Clear DMs history on server -->
+                        <div class="field" v-if="this.jwt.valid">
+                            <a href="#" @click.prevent="clearMessageHistory(true)" class="button is-small has-text-danger">
+                                <i class="fa fa-trash mr-1"></i> Clear direct message history
+                            </a>
+
+                            <div v-if="clearDirectMessages.busy" class="has-text-success mt-2 is-size-7">
+                                <i class="fa fa-spinner fa-spin mr-1"></i>
+                                Working...
+                            </div>
+                            <div v-else-if="clearDirectMessages.ok" class="has-text-success mt-2 is-size-7">
+                                <i class="fa fa-check mr-1"></i>
+                                History cleared ({{ clearDirectMessages.messagesErased }} message{{ clearDirectMessages.messagesErased === 1 ? '' : 's' }} erased)
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Advanced preferences -->
+                    <div v-if="settingsModal.tab === 'advanced'">
 
                         <div class="field">
                             <label class="label mb-0">
@@ -3798,13 +3896,13 @@ export default {
 
                         <div class="field">
                             <label class="label mb-0">
-                                Advanced
+                                Apple compatibility mode
                             </label>
                             <label class="checkbox">
                                 <input type="checkbox"
                                     v-model="prefs.appleCompat"
                                     :value="true">
-                                Apple compatibility mode (iPad, iPhone, Safari)
+                                Check this box if you are on an iPad, iPhone, or Safari browser
                             </label>
                             <p class="help">
                                 If you experience difficulty opening cameras and you are on an Apple device (iPad,

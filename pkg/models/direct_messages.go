@@ -82,6 +82,42 @@ func (dm DirectMessage) LogMessage(fromUsername, toUsername string, msg messages
 	return err
 }
 
+// ClearMessages clears all stored DMs that the username as a participant in.
+func (dm DirectMessage) ClearMessages(username string) (int, error) {
+	if DB == nil {
+		return 0, ErrNotInitialized
+	}
+
+	var placeholders = []interface{}{
+		fmt.Sprintf("@%s:%%", username), // `@alice:%`
+		fmt.Sprintf("%%:@%s", username), // `%:@alice`
+		username,
+	}
+
+	// Count all the messages we'll delete.
+	var (
+		count int
+		row   = DB.QueryRow(`
+			SELECT COUNT(message_id)
+			FROM direct_messages
+			WHERE (channel_id LIKE ? OR channel_id LIKE ?)
+			OR username = ?
+		`, placeholders...)
+	)
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+
+	// Delete them all.
+	_, err := DB.Exec(`
+		DELETE FROM direct_messages
+		WHERE (channel_id LIKE ? OR channel_id LIKE ?)
+		OR username = ?
+	`, placeholders...)
+
+	return count, err
+}
+
 // TakebackMessage removes a message by its MID from the DM history.
 //
 // Because the MessageID may have been from a previous chat session, the server can't immediately

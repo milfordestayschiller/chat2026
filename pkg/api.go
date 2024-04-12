@@ -881,6 +881,128 @@ func (s *Server) MessageHistory() http.HandlerFunc {
 	})
 }
 
+// ClearMessages (/api/message/clear) deletes all the stored direct messages for a user.
+//
+// It can be called by the authenticated user themself (with JWTToken), or from your website
+// (with APIKey) in which case you can remotely clear history for a user.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"JWTToken": "the caller's jwt token",
+//		"APIKey": "your website's admin API key"
+//		"Username": "if using your APIKey to specify a user to delete",
+//	}
+//
+// The response JSON will look like the following:
+//
+//	{
+//		"OK": true,
+//		"Error": "only on error responses",
+//		"MessagesErased": 123,
+//	}
+//
+// The Remaining value is how many older messages still exist to be loaded.
+func (s *Server) ClearMessages() http.HandlerFunc {
+	type request struct {
+		JWTToken string
+		APIKey   string
+		Username string
+	}
+
+	type result struct {
+		OK             bool
+		Error          string `json:",omitempty"`
+		MessagesErased int    `json:""`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Authenticate this request.
+		if params.APIKey != "" {
+			// By admin API key.
+			if params.APIKey != config.Current.AdminAPIKey {
+				w.WriteHeader(http.StatusUnauthorized)
+				enc.Encode(result{
+					Error: "Authentication denied.",
+				})
+				return
+			}
+		} else {
+			// Are JWT tokens enabled on the server?
+			if !config.Current.JWT.Enabled || params.JWTToken == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				enc.Encode(result{
+					Error: "JWT authentication is not available.",
+				})
+				return
+			}
+
+			// Validate the user's JWT token.
+			claims, _, err := jwt.ParseAndValidate(params.JWTToken)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				enc.Encode(result{
+					Error: err.Error(),
+				})
+				return
+			}
+
+			// Set the username to clear.
+			params.Username = claims.Subject
+		}
+
+		// Erase their message history.
+		count, err := (models.DirectMessage{}).ClearMessages(params.Username)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		enc.Encode(result{
+			OK:             true,
+			MessagesErased: count,
+		})
+	})
+}
+
 // Blocklist cache sent over from your website.
 var (
 	// Map of username to the list of usernames they block.
