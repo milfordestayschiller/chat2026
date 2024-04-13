@@ -182,7 +182,7 @@ export default {
                 @click="openProfile()">
                 {{ user.username }}
             </strong>
-            <sup class="fa fa-peace has-text-warning-dark is-size-7 ml-1" v-if="user.op"
+            <sup class="fa fa-peace has-text-warning is-size-7 ml-1" v-if="user.op"
                 title="Operator"></sup>
             <sup class="is-size-7 ml-1" :class="vipConfig.Icon" v-else-if="user.vip"
                 :title="vipConfig.Name"></sup>
