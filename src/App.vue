@@ -37,6 +37,7 @@ const configuration = {
 };
 
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
+const DebugChannelID = "barertc-debug";
 
 export default {
     name: 'BareRTC',
@@ -156,6 +157,7 @@ export default {
                 muteSounds: false,   // mute all sound effects
                 theme: "auto",       // auto, light, dark theme
                 appleCompat: isAppleWebkit(), // Apple browser compatibility mode
+                debug: false,        // enable debugging features
             },
 
             // My video feed.
@@ -522,6 +524,9 @@ export default {
         },
         "prefs.appleCompat": function () {
             LocalStorage.set('appleCompat', this.prefs.appleCompat);
+        },
+        "prefs.debug": function () {
+            LocalStorage.set('debug', this.prefs.debug);
         },
         "prefs.theme": function() {
             LocalStorage.set('theme', this.prefs.theme);
@@ -900,6 +905,9 @@ export default {
             if (this.prefs.appleCompat != undefined) {
                 this.prefs.appleCompat = settings.appleCompat === true;
             }
+            if (this.prefs.debug != undefined) {
+                this.prefs.debug = settings.debug === true;
+            }
             if (settings.whoSort != undefined) {
                 this.whoSort = settings.whoSort;
             }
@@ -993,6 +1001,16 @@ export default {
                 return;
             }
 
+            // DEBUGGING: enable the 'debug' pref and see the debug channel.
+            if (this.message.toLowerCase().indexOf("/toggle-debug-settings") === 0) {
+                this.prefs.debug = !this.prefs.debug;
+                this.ChatClient(
+                    `Debug tools have been turned: <strong>${this.prefs.debug ? 'on' : 'off'}.</strong>`,
+                );
+                this.message = "";
+                return;
+            }
+
             // DEBUGGING: fake set the freeze indicator.
             let match = this.message.match(/^\/freeze (.+?)$/i);
             if (match) {
@@ -1006,7 +1024,9 @@ export default {
             // DEBUGGING: test whether the page thinks you're Apple Webkit.
             if (this.message.toLowerCase().indexOf("/ipad") === 0) {
                 if (this.isAppleWebkit) {
-                    this.ChatClient("I have detected that you are probably an iPad or iPhone browser.");
+                    this.ChatClient("I have detected that you are probably an iPad or iPhone browser.<br><br>" +
+                        `* Auto-detection: ${this.isAppleWebkit}<br>` +
+                        `* Manual setting: ${this.prefs.appleCompat}`);
                 } else {
                     this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
                 }
@@ -1322,6 +1342,7 @@ export default {
 
         // Send a video request to access a user's camera.
         sendOpen(username) {
+            this.DebugChannel(`[WebRTC] Sending "open" message to ask to connect to: ${username}`);
             this.client.send({
                 action: "open",
                 username: username,
@@ -1341,10 +1362,12 @@ export default {
         },
         onOpen(msg) {
             // Response for the opener to begin WebRTC connection.
+            this.DebugChannel(`[WebRTC] Received "open" echo from chat server to connect to: ${msg.username}`);
             this.startWebRTC(msg.username, true);
         },
         onRing(msg) {
             // Request from a viewer to see our broadcast.
+            this.DebugChannel(`[WebRTC] Received "ring" message from chat server to share my video with: ${msg.username}`);
             this.startWebRTC(msg.username, false);
         },
         onUserExited(msg) {
@@ -1518,16 +1541,10 @@ export default {
                 this.WebRTC.pc[username].answerer = pc;
             }
 
+            this.DebugChannel(`[WebRTC] Starting WebRTC with: ${username} (I am the: ${isOfferer ? 'offerer' : 'answerer'})`);
+
             // Keep a pointer to the current channel being established (for candidate/SDP).
             this.WebRTC.pc[username].connecting = pc;
-
-            // Create a data channel so we have something to connect over even if
-            // the local user is not broadcasting their own camera.
-            // TODO: adding a dummy data channel might allow iPad to open single directional video
-            let dataChannel = pc.createDataChannel("data");
-            dataChannel.addEventListener("open", event => {
-                // beginTransmission(dataChannel);
-            })
 
             // 'onicecandidate' notifies us whenever an ICE agent needs to deliver a
             // message to the other peer through the signaling server.
@@ -1554,7 +1571,7 @@ export default {
                 // cam and sending their video on the offer, but we don't want to auto-open their
                 // video, so don't use it)
                 if (!isOfferer && !this.webcam.mutualOpen) {
-                    console.log(`The offerer ${username} gave us a video, but we don't auto-open their video.`);
+                    this.DebugChannel(`[WebRTC] The offerer ${username} gave us a video, but we don't auto-open their video.`);
                     return;
                 }
 
@@ -1606,7 +1623,7 @@ export default {
                 // Set a mute video handler to detect freezes.
                 stream.getVideoTracks().forEach(videoTrack => {
                     let freezeDetected = () => {
-                        console.log("FREEZE DETECTED:", username);
+                        this.DebugChannel("[WebRTC] A video freeze was detected from:", username);
                         // Wait some seconds to see if the stream has recovered on its own
                         setTimeout(() => {
                             // Flag it as likely frozen.
@@ -1616,7 +1633,6 @@ export default {
                         }, 7500); // 7.5s
                     };
 
-                    console.log("Apply onmute handler for", username);
                     videoTrack.onmute = freezeDetected;
 
                     // Double check for frozen streams on an interval.
@@ -1634,6 +1650,7 @@ export default {
             // ANSWERER: add our video to the connection so that the offerer (the one who
             // clicked on our video icon to watch us) can receive it.
             if (!isOfferer && this.webcam.active) {
+                this.DebugChannel(`[WebRTC] Answerer: attaching my video to the connection with: ${username}`);
                 let stream = this.webcam.stream;
                 stream.getTracks().forEach(track => {
                     pc.addTrack(track, stream)
@@ -1665,6 +1682,7 @@ export default {
                 // NOTE: on Apple devices, always send your video to satisfy the two-way video call
                 //       constraint imposed by Safari's WebRTC implementation.
                 if (shouldOfferVideo || this.isAppleWebkit) {
+                    this.DebugChannel(`[WebRTC] Offerer: I am attaching my video to the connection with: ${username}`)
                     let stream = this.webcam.stream;
                     stream.getTracks().forEach(track => {
                         pc.addTrack(track, stream)
@@ -1674,6 +1692,7 @@ export default {
 
             // If we are the offerer, begin the connection.
             if (isOfferer) {
+                this.DebugChannel(`[WebRTC] Offerer: create the offer and send it to ${username}`);
                 pc.createOffer({
                     offerToReceiveVideo: true,
                     offerToReceiveAudio: true,
@@ -1685,6 +1704,7 @@ export default {
         localDescCreated(pc, username) {
             return (desc) => {
                 pc.setLocalDescription(desc).then(() => {
+                    this.DebugChannel(`[WebRTC] Local description created; sending SDP message to ${username}:<br><br>${JSON.stringify(pc.localDescription)}`);
                     this.client.send({
                         action: "sdp",
                         username: username,
@@ -1709,6 +1729,8 @@ export default {
             // about at all). Re-parse the JSON stringified object here.
             let candidate = JSON.parse(msg.candidate);
 
+            this.DebugChannel(`[WebRTC] ICE candidate from ${msg.username}:<br><br>${msg.candidate}`);
+
             // Add the new ICE candidate.
             pc.addIceCandidate(candidate).catch(e => {
                 console.error(`addIceCandidate: ${e}`);
@@ -1720,6 +1742,8 @@ export default {
             }
             let pc = this.WebRTC.pc[msg.username].connecting;
 
+            this.DebugChannel(`[WebRTC] Received SDP message from ${msg.username}:<br><br>${msg.description}`);
+
             // XX: WebRTC candidate/SDP messages JSON stringify their inner payload so that the
             // Go back-end server won't re-order their json keys (Safari on Mac OS is very sensitive
             // to the keys being re-ordered during the handshake, in ways that NO OTHER BROWSER cares
@@ -1727,13 +1751,16 @@ export default {
             let message = JSON.parse(msg.description);
 
             // Add the new ICE candidate.
-            // this.ChatClient(`Received a Remote Description from ${msg.username}: ${JSON.stringify(msg.description)}.`);
-            pc.setRemoteDescription(new RTCSessionDescription(message), () => {
+            pc.setRemoteDescription(new RTCSessionDescription(message)).then(() => {
+                this.DebugChannel(`[WebRTC] <strong>setRemoteDescription</strong> called back OK!<br>Our pc.remoteDescription.type is: ${pc.remoteDescription.type}`);
                 // When receiving an offer let's answer it.
                 if (pc.remoteDescription.type === 'offer') {
+                    this.DebugChannel(`[WebRTC] Answerer: create SDP answer message for ${msg.username}`);
                     pc.createAnswer().then(this.localDescCreated(pc, msg.username)).catch(this.ChatClient);
+                } else {
+                    this.DebugChannel(`[WebRTC] pc.remoteDescription.type was not 'offer', we do not need to create an SDP Answer message.`);
                 }
-            }, console.error);
+            }).catch(this.DebugChannel);
         },
         onWatch(msg) {
             // The user has our video feed open now.
@@ -1783,7 +1810,9 @@ export default {
         setChannel(channel) {
             this.channel = typeof (channel) === "string" ? channel : channel.ID;
             this.scrollHistory(this.channel, true);
-            this.channels[this.channel].unread = 0;
+            if (this.channels[this.channel]) {
+                this.channels[this.channel].unread = 0;
+            }
 
             // Responsive CSS: switch back to chat panel upon selecting a channel.
             this.openChatPanel();
@@ -1976,6 +2005,14 @@ export default {
                     data.Updated = this.channels[channel].updated;
                 }
                 result.push(data);
+            }
+
+            // Is the debug channel enabled?
+            if (this.prefs.debug) {
+                result.push({
+                    ID: DebugChannelID,
+                    Name: "Debug Log",
+                });
             }
             return result;
         },
@@ -2242,6 +2279,7 @@ export default {
 
             // Camera is already open? Then disconnect the connection.
             if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.pc[user.username].offerer != undefined) {
+                this.DebugChannel(`OpenVideo(${user.username}): already had a connection open, closing it first.`);
                 this.closeVideo(user.username, "offerer");
             }
 
@@ -2909,6 +2947,14 @@ export default {
         },
         ChatClient(message) {
             this.pushHistory({
+                username: "ChatClient",
+                message: message,
+                isChatClient: true,
+            });
+        },
+        DebugChannel(message) {
+            this.pushHistory({
+                channel: DebugChannelID,
                 username: "ChatClient",
                 message: message,
                 isChatClient: true,
@@ -3909,6 +3955,22 @@ export default {
                                 iPhone, or the Safari browser on macOS) try enabling this option and see if it will
                                 help. <strong>Note:</strong> You will need to share your webcam first before you can
                                 open successfully open others', due to limitations in Apple's WebRTC implementation.
+                            </p>
+                        </div>
+
+                        <div class="field" v-if="isOp || prefs.debug">
+                            <label class="label mb-0">
+                                Stats for nerds
+                            </label>
+                            <label class="checkbox">
+                                <input type="checkbox"
+                                    v-model="prefs.debug"
+                                    :value="true">
+                            </label>
+                            Enable the "Debug Log" channel.
+                            <p class="help">
+                                This enables a channel where under-the-hood debug messages may be posted,
+                                e.g. to debug WebRTC connection problems.
                             </p>
                         </div>
 

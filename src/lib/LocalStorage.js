@@ -27,6 +27,7 @@ const keys = {
     'muteSounds': Boolean,
     'closeDMs': Boolean,      // close unsolicited DMs
     'appleCompat': Boolean,  // Apple browser compatibility mode
+    'debug': Boolean,        // Debug views enabled (admin only)
 
     // Don't Show Again on NSFW modals.
     'skip-nsfw-modal': Boolean,

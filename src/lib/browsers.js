@@ -2,8 +2,16 @@
 // special nuances in their WebRTC video sharing support. This is intended to
 // detect: iPads, iPhones, and Safari on macOS.
 function isAppleWebkit() {
-    // By User-Agent.
-    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    const ua = navigator.userAgent;
+
+    // By User-Agent: Apple mobiles.
+    if (/iPad|iPhone|iPod/.test(ua)) {
+        return true;
+    }
+
+    // Safari browser: claims to be Safari but not Chrome
+    // (Google Chrome claims to be both)
+    if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
         return true;
     }
 
