@@ -18,7 +18,6 @@ import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
 import StatusMessage from './lib/StatusMessage';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
-import { isAppleWebkit } from './lib/browsers';
 
 // WebRTC configuration.
 const configuration = {
@@ -156,7 +155,6 @@ export default {
                 closeDMs: false,     // ignore unsolicited DMs
                 muteSounds: false,   // mute all sound effects
                 theme: "auto",       // auto, light, dark theme
-                appleCompat: isAppleWebkit(), // Apple browser compatibility mode
                 debug: false,        // enable debugging features
             },
 
@@ -522,9 +520,6 @@ export default {
             // Tell ChatServer if we have gone to/from DND.
             this.sendMe();
         },
-        "prefs.appleCompat": function () {
-            LocalStorage.set('appleCompat', this.prefs.appleCompat);
-        },
         "prefs.debug": function () {
             LocalStorage.set('debug', this.prefs.debug);
         },
@@ -819,11 +814,6 @@ export default {
             // Default ordering from ChatServer = a-z
             return result;
         },
-        isAppleWebkit() {
-            // Return whether we are detected to be an iPad or iPhone,
-            // or if the appleCompat seting is enabled.
-            return isAppleWebkit() || this.prefs.appleCompat;
-        },
     },
     methods: {
         // Load user prefs from localStorage, called on startup
@@ -901,9 +891,6 @@ export default {
             }
             if (settings.closeDMs != undefined) {
                 this.prefs.closeDMs = settings.closeDMs === true;
-            }
-            if (this.prefs.appleCompat != undefined) {
-                this.prefs.appleCompat = settings.appleCompat === true;
             }
             if (this.prefs.debug != undefined) {
                 this.prefs.debug = settings.debug === true;
@@ -1017,19 +1004,6 @@ export default {
                 let username = match[1];
                 this.WebRTC.frozenStreamDetected[username] = true;
                 this.ChatClient(`DEBUG: Marked ${username} stream as frozen.`);
-                this.message = "";
-                return;
-            }
-
-            // DEBUGGING: test whether the page thinks you're Apple Webkit.
-            if (this.message.toLowerCase().indexOf("/ipad") === 0) {
-                if (this.isAppleWebkit) {
-                    this.ChatClient("I have detected that you are probably an iPad or iPhone browser.<br><br>" +
-                        `* Auto-detection: ${this.isAppleWebkit}<br>` +
-                        `* Manual setting: ${this.prefs.appleCompat}`);
-                } else {
-                    this.ChatClient("I have detected that you <strong>are not</strong> an iPad or iPhone browser.");
-                }
                 this.message = "";
                 return;
             }
@@ -1660,11 +1634,6 @@ export default {
             // OFFERER: If we were already broadcasting our own video, and the answerer
             // has the "auto-open your video" setting enabled, attach our video to the initial
             // offer right now.
-            //
-            // NOTE: this will force open our video on the answerer's side, and this workflow
-            // is also the only way that iPads/iPhones/Safari browsers can make a call
-            // (two-way video is the only option for them; send-only/receive-only channels seem
-            // not to work in Safari).
             if (isOfferer) {
                 let shouldOfferVideo = (
                     (this.whoMap[username].video & this.VideoFlag.MutualOpen) // They auto-open us
@@ -1679,14 +1648,21 @@ export default {
 
                 // Attach our video on the outgoing offer, so that on the answerer's side our
                 // local video pops up on their screen.
-                // NOTE: on Apple devices, always send your video to satisfy the two-way video call
-                //       constraint imposed by Safari's WebRTC implementation.
-                if (shouldOfferVideo || this.isAppleWebkit) {
+                if (shouldOfferVideo) {
                     this.DebugChannel(`[WebRTC] Offerer: I am attaching my video to the connection with: ${username}`)
                     let stream = this.webcam.stream;
                     stream.getTracks().forEach(track => {
                         pc.addTrack(track, stream)
                     });
+                } else {
+                    // We aren't offering video, but still want to receive audio/video. Add a receive-only
+                    // transceiver to this offer. NOTE: in the legacy WebRTC API we could put offerToReceiveVideo
+                    // and offerToReceiveAudio in the createOffer() call later, but the modern WebRTC has removed
+                    // those options and Safari only supports the modern way. Adding a receive-only transceiver
+                    // here is the modern way to do it that Safari will be happy with.
+                    this.DebugChannel(`[WebRTC] Offer: I am attaching a receive-only video/audio transceiver to the connection with: ${username}`);
+                    pc.addTransceiver('video', { direction: 'recvonly' });
+                    pc.addTransceiver('audio', { direction: 'recvonly' });
                 }
             }
 
@@ -2299,20 +2275,9 @@ export default {
                 delete (this.WebRTC.openTimeouts[user.username]);
             }
             this.WebRTC.openTimeouts[user.username] = setTimeout(() => {
-                // It timed out. If they are on an iPad, offer additional hints on
-                // how to have better luck connecting their cameras.
-                if (this.isAppleWebkit) {
-                    this.ChatClient(
-                        `There was an error opening <strong>${user.username}</strong>'s camera.<br><br>` +
-                        "<strong>Advice:</strong> You appear to be on an iPad-style browser. Webcam sharing " +
-                        "may be limited and only work if:<br>A) You are sharing your own camera first, and<br>B) " +
-                        "The person you view has the setting to auto-open your camera in return.<br>Best of luck!",
-                    );
-                } else {
-                    this.ChatClient(
-                        `There was an error opening <strong>${user.username}</strong>'s camera.`,
-                    );
-                }
+                this.ChatClient(
+                    `There was an error opening <strong>${user.username}</strong>'s camera.`,
+                );
                 delete (this.WebRTC.openTimeouts[user.username]);
             }, 10000);
 
@@ -2498,15 +2463,6 @@ export default {
             // Already opened?
             if (this.WebRTC.pc[user.username] != undefined && this.WebRTC.streams[user.username] != undefined) {
                 return 'fa-eye';
-            }
-
-            // iPad test: they will have very limited luck opening videos unless
-            // A) the iPad camera is already on, and
-            // B) the person they want to watch has mutual auto-open enabled.
-            if (this.isAppleWebkit) {
-                if (!this.webcam.active) {
-                    return 'fa-video-slash';  // can not open any cam w/o local video on
-                }
             }
 
             if (this.isVideoNotAllowed(user)) return 'fa-video-slash';
@@ -3641,11 +3597,19 @@ export default {
                     <!-- Sound settings -->
                     <div v-else-if="settingsModal.tab === 'sounds'">
 
-                        <div class="mb-4">
-                            <label class="checkbox">
-                                <input type="checkbox" v-model="prefs.muteSounds" :value="true">
-                                Mute all sound effects
-                            </label>
+                        <div class="columns mb-4">
+                            <div class="column">
+                                <label class="checkbox">
+                                    <input type="checkbox" v-model="prefs.muteSounds" :value="true">
+                                    Mute all sound effects
+                                </label>
+                            </div>
+                            <div class="column">
+                                <label class="checkbox">
+                                    <input type="checkbox" v-model="webcam.autoMuteWebcams" :value="true">
+                                    Automatically mute webcams
+                                </label>
+                            </div>
                         </div>
 
                         <div class="columns is-mobile">
@@ -3937,24 +3901,6 @@ export default {
                                 <span v-if="!connected" class="has-text-danger">
                                     Notice: you may need to refresh the chat page after changing this setting.
                                 </span>
-                            </p>
-                        </div>
-
-                        <div class="field">
-                            <label class="label mb-0">
-                                Apple compatibility mode
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox"
-                                    v-model="prefs.appleCompat"
-                                    :value="true">
-                                Check this box if you are on an iPad, iPhone, or Safari browser
-                            </label>
-                            <p class="help">
-                                If you experience difficulty opening cameras and you are on an Apple device (iPad,
-                                iPhone, or the Safari browser on macOS) try enabling this option and see if it will
-                                help. <strong>Note:</strong> You will need to share your webcam first before you can
-                                open successfully open others', due to limitations in Apple's WebRTC implementation.
                             </p>
                         </div>
 
