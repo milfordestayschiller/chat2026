@@ -377,111 +377,9 @@
             <h1 id="browsers">Supported Browsers</h1>
 
             <p>
-                Currently, BareRTC works best on <i class="fab fa-chrome"></i> Chromium browsers (including Google
-                Chrome, Microsoft Edge, Opera, Brave, and other Chromium derivatives) as well as
-                <i class="fab fa-firefox"></i> Mozilla Firefox.
-            </p>
-
-            <p>
-                It works in these browsers on desktop operating systems (including <i class="fab fa-windows"></i> Windows,
-                <i class="fab fa-apple"></i> Mac OS and <i class="fab fa-linux"></i> GNU/Linux) as well as on
-                <i class="fab fa-android"></i> Android devices.
-            </p>
-
-            <p>
-                Feature support matrix of browsers currently tested:
-            </p>
-
-            <table class="table table-striped mb-5">
-                <thead>
-                    <tr>
-                        <th>Device Type</th>
-                        <th>Web Browsers</th>
-                        <th>Chat works?</th>
-                        <th>Video works?</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><i class="fa fa-computer"></i> All Desktops</td>
-                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                    </tr>
-                    <tr>
-                        <td><i class="fa fa-computer"></i> All Desktops</td>
-                        <td><i class="fab fa-chrome"></i> Chromium (Chrome, Edge)</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-apple"></i> Mac OS Desktop</td>
-                        <td><i class="fab fa-chrome"></i> Safari</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-asterisk has-text-warning"></i></td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-android"></i> Android</td>
-                        <td><i class="fab fa-firefox"></i> Mozilla Firefox</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-android"></i> Android</td>
-                        <td><i class="fab fa-chrome"></i> Chromium (Vanadium)</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                    </tr>
-                    <tr>
-                        <td><i class="fab fa-apple"></i> iPhone &amp; iPad</td>
-                        <td><i class="fa fa-globe"></i> All browsers</td>
-                        <td><i class="fa fa-check has-text-success-dark"></i></td>
-                        <td><i class="fa fa-asterisk has-text-warning"></i></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5 id="safari"><i class="fa fa-asterisk has-text-warning"></i> Apple Safari Browsers</h5>
-
-            <p>
-            This section applies to web browsers based on Safari, which includes <strong>every</strong> web
-            browser on iPad and iPhone. There are some more nuances to the support level of these browsers on
-            BareRTC.
-            </p>
-
-            <p>
-            The regular chat features (logging in, chatting, sharing pictures) are 100% supported on Safari,
-            but webcam sharing may be more difficult to get working. On iPad, iPhone, and Safari browsers,
-            connecting to somebody's webcam may <strong>only</strong> work correctly if you follow exactly
-            these steps:
-            </p>
-
-            <ol>
-                <li>
-                    First, you need to share your own local webcam first (by clicking on the green "Share webcam"
-                    button at the top of the chat page).
-                </li>
-                <li>
-                    Then, you may only be able to view somebody else's camera <strong>IF</strong> they have marked
-                    the setting "When somebody opens my camera, I also open their camera automatically."
-                </li>
-            </ol>
-
-            <p>
-            This is because Apple Safari only supports two-directional video calls, which is in contrast to the
-            way that BareRTC was designed to work: it is intended to be possible that somebody can start their webcam
-            and be watched by anybody who wants to tune in, without it always needing to be a two-way video call. But
-            for Apple Safari browsers, uni-directional video channels are not supported, so iPads and iPhones are only
-            able to successfully connect to a video <strong>if</strong> that person opts-in to open your video in
-            return (thus making it a two-way video call).
-            </p>
-
-            <p>
-            For <i class="fab fa-apple"></i> <strong>macOS users</strong>, it is recommended to use a Chromium or
-            Firefox browser instead of Safari for the best experience. It is only Safari-based browsers that have
-            this limitation. Unfortunately, there is no alternative for iPad or iPhone: <em>every</em> web browser on
-            iOS is based on Safari per Apple's app store guidelines. (Chrome and Firefox on iOS were not allowed to
-            bring their <em>actual</em> web browser engine to Apple's mobiles).
+                All features of the chat room, including webcam sharing, should generally work on all current
+                web browsers and devices (Firefox, all Chromium browsers including Google Chrome or Microsoft
+                Edge, Safari, Androids and iPads).
             </p>
 
             <h1 id="privacy">Privacy</h1>
@@ -493,7 +391,7 @@
             <ul>
                 <li>
                     The server does not maintain long-term state of chat history. Messages are pushed out as
-                    soon as they come in.
+                    soon as they come in, and users are forgotten when they log off.
                 </li>
                 <li>
                     However, the server does keep temporary <strong>log files</strong> to help the server admin
@@ -502,6 +400,13 @@
                     If the server is running in debug mode (which provides a ton of telemetry to diagnose issues),
                     the contents of DMs may be logged since debug mode will record the low-level chat protocol
                     messages sent between the server and clients.
+                </li>
+                <li>
+                    If the administrator has enabled it, your <strong>recent direct message</strong> histories
+                    may be recorded (for your convenience) in a database. Old messages expire off after about 90
+                    days, and you can clear all your DMs history from the Chat Settings -> Misc tab. DMs are only
+                    logged when the associate website logs you in to the chat room, so that only you can access
+                    them to remember where you left off with a chat partner.
                 </li>
                 <li>
                     Chat moderators <strong>DO NOT</strong> get to see the contents of your Direct Message
