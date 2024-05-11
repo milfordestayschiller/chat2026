@@ -653,7 +653,7 @@ export default {
         },
         isOp() {
             // Returns if the current user has operator rights
-            return this.jwt.claims.op || this.whoMap[this.username].op;
+            return this.jwt.claims.op || this.whoMap[this.username]?.op;
         },
         isVIP() {
             // Returns if the current user has VIP rights.
