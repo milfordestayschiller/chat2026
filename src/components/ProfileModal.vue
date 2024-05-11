@@ -1,10 +1,13 @@
 <script>
+import VideoFlag from '../lib/VideoFlag';
+
 export default {
     props: {
         visible: Boolean,
         jwt: String, // caller's JWT token for authorization
         user: Object, // the user we are viewing
         username: String, // the local user
+        isViewerOp: Boolean, // the viewer is an operator (show buttons)
         websiteUrl: String,
         isDnd: Boolean,
         isMuted: Boolean,
@@ -52,6 +55,13 @@ export default {
                 return this.user.nickname;
             }
             return this.user.username;
+        },
+        isOnBlueCam() {
+            // User is broadcasting a cam and is not NSFW.
+            if ((this.user.video & VideoFlag.Active) && !(this.user.video & VideoFlag.NSFW)) {
+                return true;
+            }
+            return false;
         },
     },
     methods: {
@@ -113,6 +123,29 @@ export default {
 
         bootUser() {
             this.$emit('boot-user', this.user.username);
+        },
+
+        // Operator commands (may be rejected by server if not really Op)
+        markNsfw() {
+            if (!window.confirm("Mark this user's webcam as 'Explicit'?")) return;
+            this.$emit('send-command', `/nsfw ${this.user.username}`);
+
+            // Close the modal immediately: our view of the user's cam data is a copy
+            // and we can't follow the current value.
+            this.cancel();
+        },
+        kickUser() {
+            if (!window.confirm("Really kick this user from the chat room?")) return;
+            this.$emit('send-command', `/kick ${this.user.username}`);
+        },
+        banUser() {
+            let hours = window.prompt(
+                "Ban this user for how many hours? (Default 24)",
+                "24",
+            );
+            if (!/^\d+$/.test(hours)) return;
+
+            this.$emit('send-command', `/ban ${this.user.username} ${hours}`);
         },
 
         urlFor(url) {
@@ -221,6 +254,37 @@ export default {
                             }"></i>
                             {{  isBooted ? 'Allow to watch my webcam' : "Don't allow to watch my webcam" }}
                         </button>
+
+                        <!-- Admin actions -->
+                        <div v-if="isViewerOp" class="mt-1">
+                            <!-- Mark camera NSFW -->
+                            <button v-if="isOnBlueCam"
+                                type="button"
+                                class="button is-small is-outlined is-danger has-text-dark px-2 mr-1 mb-1"
+                                @click="markNsfw()" title="Mark their camera as Explicit (red).">
+                                <i class="fa fa-video mr-1" :class="{
+                                    'has-text-success': isMuted,
+                                    'has-text-danger': !isMuted
+                                }"></i>
+                                Mark camera as Explicit
+                            </button>
+
+                            <!-- Kick user -->
+                            <button type="button"
+                                class="button is-small is-outlined is-danger has-text-dark px-2 mr-1 mb-1"
+                                @click="kickUser()" title="Kick this user from the chat room.">
+                                <i class="fa fa-shoe-prints mr-1 has-text-danger"></i>
+                                Kick from the room
+                            </button>
+
+                            <!-- Ban user -->
+                            <button type="button"
+                                class="button is-small is-outlined is-danger has-text-dark px-2 mb-1"
+                                @click="banUser()" title="Ban this user from the chat room for 24 hours.">
+                                <i class="fa fa-clock mr-1 has-text-danger"></i>
+                                Ban user (temporary)
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Profile Fields spinner/error -->
@@ -245,7 +309,6 @@ export default {
                             {{ field.Value }}
                         </div>
                     </div>
-
                 </div>
                 <footer class="card-footer">
                     <a :href="profileURL" target="_blank"

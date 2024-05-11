@@ -653,7 +653,7 @@ export default {
         },
         isOp() {
             // Returns if the current user has operator rights
-            return this.jwt.claims.op;
+            return this.jwt.claims.op || this.whoMap[this.username].op;
         },
         isVIP() {
             // Returns if the current user has VIP rights.
@@ -932,6 +932,14 @@ export default {
                 this.messageBox.focus();
                 this.messageBox.selectionStart = this.messageBox.selectionEnd = this.messageBox.value.length;
             });
+        },
+        sendCommand(message) {
+            // Automatically send a message to the chat server.
+            // e.g. for the ProfileModal to send a "/kick username" command for easy operator buttons.
+            let origMsg = this.message;
+            this.message = message;
+            this.sendMessage();
+            this.message = origMsg;
         },
         sendMessage() {
             if (!this.message) {
@@ -4064,11 +4072,23 @@ export default {
         :message="reportModal.message" @accept="doReport" @cancel="reportModal.visible = false"></ReportModal>
 
     <!-- Profile Modal (profile cards popup) -->
-    <ProfileModal :visible="profileModal.visible" :user="profileModal.user" :username="username" :jwt="jwt.token"
-        :website-url="config.website" :is-dnd="isUsernameDND(profileModal.username)"
-        :is-muted="isMutedUser(profileModal.username)" :is-booted="isBooted(profileModal.username)"
-        :profile-webhook-enabled="isWebhookEnabled('profile')" :vip-config="config.VIP" @send-dm="openDMs"
-        @mute-user="muteUser" @boot-user="bootUser" @cancel="profileModal.visible = false"></ProfileModal>
+    <ProfileModal
+        :visible="profileModal.visible"
+        :user="profileModal.user"
+        :username="username"
+        :is-viewer-op="isOp"
+        :jwt="jwt.token"
+        :website-url="config.website"
+        :is-dnd="isUsernameDND(profileModal.username)"
+        :is-muted="isMutedUser(profileModal.username)"
+        :is-booted="isBooted(profileModal.username)"
+        :profile-webhook-enabled="isWebhookEnabled('profile')"
+        :vip-config="config.VIP"
+        @send-dm="openDMs"
+        @mute-user="muteUser"
+        @boot-user="bootUser"
+        @send-command="sendCommand"
+        @cancel="profileModal.visible = false"></ProfileModal>
 
     <div class="chat-container">
 
