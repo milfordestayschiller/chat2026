@@ -544,7 +544,7 @@ func (s *Server) SendWhoList() {
 				// VIP flags: if we are in MutuallySecret mode, only VIPs can see
 				// other VIP flags on the Who List.
 				if config.Current.VIP.MutuallySecret {
-					if sub.IsVIP() || sub.IsAdmin() {
+					if sub.IsVIP() {
 						who.VIP = user.JWTClaims.VIP
 					}
 				} else {

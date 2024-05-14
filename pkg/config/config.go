@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 11
+var currentVersion = 12
 
 // Config for your BareRTC app.
 type Config struct {
@@ -94,10 +94,11 @@ func (c Config) GetChannel(id string) (Channel, bool) {
 
 // Channel config for a default public room.
 type Channel struct {
-	ID   string // Like "lobby"
-	Name string // Like "Main Chat Room"
-	Icon string `toml:",omitempty"` // CSS class names for room icon (optional)
-	VIP  bool   // For VIP users only
+	ID           string // Like "lobby"
+	Name         string // Like "Main Chat Room"
+	Icon         string `toml:",omitempty"` // CSS class names for room icon (optional)
+	VIP          bool   // For VIP users only
+	PermitPhotos bool   // photos are allowed to be shared
 
 	// ChatServer messages to send to the user immediately upon connecting.
 	WelcomeMessages []string
@@ -151,11 +152,13 @@ func DefaultConfig() Config {
 				WelcomeMessages: []string{
 					"Welcome to the Off Topic channel!",
 				},
+				PermitPhotos: true,
 			},
 			{
-				ID:   "vip",
-				Name: "VIPs Only",
-				VIP:  true,
+				ID:           "vip",
+				Name:         "VIPs Only",
+				VIP:          true,
+				PermitPhotos: true,
 				WelcomeMessages: []string{
 					"This channel is only for operators and VIPs.",
 				},

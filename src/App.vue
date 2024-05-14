@@ -631,9 +631,16 @@ export default {
             return status === null || status.name !== "online";
         },
         canUploadFile() {
-            // Public channels: OK
-            if (!this.channel.indexOf('@') === 0) {
-                return true;
+            // Public channels: check whether it PermitsPhotos.
+            if (!this.isDM) {
+                for (let cfg of this.config.channels) {
+                    if (cfg.ID === this.channel && cfg.PermitPhotos) {
+                        return true;
+                    }
+                }
+
+                // By default: channels do not permit photos.
+                return false;
             }
 
             // User is an admin?
