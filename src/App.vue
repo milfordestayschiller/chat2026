@@ -2846,7 +2846,13 @@ export default {
             // Mark unread notifiers if this is not our channel.
             if (this.channel !== channel || !this.windowFocused) {
                 // Don't notify about presence broadcasts or history-backfilled messages.
-                if (action !== "presence" && action !== "notification" && !isChatServer && !unshift) {
+                if (
+                    channel !== DebugChannelID && // don't notify about debug channel
+                    action !== "presence" &&
+                    action !== "notification" &&
+                    !isChatServer &&
+                    !unshift  // not when backfilling old logs
+                ) {
                     this.channels[channel].unread++;
                 }
             }
