@@ -1023,6 +1023,13 @@ export default {
                 return;
             }
 
+            // DEBUGGING: fake open a broken video to see the error graphic
+            if (this.message.toLowerCase().indexOf("/debug-broken-video") === 0) {
+                this.WebRTC.streams["#broken"] = null;
+                this.message = "";
+                return;
+            }
+
             // DEBUGGING: print WebRTC statistics
             if (this.message.toLowerCase().indexOf("/debug-webrtc") === 0) {
                 let lines = [

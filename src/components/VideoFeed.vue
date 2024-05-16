@@ -156,4 +156,11 @@ export default {
     top: 30px;
     bottom: 44px;
 }
+
+/* A background image behind video elements in case they don't load properly */
+video {
+    background-image: url(/static/img/connection-error.png);
+    background-position: center center;
+    background-repeat: no-repeat;
+}
 </style>
