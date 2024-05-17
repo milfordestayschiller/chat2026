@@ -29,6 +29,7 @@ class ChatClient {
         onWatch,
         onUnwatch,
         onBlock,
+        onCut,
 
         // Misc function registrations for callback.
         onNewJWT, // new JWT token from ping response
@@ -59,6 +60,7 @@ class ChatClient {
         this.onWatch = onWatch;
         this.onUnwatch = onUnwatch;
         this.onBlock = onBlock;
+        this.onCut = onCut;
 
         this.onNewJWT = onNewJWT;
         this.bulkMuteUsers = bulkMuteUsers;
@@ -191,6 +193,9 @@ class ChatClient {
             case "block":
                 this.onBlock(msg);
                 break;
+            case "cut":
+                this.onCut(msg);
+                break;
             case "error":
                 this.pushHistory({
                     channel: msg.channel,
@@ -269,7 +274,7 @@ class ChatClient {
             }
         });
 
-        conn.addEventListener("open", ev => {
+        conn.addEventListener("open", () => {
             this.ws.connected = true;
             this.ChatClient("Websocket connected!");
 

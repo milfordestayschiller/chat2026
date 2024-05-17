@@ -8,6 +8,7 @@ export default {
         websiteUrl: String, // Base URL to website (for profile/avatar URLs)
         isDnd: Boolean,     // user is not accepting DMs
         isMuted: Boolean,   // user is muted by current user
+        isBlocked: Boolean, // user is blocked on your main website (can't be unmuted)
         isBooted: Boolean,  // user is booted by current user
         vipConfig: Object,  // VIP config settings for BareRTC
         isOp: Boolean,      // current user is operator (can always DM)
@@ -201,16 +202,16 @@ export default {
             </button>
 
             <!-- Unmute User button (if muted) -->
-            <button type="button" v-if="isMuted" class="button is-small px-2 py-1"
+            <button type="button" v-if="isMuted && !isBlocked" class="button is-small px-2 py-1"
                 @click="muteUser()" title="This user is muted. Click to unmute them.">
                 <i class="fa fa-comment-slash has-text-danger"></i>
             </button>
 
             <!-- DM button (if not muted) -->
             <button type="button" v-else class="button is-small px-2 py-1" @click="openDMs(u)"
-                :disabled="user.username === username || (user.dnd && !isOp)"
-                :title="user.dnd ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
-                <i class="fa" :class="{ 'fa-comment': !user.dnd, 'fa-comment-slash': user.dnd }"></i>
+                :disabled="user.username === username || (user.dnd && !isOp) || (isBlocked && !isOp)"
+                :title="(user.dnd || isBlocked) ? 'This person is not accepting new DMs' : 'Send a Direct Message'">
+                <i class="fa" :class="{ 'fa-comment': !(user.dnd || isBlocked), 'fa-comment-slash': user.dnd || isBlocked }"></i>
             </button>
 
             <!-- Video button -->

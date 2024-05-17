@@ -214,7 +214,7 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		}
 
 		// If the sender already mutes the recipient, reply back with the error.
-		if err == nil && sub.Mutes(rcpt.Username) {
+		if err == nil && sub.Mutes(rcpt.Username) && !sub.IsAdmin() {
 			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
 			return
 		}
@@ -386,8 +386,36 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 
 // OnMe handles current user state updates.
 func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
+	// Reflect a 'me' message back at them? (e.g. if server forces their camera NSFW)
+	var reflect bool
+
 	if msg.VideoStatus&messages.VideoFlagActive == messages.VideoFlagActive {
 		log.Debug("User %s turns on their video feed", sub.Username)
+
+		// Moderation rules?
+		if rule := config.Current.GetModerationRule(sub.Username); rule != nil {
+
+			// Are they barred from sharing their camera on chat?
+			if rule.DisableCamera {
+				sub.SendCut()
+				sub.ChatServer(
+					"A chat server moderation rule is currently in place which restricts your ability to share your webcam. Please " +
+						"contact a chat operator for more information.",
+				)
+				msg.VideoStatus = 0
+			}
+
+			// Is their camera forced to always be explicit?
+			if rule.CameraAlwaysNSFW && !(msg.VideoStatus&messages.VideoFlagNSFW == messages.VideoFlagNSFW) {
+				msg.VideoStatus |= messages.VideoFlagNSFW
+				reflect = true // send them a 'me' echo afterward to inform the front-end page properly of this
+				sub.ChatServer(
+					"A chat server moderation rule is currently in place which forces your camera to stay marked as Explicit. Please " +
+						"contact a chat moderator if you have any questions about this.",
+				)
+			}
+
+		}
 	}
 
 	// Hidden status: for operators only, + fake a join/exit chat message.
@@ -418,6 +446,11 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 
 	// Sync the WhoList to everybody.
 	s.SendWhoList()
+
+	// Reflect a 'me' message back?
+	if reflect {
+		sub.SendMe()
+	}
 }
 
 // OnOpen is a client wanting to start WebRTC with another, e.g. to see their camera.
@@ -425,7 +458,6 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		log.Error(err.Error())
 		return
 	}
 
@@ -490,11 +522,11 @@ func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, st
 			Error: fmt.Sprintf("%s has requested that you should share your own camera too before opening theirs.", other.Username),
 		},
 		{
-			If:    theirVIPRequired && !sub.IsVIP(),
+			If:    theirVIPRequired && !sub.IsVIP() && !sub.IsAdmin(),
 			Error: "You do not have permission to view that camera.",
 		},
 		{
-			If:    other.Mutes(sub.Username) || other.Blocks(sub),
+			If:    (other.Mutes(sub.Username) || other.Blocks(sub)) && !sub.IsAdmin(),
 			Error: "You do not have permission to view that camera.",
 		},
 	}
@@ -633,7 +665,6 @@ func (s *Server) OnCandidate(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		log.Error(err.Error())
 		return
 	}
 
@@ -649,7 +680,6 @@ func (s *Server) OnSDP(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		log.Error(err.Error())
 		return
 	}
 
@@ -665,7 +695,6 @@ func (s *Server) OnWatch(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		log.Error(err.Error())
 		return
 	}
 
@@ -680,7 +709,6 @@ func (s *Server) OnUnwatch(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
-		log.Error(err.Error())
 		return
 	}
 

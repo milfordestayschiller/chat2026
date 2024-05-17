@@ -37,6 +37,16 @@ PreviewImageWidth = 360
   Name = "Off Topic"
   WelcomeMessages = ["Welcome to the Off Topic channel!"]
 
+[[WebhookURLs]]
+  Name = "report"
+  Enabled = true
+  URL = "https://www.example.com/v1/barertc/report"
+
+[[WebhookURLs]]
+  Name = "profile"
+  Enabled = true
+  URL = "https://www.example.com/v1/barertc/profile"
+
 [VIP]
   Name = "VIP"
   Branding = "<em>VIP Members</em>"
@@ -56,6 +66,23 @@ PreviewImageWidth = 360
   ForwardMessage = false
   ReportMessage = false
   ChatServerResponse = "Watch your language."
+
+[[ModerationRule]]
+  Username = "example"
+  CameraAlwaysNSFW = true
+  DisableCamera = false
+
+[DirectMessageHistory]
+  Enabled = true
+  SQLiteDatabase = "database.sqlite"
+  RetentionDays = 90
+  DisclaimerMessage = "Reminder: please conduct yourself honorable in DMs."
+
+[Logging]
+  Enabled = true
+  Directory = "./logs"
+  Channels = ["lobby"]
+  Usernames = []
 ```
 
 A description of the config directives includes:
@@ -119,3 +146,35 @@ Options for the `[[MessageFilters]]` section include:
 * **ForwardMessage** (bool): whether to repeat the message to the other chatters. If false, the sender will see their own message echo (possibly censored) but other chatters will not get their message at all.
 * **ReportMessage** (bool): if true, report the message along with the recent context (previous 10 messages in that conversation) to your website's report webhook (if configured).
 * **ChatServerResponse** (str): optional - you can have ChatServer send a message to the sender (in the same channel) after the filter has been run. An empty string will not send a ChatServer message.
+
+## Moderation Rules
+
+This section of the config file allows you to place certain moderation rules on specific users of your chat room. For example: if somebody perpetually needs to be reminded to label their camera as NSFW, you can enforce a moderation rule on that user which _always_ forces their camera to be NSFW.
+
+Settings in the `[[ModerationRule]]` array include:
+
+* **Username** (string): the username on chat to apply the rule to.
+* **CameraAlwaysNSFW** (bool): if true, the user's camera is forced to NSFW and they will receive a ChatServer message when they try and remove the flag themselves.
+* **DisableCamera** (bool): if true, the user is not allowed to share their webcam and the server will send them a 'cut' message any time they go live, along with a ChatServer message informing them of this.
+
+## Direct Message History
+
+You can allow BareRTC to retain temporary DM history for your users so they can remember where they left off with people.
+
+Settings for this include:
+
+* **Enabled** (bool): set to true to log chat DMs history.
+* **SQLiteDatabase** (string): the name of the .sqlite DB file to store their DMs in.
+* **RetentionDays** (int): how many days of history to record before old chats are erased. Set to zero for no limit.
+* **DisclaimerMessage** (string): a custom banner message to show at the top of DM threads. HTML is supported. A good use is to remind your users of your local site rules.
+
+## Logging
+
+This feature can enable logging of public channels and user DMs to text files on disk. It is useful to keep a log of your public channels so you can look back at the context of a reported public chat if you weren't available when it happened, or to selectively log the DMs of specific users to investigate a problematic user.
+
+Settings include:
+
+* **Enabled** (bool): to enable or disable the logging feature.
+* **Directory** (string): a folder on disk to save logs into. Public channels will save directly as text files here (e.g. "lobby.txt"), while DMs will create a subfolder for the monitored user.
+* **Channels** ([]string): array of public channel IDs to monitor.
+* **Usernames** ([]string): array of chat usernames to monitor.

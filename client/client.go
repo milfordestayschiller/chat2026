@@ -36,6 +36,7 @@ type Client struct {
 	OnOpen       HandlerFunc
 	OnWatch      HandlerFunc
 	OnUnwatch    HandlerFunc
+	OnCut        HandlerFunc
 	OnError      HandlerFunc
 	OnDisconnect HandlerFunc
 	OnPing       HandlerFunc
@@ -129,6 +130,8 @@ func (c *Client) Run() error {
 			c.Handle(msg, c.OnWatch)
 		case messages.ActionUnwatch:
 			c.Handle(msg, c.OnUnwatch)
+		case messages.ActionCut:
+			c.Handle(msg, c.OnCut)
 		case messages.ActionError:
 			c.Handle(msg, c.OnError)
 		case messages.ActionKick:

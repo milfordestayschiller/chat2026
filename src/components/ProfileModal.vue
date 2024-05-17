@@ -63,6 +63,10 @@ export default {
             }
             return false;
         },
+        isOnCamera() {
+            // User's camera is enabled.
+            return (this.user.video & VideoFlag.Active);
+        },
     },
     methods: {
         refresh() {
@@ -132,6 +136,11 @@ export default {
 
             // Close the modal immediately: our view of the user's cam data is a copy
             // and we can't follow the current value.
+            this.cancel();
+        },
+        cutCamera() {
+            if (!window.confirm("Make this user stop broadcasting their camera?")) return;
+            this.$emit('send-command', `/cut ${this.user.username}`);
             this.cancel();
         },
         kickUser() {
@@ -262,11 +271,17 @@ export default {
                                 type="button"
                                 class="button is-small is-outlined is-danger has-text-dark px-2 mr-1 mb-1"
                                 @click="markNsfw()" title="Mark their camera as Explicit (red).">
-                                <i class="fa fa-video mr-1" :class="{
-                                    'has-text-success': isMuted,
-                                    'has-text-danger': !isMuted
-                                }"></i>
+                                <i class="fa fa-video mr-1 has-text-danger"></i>
                                 Mark camera as Explicit
+                            </button>
+
+                            <!-- Cut camera -->
+                            <button v-if="isOnCamera"
+                                type="button"
+                                class="button is-small is-outlined is-danger has-text-dark px-2 mr-1 mb-1"
+                                @click="cutCamera()" title="Turn their camera off.">
+                                <i class="fa fa-stop mr-1 has-text-danger"></i>
+                                Cut camera
                             </button>
 
                             <!-- Kick user -->
@@ -282,7 +297,7 @@ export default {
                                 class="button is-small is-outlined is-danger has-text-dark px-2 mb-1"
                                 @click="banUser()" title="Ban this user from the chat room for 24 hours.">
                                 <i class="fa fa-clock mr-1 has-text-danger"></i>
-                                Ban user (temporary)
+                                Ban from chat
                             </button>
                         </div>
                     </div>

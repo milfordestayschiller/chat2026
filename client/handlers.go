@@ -109,6 +109,7 @@ func (c *Client) SetupChatbot() error {
 	c.OnOpen = handler.OnOpen
 	c.OnWatch = handler.OnWatch
 	c.OnUnwatch = handler.OnUnwatch
+	c.OnCut = handler.OnCut
 	c.OnError = handler.OnError
 	c.OnDisconnect = handler.OnDisconnect
 	c.OnPing = handler.OnPing
@@ -134,6 +135,12 @@ func (h *BotHandlers) OnMe(msg messages.Message) {
 		log.Error("OnMe: the server has renamed us to '%s'", msg.Username)
 		h.client.claims.Subject = msg.Username
 	}
+
+	// Send the /unmute-all command to lift any mutes imposed by users blocking the chatbot.
+	h.client.Send(messages.Message{
+		Action:  messages.ActionMessage,
+		Message: "/unmute-all",
+	})
 }
 
 // Buffer a message seen on chat for a while.
@@ -233,7 +240,6 @@ func (h *BotHandlers) OnMessage(msg messages.Message) {
 		// Set their user variables.
 		h.SetUserVariables(msg)
 		reply, err := h.rs.Reply(msg.Username, msg.Message)
-		log.Error("REPLY: %s", reply)
 		if NoReply(reply) {
 			return
 		}
@@ -384,6 +390,11 @@ func (h *BotHandlers) OnUnwatch(msg messages.Message) {
 
 }
 
+// OnCut handles an admin telling us to cut our camera.
+func (h *BotHandlers) OnCut(msg messages.Message) {
+
+}
+
 // OnError handles ChatServer messages from the backend.
 func (h *BotHandlers) OnError(msg messages.Message) {
 	log.Error("[%s] %s", msg.Username, msg.Message)
@@ -396,5 +407,9 @@ func (h *BotHandlers) OnDisconnect(msg messages.Message) {
 
 // OnPing handles server keepalive pings.
 func (h *BotHandlers) OnPing(msg messages.Message) {
-
+	// Send the /unmute-all command to lift any mutes imposed by users blocking the chatbot.
+	h.client.Send(messages.Message{
+		Action:  messages.ActionMessage,
+		Message: "/unmute-all",
+	})
 }

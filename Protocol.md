@@ -313,6 +313,19 @@ The server passes the watch/unwatch message to the broadcaster.
 }
 ```
 
+## Cut
+
+Sent by: Server.
+
+The server tells the client to turn off their camera. This is done in response to a `/cut` command being sent by an admin user: to remotely cause another user on chat to turn off their camera and stop broadcasting.
+
+```javascript
+// Server Cut
+{
+    "action": "cut"
+}
+```
+
 ## Mute, Unmute
 
 Sent by: Client.

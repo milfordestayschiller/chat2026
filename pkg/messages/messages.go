@@ -94,6 +94,7 @@ const (
 	ActionPing     = "ping"
 	ActionWhoList  = "who"        // server pushes the Who List
 	ActionPresence = "presence"   // a user joined or left the room
+	ActionCut      = "cut"        // tell the client to turn off their webcam
 	ActionError    = "error"      // ChatServer errors
 	ActionKick     = "disconnect" // client should disconnect (e.g. have been kicked).
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
@@ -47,20 +48,34 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 		case "/nsfw":
 			s.NSFWCommand(words, sub)
 			return true
+		case "/cut":
+			s.CutCommand(words, sub)
+			return true
+		case "/unmute-all":
+			s.UnmuteAllCommand(words, sub)
+			return true
 		case "/help":
-			sub.ChatServer(RenderMarkdown("Moderator commands are:\n\n" +
+			sub.ChatServer(RenderMarkdown("The most common moderator commands on chat are:\n\n" +
 				"* `/kick <username>` to kick from chat\n" +
 				"* `/ban <username> <duration>` to ban from chat (default duration is 24 (hours))\n" +
 				"* `/unban <username>` to list the ban on a user\n" +
 				"* `/bans` to list current banned users and their expiration date\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
+				"* `/cut <username>` to make them turn off their camera\n" +
+				"* `/unmute-all` to lift all mutes on your side\n" +
+				"* `/help` to show this message\n" +
+				"* `/help-advanced` to show advanced admin commands\n\n" +
+				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
+			))
+			return true
+		case "/help-advanced":
+			sub.ChatServer(RenderMarkdown("The following are **dangerous** commands that you should not use unless you know what you're doing:\n\n" +
 				"* `/op <username>` to grant operator rights to a user\n" +
 				"* `/deop <username>` to remove operator rights from a user\n" +
 				"* `/shutdown` to gracefully shut down (reboot) the chat server\n" +
 				"* `/kickall` to kick EVERYBODY off and force them to log back in\n" +
 				"* `/reconfigure` to dynamically reload the chat server settings file\n" +
-				"* `/help` to show this message\n\n" +
-				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
+				"* `/help-advanced` to show this message",
 			))
 			return true
 		case "/shutdown":
@@ -109,14 +124,23 @@ func (s *Server) NSFWCommand(words []string, sub *Subscriber) {
 	if len(words) == 1 {
 		sub.ChatServer("Usage: `/nsfw username` to add the NSFW flag to their camera.")
 	}
-	username := words[1]
+	username := strings.TrimPrefix(words[1], "@")
 	other, err := s.GetSubscriber(username)
 	if err != nil {
 		sub.ChatServer("/nsfw: username not found: %s", username)
 	} else {
+		// Sanity check that the target user is presently on a blue camera.
+		if !(other.VideoStatus&messages.VideoFlagActive == messages.VideoFlagActive) {
+			sub.ChatServer("/nsfw: %s's camera was not currently enabled.", username)
+			return
+		} else if other.VideoStatus&messages.VideoFlagNSFW == messages.VideoFlagNSFW {
+			sub.ChatServer("/nsfw: %s's camera was already marked as explicit.", username)
+			return
+		}
+
 		// The message to deliver to the target.
 		var message = "Just a friendly reminder to mark your camera as 'Explicit' by using the button at the top " +
-			"of the page if you are going to be sexual on webcam. "
+			"of the page if you are going to be sexual on webcam.<br><br>"
 
 		// If the admin who marked it was previously booted
 		if other.Boots(sub.Username) {
@@ -133,6 +157,41 @@ func (s *Server) NSFWCommand(words []string, sub *Subscriber) {
 	}
 }
 
+// CutCommand handles the `/cut` operator command (force a user's camera to turn off).
+func (s *Server) CutCommand(words []string, sub *Subscriber) {
+	if len(words) == 1 {
+		sub.ChatServer("Usage: `/cut username` to turn their camera off.")
+	}
+	username := strings.TrimPrefix(words[1], "@")
+	other, err := s.GetSubscriber(username)
+	if err != nil {
+		sub.ChatServer("/cut: username not found: %s", username)
+	} else {
+		// Sanity check that the target user is presently on a blue camera.
+		if !(other.VideoStatus&messages.VideoFlagActive == messages.VideoFlagActive) {
+			sub.ChatServer("/cut: %s's camera was not currently enabled.", username)
+			return
+		}
+
+		other.SendCut()
+		sub.ChatServer("%s has been told to turn off their camera.", username)
+	}
+}
+
+// UnmuteAllCommand handles the `/unmute-all` operator command (remove all mutes for the current user).
+//
+// It enables an operator to see public messages from any user who muted/blocked them. Note: from the
+// other side of the mute, the operator's public messages may still be hidden from those users.
+//
+// It is useful for an operator chatbot if you want users to be able to block it but still retain the
+// bot's ability to moderate public channel messages, and send warnings in DMs to misbehaving users
+// even despite a mute being in place.
+func (s *Server) UnmuteAllCommand(words []string, sub *Subscriber) {
+	count := len(sub.muted)
+	sub.muted = map[string]struct{}{}
+	sub.ChatServer("Your mute on %d users has been lifted.", count)
+}
+
 // KickCommand handles the `/kick` operator command.
 func (s *Server) KickCommand(words []string, sub *Subscriber) {
 	if len(words) == 1 {
@@ -141,7 +200,7 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 		))
 		return
 	}
-	username := words[1]
+	username := strings.TrimPrefix(words[1], "@")
 	other, err := s.GetSubscriber(username)
 	if err != nil {
 		sub.ChatServer("/kick: username not found: %s", username)
@@ -218,7 +277,7 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 
 	// Parse the command.
 	var (
-		username = words[1]
+		username = strings.TrimPrefix(words[1], "@")
 		duration = 24 * time.Hour
 	)
 	if len(words) >= 3 {
@@ -261,7 +320,7 @@ func (s *Server) UnbanCommand(words []string, sub *Subscriber) {
 	}
 
 	// Parse the command.
-	var username = words[1]
+	var username = strings.TrimPrefix(words[1], "@")
 
 	if UnbanUser(username) {
 		sub.ChatServer("The ban on %s has been lifted.", username)
@@ -299,7 +358,7 @@ func (s *Server) OpCommand(words []string, sub *Subscriber) {
 	}
 
 	// Parse the command.
-	var username = words[1]
+	var username = strings.TrimPrefix(words[1], "@")
 	if other, err := s.GetSubscriber(username); err != nil {
 		sub.ChatServer("/op: user %s was not found.", username)
 	} else {
@@ -329,7 +388,7 @@ func (s *Server) DeopCommand(words []string, sub *Subscriber) {
 	}
 
 	// Parse the command.
-	var username = words[1]
+	var username = strings.TrimPrefix(words[1], "@")
 	if other, err := s.GetSubscriber(username); err != nil {
 		sub.ChatServer("/deop: user %s was not found.", username)
 	} else {

@@ -149,7 +149,7 @@ func (s *Server) OnClientMessage(sub *Subscriber, msg messages.Message) {
 		s.OnReport(sub, msg)
 	case messages.ActionPing:
 	default:
-		sub.ChatServer("Unsupported message type.")
+		sub.ChatServer("Unsupported message type: %s", msg.Action)
 	}
 }
 
@@ -231,6 +231,13 @@ func (sub *Subscriber) SendMe() {
 		Action:      messages.ActionMe,
 		Username:    sub.Username,
 		VideoStatus: sub.VideoStatus,
+	})
+}
+
+// SendCut sends the client a 'cut' message to deactivate their camera.
+func (sub *Subscriber) SendCut() {
+	sub.SendJSON(messages.Message{
+		Action: messages.ActionCut,
 	})
 }
 

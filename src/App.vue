@@ -1232,6 +1232,12 @@ export default {
             this.config.CachedBlocklist.push(msg.username);
         },
 
+        // Server side "cut" event: tells the user to turn off their camera.
+        onCut(msg) {
+            this.DebugChannel(`Received cut command from server: ${JSON.stringify(msg)}`);
+            this.stopVideo();
+        },
+
         // Mute or unmute a user.
         muteUser(username) {
             username = this.normalizeUsername(username);
@@ -1297,6 +1303,16 @@ export default {
         },
         isMutedUser(username) {
             return this.muted[this.normalizeUsername(username)] != undefined;
+        },
+        isBlockedUser(username) {
+            if (this.config.CachedBlocklist.length > 0) {
+                for (let user of this.config.CachedBlocklist) {
+                    if (user === username) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         },
         bulkMuteUsers() {
             // On page load, if the website sent you a CachedBlocklist, mute all
@@ -1487,6 +1503,7 @@ export default {
                 onWatch: this.onWatch,
                 onUnwatch: this.onUnwatch,
                 onBlock: this.onBlock,
+                onCut: this.onCut,
 
                 bulkMuteUsers: this.bulkMuteUsers,
                 focusMessageBox: () => {
@@ -4154,7 +4171,7 @@ export default {
                         :class="{
                             'is-outlined is-dark': !webcam.nsfw,
                             'is-danger': webcam.nsfw
-                        }" @click.prevent="webcam.nsfw = !webcam.nsfw; sendMe()"
+                        }" @click.prevent="webcam.nsfw = !webcam.nsfw"
                         title="Toggle the NSFW setting for your camera broadcast">
                         <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>
@@ -4618,6 +4635,7 @@ export default {
                                 :website-url="config.website"
                                 :is-dnd="isUsernameDND(u.username)"
                                 :is-muted="isMutedUser(u.username)"
+                                :is-blocked="isBlockedUser(u.username)"
                                 :is-booted="isBooted(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"
@@ -4642,6 +4660,7 @@ export default {
                                 :website-url="config.website"
                                 :is-dnd="isUsernameDND(username)"
                                 :is-muted="isMutedUser(username)"
+                                :is-blocked="isBlockedUser(u.username)"
                                 :is-booted="isBooted(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"

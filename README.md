@@ -8,17 +8,20 @@ BareRTC is a simple WebRTC-based chat room application. It is especially designe
 
 It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
 
-* [Features](#features)
-* [Configuration](#configuration)
-* [Authentication](#authentication)
-    * [JWT Strict Mode](#jwt-strict-mode)
-    * [Running Without Authentication](#running-without-authentication)
-    * [Known Bugs Running Without Authentication](#known-bugs-running-without-authentication)
-* [Moderator Commands](#moderator-commands)
-* [JSON APIs](#json-apis)
-* [Tour of the Codebase](#tour-of-the-codebase)
-* [Deploying This App](#deploying-this-app)
-* [License](#license)
+- [BareRTC](#barertc)
+- [Features](#features)
+- [Configuration](#configuration)
+- [Authentication](#authentication)
+- [Moderator Commands](#moderator-commands)
+- [JSON APIs](#json-apis)
+- [Webhook URLs](#webhook-urls)
+- [Chatbot](#chatbot)
+- [Tour of the Codebase](#tour-of-the-codebase)
+  - [Backend files](#backend-files)
+  - [Frontend files](#frontend-files)
+- [Deploying This App](#deploying-this-app)
+- [Developing This App](#developing-this-app)
+- [License](#license)
 
 # Features
 
@@ -34,14 +37,7 @@ It is very much in the style of the old-school Flash based webcam chat rooms of 
 * WebRTC means peer-to-peer video streaming so cheap on hosting costs!
 * Simple integration with your existing userbase via signed JWT tokens.
 * User configurable sound effects to be notified of DMs or users entering/exiting the room.
-* Operator commands
-    * [x] /kick users
-    * [x] /ban users (and /unban, /bans to list)
-    * [x] /nsfw to tag a user's camera as explicit
-    * [x] /shutdown to gracefully reboot the server
-    * [x] /kickall to kick EVERYBODY off the server (e.g., for mandatory front-end reload for new features)
-    * [x] /op and /deop users (give temporary mod control)
-    * [x] /help to get in-chat help for moderator commands
+* Operator commands to kick, ban users, mark cameras NSFW, etc.
 
 The BareRTC project also includes a [Chatbot implementation](docs/Chatbot.md) so you can provide an official chatbot for fun & games & to auto moderate your chat room!
 

@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 12
+var currentVersion = 13
 
 // Config for your BareRTC app.
 type Config struct {
@@ -50,6 +50,7 @@ type Config struct {
 	VIP VIP
 
 	MessageFilters []*MessageFilter
+	ModerationRule []*ModerationRule
 
 	DirectMessageHistory DirectMessageHistory
 
@@ -117,6 +118,13 @@ type Logging struct {
 	Directory string
 	Channels  []string
 	Usernames []string
+}
+
+// ModerationRule applies certain rules to moderate specific users.
+type ModerationRule struct {
+	Username         string
+	CameraAlwaysNSFW bool
+	DisableCamera    bool
 }
 
 // Current loaded configuration.
@@ -197,6 +205,11 @@ func DefaultConfig() Config {
 				ChatServerResponse: "Watch your language.",
 			},
 		},
+		ModerationRule: []*ModerationRule{
+			{
+				Username: "example",
+			},
+		},
 		DirectMessageHistory: DirectMessageHistory{
 			Enabled:           false,
 			SQLiteDatabase:    "database.sqlite",
@@ -252,4 +265,14 @@ func WriteSettings() error {
 		return err
 	}
 	return os.WriteFile("./settings.toml", buf.Bytes(), 0644)
+}
+
+// GetModerationRule returns a matching ModerationRule for the given user, or nil if no rule is found.
+func (c Config) GetModerationRule(username string) *ModerationRule {
+	for _, rule := range c.ModerationRule {
+		if rule.Username == username {
+			return rule
+		}
+	}
+	return nil
 }
