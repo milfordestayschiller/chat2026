@@ -87,7 +87,27 @@ See [Authentication](docs/Authentication.md) for more information.
 If you authenticate an Op user via JWT they can enter IRC-style chat commands to moderate the server. Current commands include:
 
 * `/kick <username>` to disconnect a user's chat session.
+* `/ban <username> [hours]` to ban a user from chat (temporary - time-based or until the next server reboot, default 24 hours)
 * `/nsfw <username>` to tag a user's video feed as NSFW (if your settings.toml has PermitNSFW enabled).
+* `/cut <username>` to 'cut' their webcam feed (instruct their web page to turn off their camera automatically)
+
+There are easy buttons for the above commonly used actions in a user's pop-up "profile card" on the chat room.
+
+Additional operator commands include:
+
+* `/unban <username>` to lift the ban on a user.
+* `/bans` to list all of the currently banned users.
+* `/op <username>` to grant operator controls to a user (temporary, until they log off)
+* `/deop <username>` to remove operator controls
+* `/unmute-all` removes the mute flag on all users for the current operator (intended especially for the [Chatbot](docs/Chatbot.md) so it can still moderate public chat messages from users who have blocked it from your main website).
+
+And there are some advanced commands intended for the server system administrator (these can be 'dangerous' and disruptive to users in the chat room):
+
+* `/shutdown` will shut down the chat server (and hopefully, reboot it if your process supervisor is configured as such)
+* `/reconfigure` will reload the server config file without needing to reboot.
+* `/kickall` will kick ALL users from the room, with a message asking them to refresh the page (useful to deploy backwards-incompatible server updates where the new front-end is required to be loaded).
+
+In case your operators forget, the `/help` command will list the common moderator commands and `/help-advanced` will list the more advanced/dangerous ones. **Note:** there is only one level of admin rights currently, so it will be a matter of policy to instruct your moderators not to play with the advanced commands.
 
 # JSON APIs
 
