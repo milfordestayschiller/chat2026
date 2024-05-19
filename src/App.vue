@@ -38,6 +38,9 @@ const configuration = {
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 const DebugChannelID = "barertc-debug";
 
+const WebcamWidth = 640,
+    WebcamHeight = 480;
+
 export default {
     name: 'BareRTC',
     components: {
@@ -201,6 +204,20 @@ export default {
                 preferredDeviceNames: {
                     video: null,
                     audio: null,
+                },
+
+                // Detect dark video streams.
+                darkVideo: {
+                    canvas: null,    // <canvas> element to screenshot video into
+                    ctx: null,       // Canvas context2d
+                    interval: null,  // interval loop
+                    lastImage: null, // data: uri of last screenshot taken
+                    lastAverage: [], // last average RGB color
+                    lastAverageColor: "rgba(255, 0, 255, 1)",
+                    wasTooDark: false, // previous average was too dark
+
+                    // Configuration thresholds: how dark is too dark? (0-255)
+                    threshold: 60,
                 },
             },
 
@@ -1048,6 +1065,21 @@ export default {
                 }
 
                 this.ChatClient(lines.join("<br>"));
+                this.message = "";
+                return;
+            }
+
+            // DEBUGGING: print last dark video screenshot taken
+            if (this.message.toLowerCase().indexOf("/debug-dark-video") === 0) {
+                if (this.webcam.darkVideo.lastImage === null) {
+                    this.ChatClient("There is no recent image available.");
+                } else {
+                    this.ChatClient(
+                        `Last average color of your video: ${JSON.stringify(this.webcam.darkVideo.lastAverage)} ` +
+                        `<span style="background-color: ${this.webcam.darkVideo.lastAverageColor}">${this.webcam.darkVideo.lastAverageColor}</span>` +
+                        `<br><img src="${this.webcam.darkVideo.lastImage}" width="160" height="120">`
+                    );
+                }
                 this.message = "";
                 return;
             }
@@ -2057,8 +2089,8 @@ export default {
             let mediaParams = {
                 audio: true,
                 video: {
-                    width: { max: 640 },
-                    height: { max: 480 },
+                    width: { max: WebcamWidth },
+                    height: { max: WebcamHeight },
                 },
             };
 
@@ -2118,6 +2150,9 @@ export default {
                 if (changeCamera) {
                     this.updateWebRTCStreams();
                 }
+
+                // Begin dark video detection.
+                this.initDarkVideoDetection();
             }).catch(err => {
                 this.ChatClient(`Webcam error: ${err}`);
             }).finally(() => {
@@ -2605,6 +2640,8 @@ export default {
 
         // Stop broadcasting.
         stopVideo() {
+            this.stopDarkVideoDetection();
+
             // Close all WebRTC sessions.
             for (let username of Object.keys(this.WebRTC.pc)) {
                 this.closeVideo(username, "answerer");
@@ -2771,6 +2808,128 @@ export default {
             })
         },
 
+        // Dark video detection.
+        initDarkVideoDetection() {
+            if (this.webcam.darkVideo.canvas === null) {
+                let canvas = document.createElement("canvas"),
+                    ctx = canvas.getContext('2d');
+                canvas.width = WebcamWidth;
+                canvas.height = WebcamHeight;
+                this.webcam.darkVideo.canvas = canvas;
+                this.webcam.darkVideo.ctx = ctx;
+            }
+
+            if (this.webcam.darkVideo.interval !== null) {
+                clearInterval(this.webcam.darkVideo.interval);
+            }
+            this.webcam.darkVideo.interval = setInterval(() => {
+                this.darkVideoInterval();
+            }, 5000);
+        },
+        stopDarkVideoDetection() {
+            if (this.webcam.darkVideo.interval !== null) {
+                clearInterval(this.webcam.darkVideo.interval);
+            }
+        },
+        darkVideoInterval() {
+            if (!this.webcam.active) { // safety
+                this.stopDarkVideoDetection();
+                return;
+            }
+
+            // Take a screenshot from the user's local webcam.
+            let canvas = this.webcam.darkVideo.canvas,
+                ctx = this.webcam.darkVideo.ctx;
+            ctx.drawImage(this.webcam.elem, 0, 0, canvas.width, canvas.height);
+
+            // Debugging: export the screenshot to a data URI.
+            let img = canvas.toDataURL('image/jpeg');
+            this.webcam.darkVideo.lastImage = img;
+
+            // Get average RGB value.
+            let rgb = this.getAverageRGB(ctx);
+            if (rgb === null) {
+                return;
+            }
+
+            this.webcam.darkVideo.lastAverage = rgb;
+            this.webcam.darkVideo.lastAverageColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`;
+
+            // If the average total color is below the threshold (too dark of a video).
+            let averageBrightness = Math.floor((rgb[0] + rgb[1] + rgb[2]) / 3);
+            if (averageBrightness < this.webcam.darkVideo.threshold) {
+                if (this.wasTooDark) {
+                    // Last sample was too dark too, = cut the camera.
+                    this.stopVideo();
+                    this.ChatClient(
+                        "Your webcam was too dark to see anything and has been turned off.",
+                    );
+                } else {
+                    // Mark that this frame was too dark, if the next sample is too,
+                    // cut their camera.
+                    this.wasTooDark = true;
+                }
+            } else {
+                this.wasTooDark = false;
+            }
+        },
+        getAverageRGB(ctx) {
+            // Helper function to compute the average color of a <canvas>.
+            // Ref: https://stackoverflow.com/a/2541680
+            const blockSize = 16; // only visit every N pixels
+            let img = null,
+                rgb = [0, 0, 0];
+
+            try {
+                img = ctx.getImageData(0, 0, WebcamWidth, WebcamHeight);
+            } catch(e) {
+                // Not supported.
+                return null;
+            }
+
+            let length = img.data.length,
+                i = 0,
+                count = 0,
+                firstColor = [],
+                allSame = true;
+            while ((i += blockSize * 4) < length) {
+                count++;
+                let thisColor = [
+                    img.data[i],
+                    img.data[i+1],
+                    img.data[i+2]
+                ]
+
+                rgb[0] += thisColor[0];
+                rgb[1] += thisColor[1];
+                rgb[2] += thisColor[2];
+
+                // Also check whether every sampled pixel is THE SAME color,
+                // to detect users broadcasting a solid (bright) color.
+                if (firstColor.length === 0) {
+                    firstColor = [ rgb[0], rgb[1], rgb[2] ];
+                } else if (allSame) {
+                    if (firstColor[0] !== thisColor[0] ||
+                        firstColor[1] !== thisColor[1] ||
+                        firstColor[2] !== thisColor[2]
+                    ) {
+                        allSame = false;
+                    }
+                }
+            }
+
+            // If all sampled colors were the same solid image: red flag!
+            if (allSame) {
+                return [0, 0, 0];
+            }
+
+            rgb[0] = Math.floor(rgb[0]/count);
+            rgb[1] = Math.floor(rgb[1]/count);
+            rgb[2] = Math.floor(rgb[2]/count);
+
+            return rgb;
+        },
+
         initHistory(channel) {
             if (this.channels[channel] == undefined) {
                 this.channels[channel] = {
@@ -2811,6 +2970,9 @@ export default {
                 } else if (this.imageDisplaySetting === "collapse") {
                     // Put a collapser link.
                     let collapseID = `collapse-${messageID}`;
+                    if (!messageID) {
+                        collapseID = "collapse-missingno-" + parseInt(Math.random()*100000);
+                    }
                     message = `
                         <a href="#" id="img-show-${collapseID}"
                             class="button is-outlined is-small is-info"
