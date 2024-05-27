@@ -217,7 +217,7 @@ export default {
                     wasTooDark: false, // previous average was too dark
 
                     // Configuration thresholds: how dark is too dark? (0-255)
-                    threshold: 60,
+                    threshold: 10,
                 },
             },
 
