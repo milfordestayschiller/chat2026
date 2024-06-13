@@ -250,6 +250,7 @@ div.feed.popped-out {
     top: 0;
     left: 0;
     resize: none;
+    z-index: 1; /* work around Safari video being on top when return from fullscreen */
 }
 
 .video-feeds.x1 > .feed {
@@ -285,12 +286,14 @@ div.feed.popped-out {
     position: absolute;
     left: 4px;
     bottom: 4px;
+    z-index: 1; /* work around Safari video being on top when return from fullscreen */
 }
 
 .feed > .close {
     position: absolute;
     right: 4px;
     top: 0;
+    z-index: 1; /* work around Safari video being on top when return from fullscreen */
 }
 
 .feed > .caption {
@@ -301,6 +304,7 @@ div.feed.popped-out {
     left: 4px;
     font-size: small;
     padding: 2px 4px;
+    z-index: 1; /* work around Safari video being on top when return from fullscreen */
 }
 
 /* YouTube embeds */

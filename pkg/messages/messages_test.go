@@ -38,12 +38,6 @@ func (f flags) Check(video int) error {
 		return errors.New("Muted expected NOT to be set")
 	}
 
-	if video&messages.VideoFlagIsTalking == messages.VideoFlagIsTalking && !f.IsTalking {
-		return errors.New("IsTalking expected to be set")
-	} else if video&messages.VideoFlagIsTalking != messages.VideoFlagIsTalking && f.IsTalking {
-		return errors.New("IsTalking expected NOT to be set")
-	}
-
 	if video&messages.VideoFlagMutualRequired == messages.VideoFlagMutualRequired && !f.MutualRequired {
 		return errors.New("MutualRequired expected to be set")
 	} else if video&messages.VideoFlagMutualRequired != messages.VideoFlagMutualRequired && f.MutualRequired {
@@ -217,14 +211,13 @@ func TestVideoFlagMutation(t *testing.T) {
 		},
 		{
 			Mutate: func(v int) int {
-				return v | messages.VideoFlagOnlyVIP | messages.VideoFlagNSFW | messages.VideoFlagIsTalking
+				return v | messages.VideoFlagOnlyVIP | messages.VideoFlagNSFW
 			},
 			Expect: flags{
-				Active:    true,
-				Muted:     true,
-				OnlyVIP:   true,
-				NSFW:      true,
-				IsTalking: true,
+				Active:  true,
+				Muted:   true,
+				OnlyVIP: true,
+				NSFW:    true,
 			},
 		},
 	}

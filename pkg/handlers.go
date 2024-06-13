@@ -593,7 +593,7 @@ func (s *Server) OnMute(sub *Subscriber, msg messages.Message, mute bool) {
 
 // OnBlock is a user placing a hard block (hide from) another user.
 func (s *Server) OnBlock(sub *Subscriber, msg messages.Message) {
-	log.Info("%s blocks %s: %v", sub.Username, msg.Username)
+	log.Info("%s blocks %s", sub.Username, msg.Username)
 
 	// If the subject of the block is an admin, return an error.
 	if other, err := s.GetSubscriber(msg.Username); err == nil && other.IsAdmin() {
