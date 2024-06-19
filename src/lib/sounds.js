@@ -42,6 +42,7 @@ var DefaultSounds = {
     Leave: "Quiet",
     Watch: "Quiet",
     Unwatch: "Quiet",
+    Mentioned: "Ping",
 };
 
 export { SoundEffects, DefaultSounds };

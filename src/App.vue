@@ -267,6 +267,7 @@ export default {
                 //   "history": [],
                 //   "updated": timestamp,
                 //   "unread": 4,
+                //   "urgent": false, // true if at-mentioned
                 // },
                 // "@username": {
                 //   "history": [],
@@ -395,6 +396,7 @@ export default {
             let channel = this.channel;
             if (this.channels[channel].unread > 0) {
                 this.channels[channel].unread = 0;
+                this.channels[channel].urgent = false;
             }
         });
         window.addEventListener("blur", () => {
@@ -703,6 +705,34 @@ export default {
         numVideosOpen() {
             // Return the count of other peoples videos we have open.
             return Object.keys(this.WebRTC.streams).length;
+        },
+        activeChannels() {
+            // List of current channels, unread indicators etc.
+            let result = [];
+            for (let channel of this.config.channels) {
+                // VIP room we can't see?
+                if (channel.VIP && !this.isVIP) continue;
+
+                let data = {
+                    ID: channel.ID,
+                    Name: channel.Name,
+                };
+                if (this.channels[channel.ID] != undefined) {
+                    data.Unread = this.channels[channel.ID].unread;
+                    data.Urgent = this.channels[channel.ID].urgent;
+                    data.Updated = this.channels[channel.ID].updated;
+                }
+                result.push(data);
+            }
+
+            // Is the debug channel enabled?
+            if (this.prefs.debug) {
+                result.push({
+                    ID: DebugChannelID,
+                    Name: "Debug Log",
+                });
+            }
+            return result;
         },
         atMentionItems() {
             // Available users in chat for the at-mentions support.
@@ -1859,6 +1889,7 @@ export default {
             this.scrollHistory(this.channel, true);
             if (this.channels[this.channel]) {
                 this.channels[this.channel].unread = 0;
+                this.channels[this.channel].urgent = false;
             }
 
             // Responsive CSS: switch back to chat panel upon selecting a channel.
@@ -1869,12 +1900,6 @@ export default {
 
             // Focus the message entry box.
             this.messageBox.focus();
-        },
-        hasUnread(channel) {
-            if (this.channels[channel] == undefined) {
-                return 0;
-            }
-            return this.channels[channel].unread;
         },
         hasAnyUnread() {
             // Returns total unread count (for mobile responsive view to show in the left drawer button)
@@ -2034,34 +2059,6 @@ export default {
                 }
             }
             return false;
-        },
-
-        activeChannels() {
-            // List of current channels, unread indicators etc.
-            let result = [];
-            for (let channel of this.config.channels) {
-                // VIP room we can't see?
-                if (channel.VIP && !this.isVIP) continue;
-
-                let data = {
-                    ID: channel.ID,
-                    Name: channel.Name,
-                };
-                if (this.channels[channel] != undefined) {
-                    data.Unread = this.channels[channel].unread;
-                    data.Updated = this.channels[channel].updated;
-                }
-                result.push(data);
-            }
-
-            // Is the debug channel enabled?
-            if (this.prefs.debug) {
-                result.push({
-                    ID: DebugChannelID,
-                    Name: "Debug Log",
-                });
-            }
-            return result;
         },
 
         // Start broadcasting my webcam.
@@ -2936,6 +2933,7 @@ export default {
                     history: [],
                     updated: Date.now(),
                     unread: 0,
+                    urgent: false,
                 };
             }
         },
@@ -2993,6 +2991,12 @@ export default {
             if (message.indexOf("@" + this.username) > -1) {
                 let re = new RegExp("@" + this.username + "\\b", "ig");
                 message = message.replace(re, `<strong class="has-background-at-mention">@${this.username}</strong>`);
+
+                // Play the sound effect if this is a public channel that isn't currently focused.
+                if (channel.indexOf("@") !== 0 && (this.channel !== channel || !this.windowFocused)) {
+                    this.playSound("Mentioned");
+                    this.channels[channel].urgent = true;
+                }
             }
 
             // And same for @here or @all
@@ -3902,6 +3906,29 @@ export default {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="columns is-mobile">
+                            <div class="column is-2 pr-1">
+                                <label class="label is-size-7">@ Mentioned</label>
+                            </div>
+                            <div class="column">
+                                <div class="select is-fullwidth pr-2">
+                                    <select v-model="config.sounds.settings.Mentioned" @change="setSoundPref('Mentioned')">
+                                        <option v-for="s in config.sounds.available" v-bind:key="s.name" :value="s.name">
+                                            {{ s.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- For later expansion -->
+                            <div class="column is-2 pr-1">
+                                &nbsp;
+                            </div>
+                            <div class="column is-4">
+                                &nbsp;
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Webcam preferences -->
@@ -4399,12 +4426,12 @@ export default {
                         </p>
 
                         <ul class="menu-list">
-                            <li v-for="c in activeChannels()" v-bind:key="c.ID">
+                            <li v-for="c in activeChannels" v-bind:key="c.ID">
                                 <a :href="'#' + c.ID" @click.prevent="setChannel(c)"
                                     :class="{ 'is-active': c.ID == channel }">
                                     {{ c.Name }}
-                                    <span v-if="hasUnread(c.ID)" class="tag is-success">
-                                        {{ hasUnread(c.ID) }}
+                                    <span v-if="c.Unread" class="tag" :class="{'is-success': !c.Urgent, 'is-danger': c.Urgent}">
+                                        {{ c.Unread }}
                                     </span>
                                 </a>
                             </li>
@@ -4434,8 +4461,8 @@ export default {
                                             </del>
                                             <span v-else>{{ c.name }}</span>
 
-                                            <span v-if="hasUnread(c.channel)" class="tag is-danger ml-1">
-                                                {{ hasUnread(c.channel) }}
+                                            <span v-if="c.unread" class="tag is-danger ml-1">
+                                                {{ c.unread }}
                                             </span>
                                         </div>
                                     </div>
