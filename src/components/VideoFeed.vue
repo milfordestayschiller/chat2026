@@ -88,7 +88,7 @@ export default {
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
-        <video class="feed" :id="videoID" autoplay :muted="localVideo"></video>
+        <video class="feed" :id="videoID" autoplay :muted="localVideo" playsinline></video>
 
         <!-- Caption -->
         <div class="caption" :class="textColorClass">
