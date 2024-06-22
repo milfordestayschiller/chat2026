@@ -9,6 +9,7 @@ BareRTC is a simple WebRTC-based chat room application. It is especially designe
 It is very much in the style of the old-school Flash based webcam chat rooms of the early 2000's: a multi-user chat room with DMs and _some_ users may broadcast video and others may watch multiple video feeds in an asynchronous manner. I thought that this should be such an obvious free and open source app that should exist, but it did not and so I had to write it myself.
 
 - [BareRTC](#barertc)
+- [Installation](#installation)
 - [Features](#features)
 - [Configuration](#configuration)
 - [Authentication](#authentication)
@@ -22,6 +23,10 @@ It is very much in the style of the old-school Flash based webcam chat rooms of 
 - [Deploying This App](#deploying-this-app)
 - [Developing This App](#developing-this-app)
 - [License](#license)
+
+# Installation
+
+See the [Install.md](./Install.md) for installation help.
 
 # Features
 
