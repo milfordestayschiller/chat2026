@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 13
+var currentVersion = 14
 
 // Config for your BareRTC app.
 type Config struct {
@@ -30,9 +30,10 @@ type Config struct {
 	Branding   string
 	WebsiteURL string
 
-	CORSHosts   []string
-	AdminAPIKey string
-	PermitNSFW  bool
+	CORSHosts       []string
+	AdminAPIKey     string
+	PermitNSFW      bool
+	BlockableAdmins bool
 
 	UseXForwardedFor bool
 

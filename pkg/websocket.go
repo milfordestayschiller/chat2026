@@ -50,6 +50,12 @@ type Subscriber struct {
 	blocked map[string]struct{} // usernames you have blocked
 	muted   map[string]struct{} // usernames you muted
 
+	// Admin "unblockable" override command, e.g. especially for your chatbot so it can
+	// still moderate the chat even if users had blocked it. The /unmute-all admin command
+	// will toggle this setting: then the admin chatbot will appear in the Who's Online list
+	// as normal and it can see user messages in chat.
+	unblockable bool
+
 	// Record which message IDs belong to this user.
 	midMu      sync.Mutex
 	messageIDs map[int64]struct{}
@@ -535,7 +541,7 @@ func (s *Server) SendWhoList() {
 
 				// If this person's VideoFlag is set to VIP Only, force their camera to "off"
 				// except when the person looking has the VIP status.
-				if (user.VideoStatus&messages.VideoFlagOnlyVIP == messages.VideoFlagOnlyVIP) && (!sub.IsVIP() && !sub.IsAdmin()) {
+				if (user.VideoStatus&messages.VideoFlagOnlyVIP == messages.VideoFlagOnlyVIP) && !sub.IsVIP() {
 					who.Video = 0
 				}
 			}
@@ -590,9 +596,21 @@ func (s *Subscriber) Blocks(other *Subscriber) bool {
 		return false
 	}
 
-	// If either side is an admin, blocking is not allowed.
-	if s.IsAdmin() || other.IsAdmin() {
+	// Admin blocking behavior: by default, admins are NOT blockable by users and retain visibility on
+	// chat, especially to moderate webcams (messages may still be muted between blocked users).
+	//
+	// If your chat server allows admins to be blockable:
+	if !config.Current.BlockableAdmins && (s.IsAdmin() || other.IsAdmin()) {
 		return false
+	} else {
+		// Admins are blockable, unless they have the unblockable flag - e.g. if you have an admin chatbot on
+		// your server it will send the `/unmute-all` command to still retain visibility into user messages for
+		// auto-moderation. The `/unmute-all` sets the unblockable flag, so your admin chatbot still appears
+		// on the Who's Online list as well.
+		unblockable := (s.IsAdmin() && s.unblockable) || (other.IsAdmin() && other.unblockable)
+		if unblockable {
+			return false
+		}
 	}
 
 	s.muteMu.RLock()

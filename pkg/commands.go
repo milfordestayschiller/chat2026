@@ -62,7 +62,6 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 				"* `/bans` to list current banned users and their expiration date\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
 				"* `/cut <username>` to make them turn off their camera\n" +
-				"* `/unmute-all` to lift all mutes on your side\n" +
 				"* `/help` to show this message\n" +
 				"* `/help-advanced` to show advanced admin commands\n\n" +
 				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
@@ -189,7 +188,9 @@ func (s *Server) CutCommand(words []string, sub *Subscriber) {
 func (s *Server) UnmuteAllCommand(words []string, sub *Subscriber) {
 	count := len(sub.muted)
 	sub.muted = map[string]struct{}{}
+	sub.unblockable = true
 	sub.ChatServer("Your mute on %d users has been lifted.", count)
+	s.SendWhoList()
 }
 
 // KickCommand handles the `/kick` operator command.

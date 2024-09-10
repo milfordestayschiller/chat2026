@@ -1332,11 +1332,7 @@ export default {
                 if (!window.confirm(
                     `Do you want to remove your mute on ${username}? If you un-mute them, you ` +
                     `will be able to see their chat messages or DMs going forward, but most importantly, ` +
-                    `they may be able to watch your webcam now if you are broadcasting!\n\n` +
-                    `Note: currently you can only re-mute them the next time you see one of their ` +
-                    `chat messages, or you can only boot them off your cam after they have already ` +
-                    `opened it. If you are concerned about this, click Cancel and do not remove ` +
-                    `the mute on ${username}.`
+                    `they may be able to watch your webcam now if you are broadcasting!`,
                 )) {
                     return;
                 }

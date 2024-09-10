@@ -126,7 +126,7 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		log.Info("[%s to #%s] %s", sub.Username, msg.Channel, msg.Message)
 	}
 
-	if sub.Username == "" {
+	if sub.Username == "" || !sub.authenticated {
 		sub.ChatServer("You must log in first.")
 		return
 	}
@@ -180,11 +180,8 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 			// If the user is OP, just tell them we would.
 			if sub.IsAdmin() {
 				sub.ChatServer("Your recent chat context would have been reported to your main website.")
-				return
-			}
-
-			// Send the report to the main website.
-			if err := s.reportFilteredMessage(sub, msg); err != nil {
+			} else if err := s.reportFilteredMessage(sub, msg); err != nil {
+				// Send the report to the main website.
 				log.Error("Reporting filtered message: %s", err)
 			}
 		}
@@ -204,17 +201,17 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		// Don't deliver it if the receiver has muted us. Note: admin users, even if muted,
 		// can still deliver a DM to the one who muted them.
 		rcpt, err := s.GetSubscriber(strings.TrimPrefix(msg.Channel, "@"))
-		if err == nil && rcpt.Mutes(sub.Username) && !sub.IsAdmin() {
-			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
-			return
-		} else if err != nil {
+		if err != nil {
 			// Recipient was no longer online: the message won't be sent.
 			sub.ChatServer("Could not deliver your message: %s appears not to be online.", msg.Channel)
+			return
+		} else if rcpt.Mutes(sub.Username) && !sub.IsAdmin() {
+			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
 			return
 		}
 
 		// If the sender already mutes the recipient, reply back with the error.
-		if err == nil && sub.Mutes(rcpt.Username) && !sub.IsAdmin() {
+		if sub.Mutes(rcpt.Username) && !sub.IsAdmin() {
 			sub.ChatServer("You have muted %s and so your message has not been sent.", rcpt.Username)
 			return
 		}
