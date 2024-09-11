@@ -5,6 +5,7 @@ import 'floating-vue/dist/style.css';
 import { Mentionable } from 'vue-mention';
 import EmojiPicker from 'vue3-emoji-picker';
 
+import AlertModal from './components/AlertModal.vue';
 import LoginModal from './components/LoginModal.vue';
 import ExplicitOpenModal from './components/ExplicitOpenModal.vue';
 import ReportModal from './components/ReportModal.vue';
@@ -50,6 +51,7 @@ export default {
         EmojiPicker,
 
         // My components
+        AlertModal,
         LoginModal,
         ExplicitOpenModal,
         ReportModal,
@@ -318,6 +320,17 @@ export default {
                     $center: null,
                     $right: null,
                 }
+            },
+
+            // Generic Alert/Confirm modal to replace native browser events.
+            // See also: modalAlert, modalConfirm functions.
+            alertModal: {
+                visible: false,
+                isConfirm: false,
+                title: "Alert",
+                icon: "",
+                message: "",
+                callback() {},
             },
 
             loginModal: {
@@ -1320,23 +1333,25 @@ export default {
             }
 
             if (mute) {
-                if (!window.confirm(
-                    `Do you want to mute ${username}? If muted, you will no longer see their ` +
-                    `chat messages or any DMs they send you going forward. Also, ${username} will ` +
-                    `not be able to see whether your webcam is active until you unmute them.`
-                )) {
-                    return;
-                }
-                this.muted[username] = true;
+                this.modalConfirm({
+                    title: `Mute ${username}`,
+                    icon: "fa fa-comment-slash",
+                    message: `Do you want to mute ${username}? If muted, you will no longer see their ` +
+                        `chat messages or any DMs they send you going forward. Also, ${username} will ` +
+                        `not be able to see whether your webcam is active until you unmute them.`,
+                }).then(() => {
+                    this.muted[username] = true;
+                });
             } else {
-                if (!window.confirm(
-                    `Do you want to remove your mute on ${username}? If you un-mute them, you ` +
-                    `will be able to see their chat messages or DMs going forward, but most importantly, ` +
-                    `they may be able to watch your webcam now if you are broadcasting!`,
-                )) {
-                    return;
-                }
-                delete this.muted[username];
+                this.modalConfirm({
+                    title: `Un-mute ${username}`,
+                    icon: "fa fa-comment",
+                    message: `Do you want to remove your mute on ${username}? If you un-mute them, you ` +
+                        `will be able to see their chat messages or DMs going forward, but most importantly, ` +
+                        `they may be able to watch your webcam now if you are broadcasting!`,
+                }).then(() => {
+                    delete this.muted[username];
+                });
             }
 
             // Hang up videos both ways.
@@ -1870,6 +1885,31 @@ export default {
         /**
          * Front-end web app concerns.
          */
+        
+        // Generic window.alert replacement modal.
+        async modalAlert({ message, title="Alert", icon="", isConfirm=false }) {
+            return new Promise((resolve, reject) => {
+                this.alertModal.isConfirm = isConfirm;
+                this.alertModal.title = title;
+                this.alertModal.icon = icon;
+                this.alertModal.message = message;
+                this.alertModal.callback = () => {
+                    resolve();
+                };
+                this.alertModal.visible = true;
+            });
+        },
+        async modalConfirm({ message, title="Confirmation", icon=""}) {
+            return this.modalAlert({
+                isConfirm: true,
+                message,
+                title,
+                icon,
+            })
+        },
+        modalClose() {
+            this.alertModal.visible = false;
+        },
 
         // Settings modal.
         showSettings() {
@@ -2002,39 +2042,42 @@ export default {
             // Validate we're in a DM currently.
             if (this.channel.indexOf("@") !== 0) return;
 
-            if (!window.confirm(
-                "Do you want to close this chat thread? Your conversation history will " +
-                "be forgotten on your computer, but your chat partner may still have " +
-                "your chat thread open on their end."
-            )) {
-                return;
-            }
-
-            let channel = this.channel;
-            this.setChannel(this.config.channels[0].ID);
-            delete (this.channels[channel]);
-            delete (this.directMessageHistory[channel]);
+            this.modalConfirm({
+                title: "Close conversation thread",
+                icon: "fa fa-trash",
+                message: "Do you want to close this chat thread? This will remove the conversation from your view, but " +
+                    "your chat partner may still have the conversation open on their device.",
+            }).then(() => {
+                let channel = this.channel;
+                this.setChannel(this.config.channels[0].ID);
+                delete (this.channels[channel]);
+                delete (this.directMessageHistory[channel]);
+            });
         },
 
         /* Take back messages (for everyone) or remove locally */
         takeback(msg) {
-            if (!window.confirm(
-                "Do you want to take this message back? Doing so will remove this message from everybody's view in the chat room."
-            )) return;
-
-            this.client.send({
+            this.modalConfirm({
+                title: "Take back message",
+                icon: "fa fa-rotate-left",
+                message: "Do you want to take this message back? Doing so will remove this message from everybody's view in the chat room."
+            }).then(() => {
+                this.client.send({
                 action: "takeback",
                 msgID: msg.msgID,
             });
+            });
         },
         removeMessage(msg) {
-            if (!window.confirm(
-                "Do you want to remove this message from your view? This will delete the message only for you, but others in this chat thread may still see it."
-            )) return;
-
-            this.onTakeback({
-                msgID: msg.msgID,
-            });
+            this.modalConfirm({
+                title: "Hide this message",
+                icon: "fa fa-trash",
+                message: "Do you want to remove this message from your view? This will delete the message only for you, but others in this chat thread may still see it."
+            }).then(() => {
+                this.onTakeback({
+                    msgID: msg.msgID,
+                });
+            })
         },
 
         /* message reaction emojis */
@@ -2586,41 +2629,43 @@ export default {
         bootUser(username) {
             // Un-boot?
             if (this.isBooted(username)) {
-                if (!window.confirm(`Allow ${username} to watch your webcam again?`)) {
-                    return;
-                }
-
-                this.sendUnboot(username);
-                delete (this.WebRTC.booted[username]);
-
+                this.modalConfirm({
+                    title: "Unboot user",
+                    icon: "fa fa-user-xmark",
+                    message: `Allow ${username} to watch your webcam again?`
+                }).then(() => {
+                    this.sendUnboot(username);
+                    delete (this.WebRTC.booted[username]);
+                })
                 return;
             }
 
             // Boot them off our webcam.
-            if (!window.confirm(
-                `Kick ${username} off your camera? This will also prevent them ` +
-                `from seeing that your camera is active for the remainder of your ` +
-                `chat session.`)) {
-                return;
-            }
+            this.modalConfirm({
+                title: "Boot user",
+                icon: "fa fa-user-xmark",
+                message: `Kick ${username} off your camera? This will also prevent them ` +
+                    `from seeing that your camera is active for the remainder of your ` +
+                    `chat session.`
+            }).then(() => {
+                this.sendBoot(username);
+                this.WebRTC.booted[username] = true;
 
-            this.sendBoot(username);
-            this.WebRTC.booted[username] = true;
+                // Close the WebRTC peer connections.
+                if (this.WebRTC.pc[username] != undefined) {
+                    this.closeVideo(username);
+                }
 
-            // Close the WebRTC peer connections.
-            if (this.WebRTC.pc[username] != undefined) {
-                this.closeVideo(username);
-            }
+                // Remove them from our list.
+                delete (this.webcam.watching[username]);
 
-            // Remove them from our list.
-            delete (this.webcam.watching[username]);
-
-            this.ChatClient(
-                `You have booted ${username} off your camera. They will no longer be able ` +
-                `to connect to your camera, or even see that your camera is active at all -- ` +
-                `to them it appears as though you had turned yours off.<br><br>This will be ` +
-                `in place for the remainder of your current chat session.`
-            );
+                this.ChatClient(
+                    `You have booted ${username} off your camera. They will no longer be able ` +
+                    `to connect to your camera, or even see that your camera is active at all -- ` +
+                    `to them it appears as though you had turned yours off.<br><br>This will be ` +
+                    `in place for the remainder of your current chat session.`
+                );
+            });
         },
         isBooted(username) {
             return this.WebRTC.booted[username] === true;
@@ -3499,12 +3544,13 @@ export default {
                 this.directMessageHistory[channel].busy = false;
             });
         },
-        async clearMessageHistory(prompt = false) {
+        async clearMessageHistory() {
             if (!this.jwt.valid || this.clearDirectMessages.busy) return;
 
-            if (prompt) {
-                if (!window.confirm(
-                    "This will delete all of your DMs history stored on the server. People you have " +
+            this.modalConfirm({
+                title: "Clear all DMs",
+                icon: "fa fa-exclamation-triangle",
+                message: "This will delete all of your DMs history stored on the server. People you have " +
                     "chatted with will have their past messages sent to you erased as well.\n\n" +
                     "Note: messages that are currently displayed on your chat partner's screen will " +
                     "NOT be removed by this action -- if this is a concern and you want to 'take back' " +
@@ -3512,50 +3558,48 @@ export default {
                     "message you sent to them. The 'clear history' button only clears the database, but " +
                     "does not send takebacks to pull the message from everybody else's screen.\n\n" +
                     "Are you sure you want to clear your stored DMs history on the server?",
-                )) {
-                    return;
-                }
-            }
+            }).then(async () => {
 
-            if (this.clearDirectMessages.timeout !== null) {
-                clearTimeout(this.clearDirectMessages.timeout);
-            }
-
-            this.clearDirectMessages.busy = true;
-            return fetch("/api/message/clear", {
-                method: "POST",
-                mode: "same-origin",
-                cache: "no-cache",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    "JWTToken": this.jwt.token,
-                }),
-            })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.Error) {
-                    console.error("ClearMessageHistory: ", data.Error);
-                    return;
+                if (this.clearDirectMessages.timeout !== null) {
+                    clearTimeout(this.clearDirectMessages.timeout);
                 }
 
-                this.clearDirectMessages.ok = true;
-                this.clearDirectMessages.messagesErased = data.MessagesErased;
-                this.clearDirectMessages.timeout = setTimeout(() => {
-                    this.clearDirectMessages.ok = false;
-                }, 15000);
+                this.clearDirectMessages.busy = true;
+                return fetch("/api/message/clear", {
+                    method: "POST",
+                    mode: "same-origin",
+                    cache: "no-cache",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        "JWTToken": this.jwt.token,
+                    }),
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.Error) {
+                        console.error("ClearMessageHistory: ", data.Error);
+                        return;
+                    }
 
-                this.ChatClient(
-                    "Your direct message history has been cleared from the server's database. "+
-                    "(" + data.MessagesErased + " messages erased)",
-                );
-            }).catch(resp => {
-                console.error("DirectMessageHistory: ", resp);
-                this.ChatClient("Error clearing your chat history: " + resp);
-            }).finally(() => {
-                this.clearDirectMessages.busy = false;
+                    this.clearDirectMessages.ok = true;
+                    this.clearDirectMessages.messagesErased = data.MessagesErased;
+                    this.clearDirectMessages.timeout = setTimeout(() => {
+                        this.clearDirectMessages.ok = false;
+                    }, 15000);
+
+                    this.ChatClient(
+                        "Your direct message history has been cleared from the server's database. "+
+                        "(" + data.MessagesErased + " messages erased)",
+                    );
+                }).catch(resp => {
+                    console.error("DirectMessageHistory: ", resp);
+                    this.ChatClient("Error clearing your chat history: " + resp);
+                }).finally(() => {
+                    this.clearDirectMessages.busy = false;
+                });
             });
         },
 
@@ -3571,10 +3615,17 @@ export default {
             return false;
         },
 
-        reportMessage(message) {
+        reportMessage(message, force=false) {
             // User is reporting a message on chat.
-            if (message.reported) {
-                if (!window.confirm("You have already reported this message. Do you want to report it again?")) return;
+            if (message.reported && !force) {
+                this.modalConfirm({
+                    title: "Report Message",
+                    icon: "fa fa-info-circle",
+                    message: "You have already reported this message. Do you want to report it again?",
+                }).then(() => {
+                    this.reportMessage(message, true);
+                });
+                return;
             }
 
             // Clone the user object.
@@ -3622,6 +3673,15 @@ export default {
 </script>
 
 <template>
+    <!-- Alert/Confirm modal: to avoid blocking the page with native calls. -->
+    <AlertModal :visible="alertModal.visible"
+        :is-confirm="alertModal.isConfirm"
+        :title="alertModal.title"
+        :icon="alertModal.icon"
+        :message="alertModal.message"
+        @callback="alertModal.callback"
+        @close="modalClose()"></AlertModal>
+
     <!-- Sign In modal -->
     <LoginModal :visible="loginModal.visible" @sign-in="signIn"></LoginModal>
 
@@ -3641,7 +3701,7 @@ export default {
         <div class="modal-content">
             <div class="card">
                 <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">Chat Settings</p>
+                    <p class="card-header-title">Chat Settings</p>
                 </header>
                 <div class="card-content">
 
@@ -4090,7 +4150,7 @@ export default {
 
                         <!-- Clear DMs history on server -->
                         <div class="field" v-if="this.jwt.valid">
-                            <a href="#" @click.prevent="clearMessageHistory(true)" class="button is-small has-text-danger">
+                            <a href="#" @click.prevent="clearMessageHistory()" class="button is-small has-text-danger">
                                 <i class="fa fa-trash mr-1"></i> Clear direct message history
                             </a>
 

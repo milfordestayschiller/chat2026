@@ -30,7 +30,7 @@ export default {
         <div class="modal-content">
             <div class="card">
                 <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">This camera may contain Explicit content</p>
+                    <p class="card-header-title">This camera may contain Explicit content</p>
                 </header>
                 <div class="card-content">
                     <p class="block">

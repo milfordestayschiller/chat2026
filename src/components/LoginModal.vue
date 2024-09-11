@@ -22,7 +22,7 @@ export default {
         <div class="modal-content">
             <div class="card">
                 <header class="card-header has-background-info">
-                    <p class="card-header-title has-text-light">Sign In</p>
+                    <p class="card-header-title">Sign In</p>
                 </header>
                 <div class="card-content">
                     <form @submit.prevent="signIn()">
