@@ -103,7 +103,7 @@ export default {
         </div>
 
         <!-- Close button (others' videos only) -->
-        <div class="close" v-if="!localVideo">
+        <div class="close" v-if="!localVideo" :class="{'seethru': !mouseOver}">
             <a href="#" class="button is-small is-danger is-outlined px-2" title="Close video" @click.prevent="closeVideo()">
                 <i class="fa fa-close"></i>
             </a>
@@ -113,13 +113,16 @@ export default {
         <div class="controls">
             <!-- Mute Button -->
             <button type="button" v-if="!isMuted" class="button is-small is-success is-outlined ml-1 px-2"
+                :class="{'seethru': !mouseOver}"
                 @click="muteVideo()">
                 <i class="fa" :class="{
                     'fa-microphone': localVideo,
                     'fa-volume-high': !localVideo
                 }"></i>
             </button>
-            <button type="button" v-else class="button is-small is-danger ml-1 px-2" @click="muteVideo()">
+            <button type="button" v-else class="button is-small is-danger ml-1 px-2"
+                :class="{'seethru': !mouseOver}"
+                @click="muteVideo()">
                 <i class="fa" :class="{
                     'fa-microphone-slash': localVideo,
                     'fa-volume-xmark': !localVideo
@@ -128,12 +131,14 @@ export default {
 
             <!-- Pop-out Video -->
             <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Pop out"
+                :class="{'seethru': !mouseOver}"
                 @click="popoutVideo()">
                 <i class="fa fa-up-right-from-square"></i>
             </button>
 
             <!-- Full screen -->
             <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Go full screen"
+                :class="{'seethru': !mouseOver}"
                 @click="fullscreen()">
                 <i class="fa fa-expand"></i>
             </button>
@@ -162,5 +167,10 @@ video {
     background-image: url(/static/img/connection-error.png);
     background-position: center center;
     background-repeat: no-repeat;
+}
+
+/* Translucent controls until mouse over */
+.seethru {
+    opacity: 0.4;
 }
 </style>
