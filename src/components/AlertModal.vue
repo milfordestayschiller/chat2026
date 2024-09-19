@@ -12,6 +12,19 @@ export default {
             username: '',
         };
     },
+    mounted() {
+        window.addEventListener('keyup', (e) => {
+            if (!this.visible) return;
+
+            if (e.key === 'Enter') {
+                return this.callback();
+            }
+
+            if (e.key == 'Escape') {
+                return this.close();
+            }
+        })
+    },
     methods: {
         callback() {
             this.$emit('close');
