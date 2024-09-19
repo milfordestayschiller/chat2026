@@ -70,7 +70,9 @@ PreviewImageWidth = 360
 [[ModerationRule]]
   Username = "example"
   CameraAlwaysNSFW = true
-  DisableCamera = false
+  NoBroadcast = false
+  NoVideo = false
+  NoImage = false
 
 [DirectMessageHistory]
   Enabled = true
@@ -155,7 +157,34 @@ Settings in the `[[ModerationRule]]` array include:
 
 * **Username** (string): the username on chat to apply the rule to.
 * **CameraAlwaysNSFW** (bool): if true, the user's camera is forced to NSFW and they will receive a ChatServer message when they try and remove the flag themselves.
-* **DisableCamera** (bool): if true, the user is not allowed to share their webcam and the server will send them a 'cut' message any time they go live, along with a ChatServer message informing them of this.
+* **NoBroadcast** (bool): if true, the user is not allowed to share their webcam and the server will send them a 'cut' message any time they go live, along with a ChatServer message informing them of this.
+* **NoVideo** (bool): if true, the user is not allowed to broadcast their camera OR watch any camera on chat.
+* **NoImage** (bool): if true, the user is not allowed to share images or see images shared by others on chat.
+
+### JWT Moderation Rules
+
+Rather than in the server-side settings.toml, you can enable these moderation rules from your website's side as well by including them in the "rules" custom key of your JWT token.
+
+The "rules" key is a string array with short labels representing each of the rules:
+
+| Moderation Rule  | JWT "Rules" Value |
+|------------------|-------------------|
+| CameraAlwaysNSFW | redcam            |
+| NoBroadcast      | nobroadcast       |
+| NoVideo          | novideo           |
+| NoImage          | noimage           |
+
+An example JWT token claims object may look like:
+
+```javascript
+{
+    "sub": "username",                    // Username for chat
+    "nick": "Display name",               // Friendly name
+    "img": "/static/photos/username.jpg", // user picture URL
+    "url": "/u/username",                 // user profile URL
+    "rules": ["redcam", "noimage"],       // moderation rules
+}
+```
 
 ## Direct Message History
 

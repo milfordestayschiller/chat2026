@@ -20,6 +20,7 @@ type Claims struct {
 	Nick       string `json:"nick,omitempty"`
 	Emoji      string `json:"emoji,omitempty"`
 	Gender     string `json:"gender,omitempty"`
+	Rules      Rules  `json:"rules,omitempty"`
 
 	// Standard claims. Notes:
 	// subject = username

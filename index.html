@@ -38,6 +38,7 @@
       const UserJWTToken = {{.JWTTokenString}};
       const UserJWTValid = {{if .JWTAuthOK}}true{{else}}false{{end}};
       const UserJWTClaims = {{.JWTClaims.ToJSON}};
+      const UserJWTRules = {{.JWTClaims.Rules.ToDict}};
       const CachedBlocklist = {{.CachedBlocklist}};
       const CacheHash = {{.CacheHash}};
 

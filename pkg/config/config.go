@@ -125,7 +125,9 @@ type Logging struct {
 type ModerationRule struct {
 	Username         string
 	CameraAlwaysNSFW bool
-	DisableCamera    bool
+	NoBroadcast      bool
+	NoVideo          bool
+	NoImage          bool
 }
 
 // Current loaded configuration.

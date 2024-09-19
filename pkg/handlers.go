@@ -304,6 +304,20 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 		return
 	}
 
+	// Moderation rules?
+	if rule := sub.GetModerationRule(); rule != nil {
+
+		// Are they barred from watching cameras on chat?
+		if rule.NoImage {
+			sub.ChatServer(
+				"A chat server moderation rule is currently in place which restricts your ability to share images. Please " +
+					"contact a chat operator for more information.",
+			)
+			return
+		}
+
+	}
+
 	// Detect image type and convert it into an <img src="data:"> tag.
 	var (
 		filename = msg.Message
@@ -390,10 +404,10 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 		log.Debug("User %s turns on their video feed", sub.Username)
 
 		// Moderation rules?
-		if rule := config.Current.GetModerationRule(sub.Username); rule != nil {
+		if rule := sub.GetModerationRule(); rule != nil {
 
 			// Are they barred from sharing their camera on chat?
-			if rule.DisableCamera {
+			if rule.NoBroadcast || rule.NoVideo {
 				sub.SendCut()
 				sub.ChatServer(
 					"A chat server moderation rule is currently in place which restricts your ability to share your webcam. Please " +
@@ -452,6 +466,20 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 
 // OnOpen is a client wanting to start WebRTC with another, e.g. to see their camera.
 func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
+	// Moderation rules?
+	if rule := sub.GetModerationRule(); rule != nil {
+
+		// Are they barred from watching cameras on chat?
+		if rule.NoVideo {
+			sub.ChatServer(
+				"A chat server moderation rule is currently in place which restricts your ability to watch webcams. Please " +
+					"contact a chat operator for more information.",
+			)
+			return
+		}
+
+	}
+
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {

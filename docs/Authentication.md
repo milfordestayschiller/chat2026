@@ -25,6 +25,7 @@ Configure a shared secret key (random text string) in both the BareRTC settings 
     "url": "/u/username",                 // user profile URL
     "gender": "m",                        // gender (m, f, o)
     "emoji": "🤖",                        // emoji icon
+    "rules": ["redcam", "noimage"],       // moderation rules (optional)
 
     // Standard JWT claims that we support:
     "iss": "my own app", // Issuer name
@@ -112,6 +113,8 @@ Here is in-depth documentation on what custom claims are supported by BareRTC an
     * Country flag emojis, to indicate where your users are connecting from.
     * Robot emojis, to indicate bot users.
     * Any emoji you want! Mark your special guests or VIP users, etc.
+* **Rules** (`rules`): a string array of moderation rules to apply to the joining user, dictated by your website.
+    * See [JWT Moderation Rules](./Configuration.md#jwt-moderation-rules) for available values.
 
 ## JWT Strict Mode
 

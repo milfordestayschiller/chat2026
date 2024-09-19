@@ -120,7 +120,8 @@ export default {
             jwt: {
                 token: UserJWTToken,
                 valid: UserJWTValid,
-                claims: UserJWTClaims
+                claims: UserJWTClaims,
+                rules: UserJWTRules
             },
 
             channel: "lobby",
@@ -420,7 +421,7 @@ export default {
         window.addEventListener("click", () => {
             this.setupSounds();
         });
-        window.addEventListener("keydown", () => {
+        window.addEventListener("keyup", () => {
             this.setupSounds();
         });
 
@@ -663,6 +664,9 @@ export default {
             return status === null || status.name !== "online";
         },
         canUploadFile() {
+            // User has the NoImage rule set.
+            if (this.jwt.rules.IsNoImageRule) return false;
+
             // Public channels: check whether it PermitsPhotos.
             if (!this.isDM) {
                 for (let cfg of this.config.channels) {
@@ -1157,6 +1161,9 @@ export default {
 
         // Emoji reactions
         sendReact(message, emoji) {
+            // Suppress reactions on restricted messages (e.g. when NoImage rule enabled and user did not see the image)
+            if (message.message.indexOf("barertc-no-emoji-reactions") > -1) return;
+
             this.client.send({
                 action: 'react',
                 msgID: message.msgID,
@@ -2106,6 +2113,14 @@ export default {
         startVideo({ force = false, changeCamera = false }) {
             if (this.webcam.busy) return;
 
+            // Is a moderation rule in place?
+            if (this.jwt.rules.IsNoBroadcastRule) {
+                return this.modalAlert({
+                    title: "Broadcasting video is not allowed for you",
+                    message: "A chat room moderation rule is currently in place which restricts your ability to broadcast your webcam.\n\nPlease contact a chat operator for more information.",
+                });
+            }
+
             // Before they go on cam the first time, ATTEMPT to get their device names.
             // - If they had never granted permission, we won't get the names of
             //   the devices and no big deal.
@@ -2330,6 +2345,15 @@ export default {
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
                 return;
+            }
+
+            // A chat moderation rule?
+            if (this.jwt.rules.IsNoVideoRule) {
+                return this.modalAlert({
+                    title: "Videos are not available to you",
+                    message: "A chat room moderation rule is currently in place which restricts your ability to watch webcams.\n\n" +
+                        "Please contact a chat operator for more information.",
+                });
             }
 
             // If we have muted the target, we shouldn't view their video.
@@ -2580,6 +2604,9 @@ export default {
         },
         isVideoNotAllowed(user) {
             // Returns whether the video button to open a user's cam will be not allowed (crossed out)
+
+            // If the user is under the NoVideo rule, always cross it out.
+            if (this.jwt.rules.IsNoVideoRule) return true;
 
             // Mutual video sharing is required on this camera, and ours is not active
             if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.MutualRequired)) {
@@ -3004,7 +3031,15 @@ export default {
 
             // Image handling per the user's preference.
             if (message.indexOf("<img") > -1) {
-                if (this.imageDisplaySetting === "hide") {
+                if (this.jwt.rules.IsNoImageRule) {
+                    // User is under the NoImage moderation rule.
+                    message = `
+                        <span class="has-text-danger barertc-no-emoji-reactions">
+                            <i class="fa fa-image mr-1"></i>
+                            An image was shared, but is not visible to you due to a chat moderation rule on your account.
+                        </span>`;
+                } else if (this.imageDisplaySetting === "hide") {
+                    // User hides all images in their chat preferences.
                     return;
                 } else if (this.imageDisplaySetting === "collapse") {
                     // Put a collapser link.
