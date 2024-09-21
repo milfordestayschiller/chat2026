@@ -18,6 +18,7 @@ const keys = {
     'videoNonExplicit': Boolean,  // user prefers not to see explicit
     'rememberExpresslyClosed': Boolean,
     'autoMuteWebcams': Boolean, // automatically mute other peoples' webcam audio feeds
+    'videoAutoShare': Boolean, // automatically share your webcam on page load
 
     // Booleans
     'usePolling': Boolean,  // use the polling API instead of WebSocket

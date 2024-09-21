@@ -202,6 +202,9 @@ export default {
                 audioDevices: [],
                 audioDeviceID: null,
 
+                // Advanced: automatically share your webcam when the page loads.
+                autoshare: false,
+
                 // After we get a device selected, remember it (by name) so that we
                 // might hopefully re-select it by default IF we are able to enumerate
                 // devices before they go on camera the first time.
@@ -484,6 +487,7 @@ export default {
 
         // Webcam preferences that the user can edit while live.
         "webcam.nsfw": function () {
+            this.webcam.wasServerNSFW = false;
             LocalStorage.set('videoExplicit', this.webcam.nsfw);
             if (this.webcam.active) {
                 this.sendMe();
@@ -527,6 +531,9 @@ export default {
         },
         "webcam.autoMuteWebcams": function () {
             LocalStorage.set('autoMuteWebcams', this.webcam.autoMuteWebcams);
+        },
+        "webcam.autoshare": function () {
+            LocalStorage.set('videoAutoShare', this.webcam.autoshare);
         },
 
         // Misc preference watches
@@ -709,7 +716,7 @@ export default {
             if (!this.webcam.active) return 0; // unset all flags if not active now
             if (this.webcam.active) status |= this.VideoFlag.Active;
             if (this.webcam.muted) status |= this.VideoFlag.Muted;
-            if (this.webcam.nsfw) status |= this.VideoFlag.NSFW;
+            if (this.webcam.nsfw && this.config.permitNSFW) status |= this.VideoFlag.NSFW;
             if (this.webcam.mutual) status |= this.VideoFlag.MutualRequired;
             if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
             if (this.webcam.nonExplicit) status |= this.VideoFlag.NonExplicit;
@@ -929,10 +936,13 @@ export default {
             if (settings.videoAutoMute === true) {
                 this.webcam.autoMute = true;
             }
+            if (settings.videoAutoShare === true) {
+                this.webcam.autoshare = true;
+            }
             if (settings.videoVipOnly === true) {
                 this.webcam.vipOnly = true;
             }
-            if (settings.videoExplicit === true) {
+            if (settings.videoExplicit === true && this.config.permitNSFW) {
                 this.webcam.nsfw = true;
             }
             if (settings.videoNonExplicit === true) {
@@ -1229,6 +1239,9 @@ export default {
             let theirNSFW = (msg.video & this.VideoFlag.NSFW) > 0;
             if (this.webcam.active && myNSFW != theirNSFW && theirNSFW) {
                 this.webcam.nsfw = theirNSFW;
+                window.requestAnimationFrame(() => {
+                    this.webcam.wasServerNSFW = true;
+                });
             }
 
             // Note: Me events only come when we join the server or a moderator has
@@ -1571,6 +1584,7 @@ export default {
                 jwt: this.jwt,
                 prefs: this.prefs,
 
+                onLoggedIn: this.onLoggedIn,
                 onWho: this.onWho,
                 onMe: this.onMe,
                 onMessage: this.onMessage,
@@ -1612,6 +1626,14 @@ export default {
                     this.dial();
                 }, 1000);
             });
+        },
+        onLoggedIn() {
+            // Called after the first 'me' is received from the chat server, e.g. once per login.
+
+            // Do we auto-broadcast our camera?
+            if (this.webcam.autoshare) {
+                this.startVideo({ force: true });
+            }
         },
 
         /**
@@ -2132,8 +2154,8 @@ export default {
                 this.getDevices();
             }
 
-            // If we are running in PermitNSFW mode, show the user the modal.
-            if (this.config.permitNSFW && !force) {
+            // Show the broadcast settings modal the first time.
+            if (!force) {
                 this.nsfwModalCast.visible = true;
                 return;
             }
@@ -2295,6 +2317,24 @@ export default {
 
             // Put them on localStorage.
             LocalStorage.set('preferredDeviceNames', this.webcam.preferredDeviceNames);
+        },
+
+        // The 'Explicit' button at the top of the page: toggle the user's NSFW setting but
+        // with some smarts in case the user was just marked NSFW by an admin.
+        topNavExplicitButtonClicked() {
+            if (this.webcam.wasServerNSFW) {
+                this.webcam.wasServerNSFW = false;
+                this.ChatClient(
+                    `Notice: your webcam was already marked as "Explicit" recently by the chat server.<br><br>` +
+                    `If you were recently notified that a chat moderator has marked your camera as 'explicit' (red) for you, then ` +
+                    `you do not need to do anything: your camera is marked Explicit already. Please leave it as Explicit if you are ` +
+                    `being sexual on camera.<br><br>` +
+                    `If you really mean to <strong>remove</strong> the Explicit label (and turn your camera 'blue'), then click on the ` +
+                    `Explicit button at the top of the page one more time to confirm.`,
+                );
+                return;
+            }
+            this.webcam.nsfw = !this.webcam.nsfw;
         },
 
         // Replace your video/audio streams for your watchers (on camera changes)
@@ -4037,17 +4077,18 @@ export default {
                         </p>
 
                         <p class="block mb-1" v-if="config.permitNSFW">
-                            <label class="label">Explicit</label>
+                            <label class="label">Explicit webcam options</label>
                         </p>
 
                         <div class="field mb-1" v-if="config.permitNSFW">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.nsfw">
-                                Mark my camera as featuring Explicit content
+                                Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
+                                <span class="has-text-danger">Explicit</span> or sexual content
                             </label>
                         </div>
 
-                        <div class="field">
+                        <div class="field" v-if="config.permitNSFW">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.nonExplicit">
                                 I prefer not to see Explicit cameras from other chatters
@@ -4137,6 +4178,22 @@ export default {
                                     </select>
                                 </div>
                             </div>
+                        </div>
+
+                        <p class="block mb-1" v-if="webcam.videoDevices.length > 0">
+                            <label class="label">Miscellaneous</label>
+                        </p>
+
+                        <div class="field mb-1" v-if="webcam.videoDevices.length > 0">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.autoshare">
+                                Automatically go on camera when I log onto the chat room
+                            </label>
+                            <p class="help">
+                                Note: be sure that your web browser has <strong>remembered</strong> your webcam and mic
+                                permission! This option can automatically share your webcam when you log onto chat again
+                                from this device.
+                            </p>
                         </div>
                     </div>
 
@@ -4283,23 +4340,35 @@ export default {
                         </label>
                     </div>
 
-                    <p class="block mb-1">
-                        If your camera will be featuring "<abbr title="Not Safe For Work">Explicit</abbr>" or sexual
-                        content, please
-                        mark it as such by clicking on the "<small><i class="fa fa-fire mr-1 has-text-danger"></i>
-                            Explicit</small>"
-                        button at the top of the page, or check the box below to start with it enabled.
+                    <p v-if="config.permitNSFW" class="block mb-1">
+                        <label class="label">'Explicit' webcam options</label>
                     </p>
 
-                    <div class="field">
+                    <div class="field" v-if="config.permitNSFW">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.nsfw">
-                            Check this box if your webcam will <em>definitely</em> be Explicit. 😈
+                            Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
+                            <span class="has-text-danger">Explicit</span> or sexual content
                         </label>
+                        <p class="help">
+                            You can toggle this at any time by clicking on the '<i class="fa fa-fire"></i> Explicit'
+                            button at the top of the page.
+                        </p>
+                    </div>
+
+                    <div class="field" v-if="config.permitNSFW">
+                        <label class="checkbox">
+                            <input type="checkbox" v-model="webcam.nonExplicit">
+                            I prefer not to see Explicit cameras from other chatters
+                        </label>
+                        <p class="help">
+                            Close, and don't automatically open, other peoples' cameras when they toggle
+                            to become explicit.
+                        </p>
                     </div>
 
                     <p class="block mb-1">
-                        <label class="label">Mutual webcam options:</label>
+                        <label class="label">Mutual webcam options</label>
                     </p>
 
                     <div class="field mb-1">
@@ -4314,17 +4383,6 @@ export default {
                             <input type="checkbox" v-model="webcam.mutualOpen">
                             When someone opens my camera, I also open their camera automatically
                         </label>
-                    </div>
-
-                    <div class="field">
-                        <label class="checkbox">
-                            <input type="checkbox" v-model="webcam.nonExplicit">
-                            I prefer not to see Explicit cameras from other chatters
-                        </label>
-                        <p class="help">
-                            Don't auto-open explicit cameras when they open mine; and automatically
-                            close a camera I am watching if it toggles to become explicit.
-                        </p>
                     </div>
 
                     <div class="field" v-if="isVIP">
@@ -4452,7 +4510,7 @@ export default {
                         :class="{
                             'is-outlined is-dark': !webcam.nsfw,
                             'is-danger': webcam.nsfw
-                        }" @click.prevent="webcam.nsfw = !webcam.nsfw"
+                        }" @click.prevent="topNavExplicitButtonClicked()"
                         title="Toggle the NSFW setting for your camera broadcast">
                         <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>

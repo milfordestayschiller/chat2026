@@ -32,6 +32,7 @@ class ChatClient {
         onCut,
 
         // Misc function registrations for callback.
+        onLoggedIn, // connection is fully established (first 'me' echo from server).
         onNewJWT, // new JWT token from ping response
         bulkMuteUsers, // Upload our blocklist on connect.
         focusMessageBox, // Tell caller to focus the message entry box.
@@ -62,10 +63,14 @@ class ChatClient {
         this.onBlock = onBlock;
         this.onCut = onCut;
 
+        this.onLoggedIn = onLoggedIn;
         this.onNewJWT = onNewJWT;
         this.bulkMuteUsers = bulkMuteUsers;
         this.focusMessageBox = focusMessageBox;
         this.pushHistory = pushHistory;
+
+        // Received the first 'me' echo from server (to call onLoggedIn once per connection)
+        this.firstMe = false;
 
         // WebSocket connection.
         this.ws = {
@@ -159,6 +164,13 @@ class ChatClient {
                 break;
             case "me":
                 this.onMe(msg);
+
+                // The first me?
+                if (!this.firstMe) {
+                    this.firstMe = true;
+                    this.onLoggedIn();
+                }
+
                 break;
             case "message":
                 this.onMessage(msg);
