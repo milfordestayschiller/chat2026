@@ -78,6 +78,7 @@ export default {
             // Website configuration provided by chat.html template.
             config: {
                 branding: Branding,
+                strings: BareRTCStrings,
                 channels: PublicChannels,
                 dmDisclaimer: DMDisclaimer,
                 website: WebsiteURL,
@@ -2117,7 +2118,7 @@ export default {
             if (this.jwt.rules.IsNoBroadcastRule) {
                 return this.modalAlert({
                     title: "Broadcasting video is not allowed for you",
-                    message: "A chat room moderation rule is currently in place which restricts your ability to broadcast your webcam.\n\nPlease contact a chat operator for more information.",
+                    message: this.config.strings.ModRuleErrorNoBroadcast || "A chat room moderation rule is currently in place which restricts your ability to broadcast your webcam.\n\nPlease contact a chat operator for more information.",
                 });
             }
 
@@ -2351,7 +2352,7 @@ export default {
             if (this.jwt.rules.IsNoVideoRule) {
                 return this.modalAlert({
                     title: "Videos are not available to you",
-                    message: "A chat room moderation rule is currently in place which restricts your ability to watch webcams.\n\n" +
+                    message: this.config.strings.ModRuleErrorNoVideo || "A chat room moderation rule is currently in place which restricts your ability to watch webcams.\n\n" +
                         "Please contact a chat operator for more information.",
                 });
             }
@@ -3272,7 +3273,7 @@ export default {
         onFileUpload(file) {
             // Validate they can upload it here.
             if (!this.canUploadFile) {
-                this.ChatClient("Photo sharing in DMs is not available.");
+                this.ChatClient("Photo sharing in this channel is not available.");
                 return;
             }
 

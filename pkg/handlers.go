@@ -309,10 +309,7 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 
 		// Are they barred from watching cameras on chat?
 		if rule.NoImage {
-			sub.ChatServer(
-				"A chat server moderation rule is currently in place which restricts your ability to share images. Please " +
-					"contact a chat operator for more information.",
-			)
+			sub.ChatServer(config.Current.Strings.ModRuleErrorNoImage)
 			return
 		}
 
@@ -409,10 +406,7 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 			// Are they barred from sharing their camera on chat?
 			if rule.NoBroadcast || rule.NoVideo {
 				sub.SendCut()
-				sub.ChatServer(
-					"A chat server moderation rule is currently in place which restricts your ability to share your webcam. Please " +
-						"contact a chat operator for more information.",
-				)
+				sub.ChatServer(config.Current.Strings.ModRuleErrorNoBroadcast)
 				msg.VideoStatus = 0
 			}
 
@@ -420,10 +414,7 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 			if rule.CameraAlwaysNSFW && !(msg.VideoStatus&messages.VideoFlagNSFW == messages.VideoFlagNSFW) {
 				msg.VideoStatus |= messages.VideoFlagNSFW
 				reflect = true // send them a 'me' echo afterward to inform the front-end page properly of this
-				sub.ChatServer(
-					"A chat server moderation rule is currently in place which forces your camera to stay marked as Explicit. Please " +
-						"contact a chat moderator if you have any questions about this.",
-				)
+				sub.ChatServer(config.Current.Strings.ModRuleErrorCameraAlwaysNSFW)
 			}
 
 		}
@@ -471,10 +462,7 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 
 		// Are they barred from watching cameras on chat?
 		if rule.NoVideo {
-			sub.ChatServer(
-				"A chat server moderation rule is currently in place which restricts your ability to watch webcams. Please " +
-					"contact a chat operator for more information.",
-			)
+			sub.ChatServer(config.Current.Strings.ModRuleErrorNoVideo)
 			return
 		}
 

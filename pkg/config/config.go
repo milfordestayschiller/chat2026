@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 14
+var currentVersion = 15
 
 // Config for your BareRTC app.
 type Config struct {
@@ -54,6 +54,8 @@ type Config struct {
 	ModerationRule []*ModerationRule
 
 	DirectMessageHistory DirectMessageHistory
+
+	Strings Strings
 
 	Logging Logging
 }
@@ -111,6 +113,14 @@ type WebhookURL struct {
 	Name    string
 	Enabled bool
 	URL     string
+}
+
+// Strings config for customizing certain user-facing messaging around the app.
+type Strings struct {
+	ModRuleErrorCameraAlwaysNSFW string
+	ModRuleErrorNoBroadcast      string
+	ModRuleErrorNoVideo          string
+	ModRuleErrorNoImage          string
 }
 
 // Logging configs to monitor channels or usernames.
@@ -212,6 +222,12 @@ func DefaultConfig() Config {
 			{
 				Username: "example",
 			},
+		},
+		Strings: Strings{
+			ModRuleErrorCameraAlwaysNSFW: "A chat server moderation rule is currently in place which forces your camera to stay marked as Explicit. Please contact a chat moderator if you have any questions about this.",
+			ModRuleErrorNoBroadcast:      "A chat server moderation rule is currently in place which restricts your ability to share your webcam. Please contact a chat operator for more information.",
+			ModRuleErrorNoVideo:          "A chat server moderation rule is currently in place which restricts your ability to watch webcams. Please contact a chat operator for more information.",
+			ModRuleErrorNoImage:          "A chat server moderation rule is currently in place which restricts your ability to share images. Please contact a chat operator for more information.",
 		},
 		DirectMessageHistory: DirectMessageHistory{
 			Enabled:           false,
