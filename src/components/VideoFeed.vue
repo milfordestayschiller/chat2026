@@ -28,6 +28,9 @@ export default {
         };
     },
     computed: {
+        containerID() {
+            return this.videoID + '-container';
+        },
         videoID() {
             return this.localVideo ? 'localVideo' : `videofeed-${this.username}`;
         },
@@ -60,10 +63,21 @@ export default {
             this.$emit('popout', this.username);
         },
 
-        fullscreen() {
-            let $elem = document.getElementById(this.videoID);
+        fullscreen(force=false) {
+            // If we are popped-out, pop back in before full screen.
+            if (this.poppedOut && !force) {
+                this.popoutVideo();
+                window.requestAnimationFrame(() => {
+                    this.fullscreen(true);
+                });
+                return;
+            }
+
+            let $elem = document.getElementById(this.containerID);
             if ($elem) {
-                if ($elem.requestFullscreen) {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else if ($elem.requestFullscreen) {
                     $elem.requestFullscreen();
                 } else {
                     window.alert("Fullscreen not supported by your browser.");
@@ -84,7 +98,7 @@ export default {
 </script>
 
 <template>
-    <div class="feed" :class="{
+    <div class="feed" :id="containerID" :class="{
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
@@ -136,7 +150,7 @@ export default {
                 <i class="fa fa-up-right-from-square"></i>
             </button>
 
-            <!-- Full screen -->
+            <!-- Full screen. -->
             <button type="button" class="button is-small is-light is-outlined p-2 ml-2" title="Go full screen"
                 :class="{'seethru': !mouseOver}"
                 @click="fullscreen()">
