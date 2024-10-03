@@ -1637,7 +1637,6 @@ export default {
 
             // Load our watermark image.
             this.webcam.watermark = WatermarkImage(this.username);
-            this.ChatClient(`Watermark image created: <img src="${this.webcam.watermark}" width="120">`);
 
             // Do we auto-broadcast our camera?
             if (this.webcam.autoshare) {
