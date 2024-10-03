@@ -19,6 +19,7 @@ import LocalStorage from './lib/LocalStorage';
 import VideoFlag from './lib/VideoFlag';
 import StatusMessage from './lib/StatusMessage';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
+import WatermarkImage from './lib/watermark';
 
 // WebRTC configuration.
 const configuration = {
@@ -180,6 +181,10 @@ export default {
                 vipOnly: false, // only show camera to fellow VIP users
                 rememberExpresslyClosed: true,  // remember cams we expressly closed
                 autoMuteWebcams: false, // auto-mute other cameras' audio channels
+
+                // My watermark image for screen recording protection.
+                // Set after login in setWatermark.
+                watermark: null,
 
                 // Who all is watching me? map of users.
                 watching: {},
@@ -1629,6 +1634,10 @@ export default {
         },
         onLoggedIn() {
             // Called after the first 'me' is received from the chat server, e.g. once per login.
+
+            // Load our watermark image.
+            this.webcam.watermark = WatermarkImage(this.username);
+            this.ChatClient(`Watermark image created: <img src="${this.webcam.watermark}" width="120">`);
 
             // Do we auto-broadcast our camera?
             if (this.webcam.autoshare) {
@@ -4709,20 +4718,36 @@ export default {
                     <!-- Video Feeds-->
 
                     <!-- My video -->
-                    <VideoFeed v-show="webcam.active" :local-video="true" :username="username"
-                        :popped-out="WebRTC.poppedOut[username]" :is-explicit="webcam.nsfw" :is-muted="webcam.muted"
-                        :is-source-muted="webcam.muted" @mute-video="muteMe()" @popout="popoutVideo"
+                    <VideoFeed v-show="webcam.active"
+                        :local-video="true"
+                        :username="username"
+                        :popped-out="WebRTC.poppedOut[username]"
+                        :is-explicit="webcam.nsfw"
+                        :is-muted="webcam.muted"
+                        :is-source-muted="webcam.muted"
+                        :watermark-image="webcam.watermark"
+                        @mute-video="muteMe()"
+                        @popout="popoutVideo"
                         @open-profile="showProfileModal"
                         @set-volume="setVideoVolume">
                     </VideoFeed>
 
                     <!-- Others' videos -->
-                    <VideoFeed v-for="(stream, username) in WebRTC.streams" v-bind:key="username" :username="username"
-                        :popped-out="WebRTC.poppedOut[username]" :is-explicit="isUsernameCamNSFW(username)"
-                        :is-source-muted="isSourceMuted(username)" :is-muted="isMuted(username)"
-                        :is-watching-me="isWatchingMe(username)" :is-frozen="WebRTC.frozenStreamDetected[username]"
-                        @reopen-video="openVideoByUsername" @mute-video="muteVideo" @popout="popoutVideo"
-                        @close-video="expresslyCloseVideo" @set-volume="setVideoVolume"
+                    <VideoFeed v-for="(stream, username) in WebRTC.streams"
+                        v-bind:key="username"
+                        :username="username"
+                        :popped-out="WebRTC.poppedOut[username]"
+                        :is-explicit="isUsernameCamNSFW(username)"
+                        :is-source-muted="isSourceMuted(username)"
+                        :is-muted="isMuted(username)"
+                        :is-watching-me="isWatchingMe(username)"
+                        :is-frozen="WebRTC.frozenStreamDetected[username]"
+                        :watermark-image="webcam.watermark"
+                        @reopen-video="openVideoByUsername"
+                        @mute-video="muteVideo"
+                        @popout="popoutVideo"
+                        @close-video="expresslyCloseVideo"
+                        @set-volume="setVideoVolume"
                         @open-profile="showProfileModal">
                     </VideoFeed>
 

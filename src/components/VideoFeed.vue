@@ -11,6 +11,7 @@ export default {
         isSourceMuted: Boolean, // camera is muted on the broadcaster's end
         isWatchingMe: Boolean, // other video is watching us back
         isFrozen: Boolean,     // video is detected as frozen
+        watermarkImage: Image, // watermark image to overlay (nullable)
     },
     components: {
         Slider,
@@ -102,7 +103,13 @@ export default {
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
-        <video class="feed" :id="videoID" autoplay :muted="localVideo" playsinline></video>
+        <video class="feed" :id="videoID" autoplay disablepictureinpicture :muted="localVideo" playsinline></video>
+
+        <!-- Watermark layer -->
+        <div v-if="watermarkImage">
+            <img :src="watermarkImage" class="watermark">
+            <img :src="watermarkImage" class="corner-watermark seethru invert-color">
+        </div>
 
         <!-- Caption -->
         <div class="caption" :class="textColorClass">
@@ -186,5 +193,30 @@ video {
 /* Translucent controls until mouse over */
 .seethru {
     opacity: 0.4;
+}
+
+/* Watermark image */
+.watermark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    width: 40%;
+    height: 40%;
+    opacity: 0.02;
+}
+.corner-watermark {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 20%;
+    min-width: 32px;
+    min-height: 32px;
+    max-height: 20%;
+}
+.invert-color {
+    filter: invert(100%);
 }
 </style>

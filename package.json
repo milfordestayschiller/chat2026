@@ -12,6 +12,7 @@
   "dependencies": {
     "floating-vue": "^2.0.0-beta.24",
     "interactjs": "^1.10.18",
+    "qrcodejs": "github:danielgjackson/qrcodejs",
     "vue": "^3.3.4",
     "vue-mention": "^2.0.0-alpha.3",
     "vue3-emoji-picker": "^1.1.7",
