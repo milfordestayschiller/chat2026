@@ -54,6 +54,9 @@ export default {
                     { n: ['banana'], u: '1f34c' },
                 ]
             },
+
+            // Emoji reactions are toggled fully spelled out (for mobile)
+            showReactions: false,
         };
     },
     computed: {
@@ -357,8 +360,21 @@ export default {
                 <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
-                    {{ emoji }} <small class="ml-1">{{ users.length }}</small>
+                    {{ emoji }}
+
+                    <small v-if="showReactions" class="ml-1">
+                        {{ users.join(', ') }}
+                    </small>
+                    <small v-else class="ml-1">{{ users.length }}</small>
                 </span>
+
+                <!-- Mobile helper to show all -->
+                <a href="#" class="tag is-light cursor-pointer" @click.prevent="showReactions = !showReactions">
+                    <i class="fa mr-1"
+                        :class="{'fa-angles-left': showReactions,
+                                 'fa-angles-right': !showReactions,
+                        }"></i> {{ showReactions ? 'Less' : 'More' }}
+                </a>
             </div>
         </div>
 
@@ -414,9 +430,23 @@ export default {
                 <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
                     :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
-                    {{ emoji }} <small class="ml-1">{{ users.length }}</small>
+                    {{ emoji }}
+
+                    <small v-if="showReactions" class="ml-1">
+                        {{ users.join(', ') }}
+                    </small>
+                    <small v-else class="ml-1">{{ users.length }}</small>
                 </span>
+
+                <!-- Mobile helper to show all -->
+                <a href="#" class="tag is-light cursor-pointer" @click.prevent="showReactions = !showReactions">
+                    <i class="fa mr-1"
+                        :class="{'fa-angles-left': showReactions,
+                                 'fa-angles-right': !showReactions,
+                        }"></i> {{ showReactions ? 'Less' : 'More' }}
+                </a>
             </div>
+
         </div>
 
         <!-- Emoji/Menu button -->
