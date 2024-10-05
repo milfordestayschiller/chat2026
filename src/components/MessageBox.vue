@@ -369,7 +369,7 @@ export default {
                 </span>
 
                 <!-- Mobile helper to show all -->
-                <a href="#" class="tag is-light cursor-pointer" @click.prevent="showReactions = !showReactions">
+                <a href="#" class="tag is-secondary cursor-pointer" @click.prevent="showReactions = !showReactions">
                     <i class="fa mr-1"
                         :class="{'fa-angles-left': showReactions,
                                  'fa-angles-right': !showReactions,
@@ -439,7 +439,7 @@ export default {
                 </span>
 
                 <!-- Mobile helper to show all -->
-                <a href="#" class="tag is-light cursor-pointer" @click.prevent="showReactions = !showReactions">
+                <a href="#" class="tag is-secondary cursor-pointer" @click.prevent="showReactions = !showReactions">
                     <i class="fa mr-1"
                         :class="{'fa-angles-left': showReactions,
                                  'fa-angles-right': !showReactions,
