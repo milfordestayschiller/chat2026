@@ -206,6 +206,9 @@ video {
     width: 40%;
     height: 40%;
     opacity: 0.02;
+    animation-name: subtle-pulsate;
+    animation-duration: 10s;
+    animation-iteration-count: infinite;
 }
 .corner-watermark {
     position: absolute;
@@ -218,5 +221,12 @@ video {
 }
 .invert-color {
     filter: invert(100%);
+}
+
+/* Animate the primary watermark to pulsate in opacity */
+@keyframes subtle-pulsate {
+    0% { opacity: 0.02; }
+    50% { opacity: 0.04; }
+    100% { opacity: 0.02; }
 }
 </style>
