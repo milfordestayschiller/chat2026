@@ -357,8 +357,8 @@ export default {
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mt-1">
-                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
-                    :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
+                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag mr-1 cursor-pointer"
+                    :class="{ 'has-text-info': iReacted(emoji), 'is-secondary': !iReacted(emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }}
 
@@ -427,8 +427,8 @@ export default {
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mb-2">
-                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag is-secondary mr-1 cursor-pointer"
-                    :class="{ 'is-success is-light': iReacted(msg, emoji), 'is-secondary': !iReacted(msg, emoji) }"
+                <span v-for="(users, emoji) in reactions" v-bind:key="emoji" class="tag mr-1 cursor-pointer"
+                    :class="{ 'has-text-info': iReacted(emoji), 'is-secondary': !iReacted(emoji) }"
                     :title="emoji + ' by: ' + users.join(', ')" @click="sendReact(emoji)">
                     {{ emoji }}
 
