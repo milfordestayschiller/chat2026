@@ -103,7 +103,13 @@ export default {
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
-        <video class="feed" :id="videoID" autoplay disablepictureinpicture :muted="localVideo" playsinline></video>
+        <video class="feed"
+            :id="videoID"
+            autoplay
+            disablepictureinpicture
+            playsinline
+            oncontextmenu="return false;"
+            :muted="localVideo"></video>
 
         <!-- Watermark layer -->
         <div v-if="watermarkImage">
