@@ -51,14 +51,15 @@
                 <li><a href="#features">Feature Highlights</a></li>
                 <li><a href="#browsers">Supported Browsers</a></li>
                 <li><a href="#privacy">Privacy</a></li>
+                <li><a href="#troubleshooting">Troubleshooting</a></li>
             </ul>
 
             <h1 id="tour">Tour of the user interface</h1>
 
             <div class="has-text-centered mb-4">
-                <img src="/static/img/screenshot.png" alt="Screenshot of the user interface on desktop">
+                <img src="/static/img/screenshot.png" width="1269" height="582" alt="Screenshot of the user interface on desktop">
                 <br><em>Pictured: Screenshot of the user interface on tablet or desktop-sized screens.</em><br><br>
-                <img src="/static/img/mobile.png" alt="Screenshot of the user interface on mobile">
+                <img src="/static/img/mobile.png" width="720" height="703" alt="Screenshot of the user interface on mobile">
                 <br><em>Pictured: Screenshot of the mobile interface</em>
             </div>
 
@@ -197,6 +198,8 @@
                 in to their webcams, respectively).
             </p>
 
+            <hr>
+
             <h1 id="features">Feature Highlights</h1>
 
             <h3 id="emoji-reactions">Emoji Reactions</h3>
@@ -258,6 +261,8 @@
             To learn more about Markdown, please check out the <a href="https://www.markdownguide.org" target="_blank">Markdown Guide</a>
             website.
             </p>
+
+            <hr>
 
             <h1 id="video-sharing">Video Sharing How-To's</h1>
 
@@ -374,6 +379,8 @@
                 sure that you have booted them!
             </p>
 
+            <hr>
+
             <h1 id="browsers">Supported Browsers</h1>
 
             <p>
@@ -381,6 +388,8 @@
                 web browsers and devices (Firefox, all Chromium browsers including Google Chrome or Microsoft
                 Edge, Safari, Androids and iPads).
             </p>
+
+            <hr>
 
             <h1 id="privacy">Privacy</h1>
 
@@ -424,6 +433,214 @@
                     record their computer and thus record a copy of your video. This is a risk inherent with all
                     video sharing platforms - you can't control what software the other party may be running,
                     so choose your risk tolerance accordingly.
+                </li>
+            </ul>
+
+            <hr>
+
+            <h1 id="troubleshooting">Troubleshooting</h1>
+
+            <p>
+                This section contains some troubleshooting advice for issues commonly experienced in the chat room.
+            </p>
+
+            <h2>Webcam Sharing</h2>
+
+            <h3>Permission Denied, or NotAllowedError</h3>
+
+            <p>
+                If you see an error message from <strong class="has-text-danger">ChatClient</strong> that says
+                something like "Webcam error: Permission denied" or a "NotAllowedError," this section is for you.
+            </p>
+
+            <p>
+                The reason for this error is that your web browser did not grant access to your Camera and Microphone
+                for the chat room to use. This may be because you accidentally clicked on the "Deny" button when your
+                browser asked you for permission, or because your web browser <em>itself</em> does not have permission for
+                these devices on your computer.
+            </p>
+
+            <p>
+                When you encounter this error, there are two places to look to resolve this:
+            </p>
+
+            <ol>
+                <li>
+                    In your web browser's settings (e.g. in Google Chrome or Firefox), make sure that you are granting
+                    permission for your Camera and Microphone to the chat room's website ({{.Hostname}}).
+                </li>
+                <li>
+                    In your operating system's settings, ensure that your web browser itself has permission to use
+                    your Camera and Microphone. <strong>Notice:</strong> on recent Mac OS and Windows systems, your
+                    web browser might not have permission by default to access these devices!
+                </li>
+            </ol>
+
+            <p>
+                Please see the following sections for in-depth guidance on where to look.
+            </p>
+
+            <p>
+                <strong>Notice:</strong> webcam sharing will require both your Camera <em>and</em> your Microphone
+                permission - if either one is denied, webcam sharing will fail.
+            </p>
+
+            <h4>1. Check your web browser's permissions for {{.Hostname}}</h4>
+
+            <p>
+                Go into your web browser's settings, to the "Privacy" or "Permissions" section and verify that
+                <code>{{.Hostname}}</code> has permissions to use your Camera <strong>and</strong> your Microphone.
+                Or at the very least: make sure that these settings are not set to "Deny" for {{.Hostname}}.
+            </p>
+
+            <p>
+                For example, on <i class="fab fa-chrome"></i> <strong>Google Chrome:</strong>
+            </p>
+
+            <ul>
+                <li>Go into your browser Settings -> "Privacy and security"</li>
+                <li>Click on "Site settings" <small>("Controls what information sites can use and show (location, camera, pop-ups, and more")</small></li>
+                <li>From here you can check the permissions in two ways:
+                    <ul>
+                        <li>Under the "Recent activity" section, look for {{.Hostname}} or click "View permissions and data stored across sites" to look for it there.</li>
+                        <li>Or: under the "Permissions" section, click into the "Camera" and "Microphone" settings to see the list of sites you've given/denied
+                            permission for, and change {{.Hostname}} to "Allow" or remove {{.Hostname}} from the list of sites.
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p>
+                Or for example, on <i class="fab fa-firefox"></i> <strong>Mozilla Firefox:</strong>
+            </p>
+
+            <ul>
+                <li>Go into your browser Settings -> "Privacy & Security"</li>
+                <li>Scroll down to the "Permissions" section where you see buttons for Camera and Microphone.</li>
+                <li>Click on the "Settings..." button for Camera and Microphone to see the list of websites you've given/denied permission for.</li>
+                <li>Find <code>{{.Hostname}}</code> and remove it from the list.</li>
+            </ul>
+
+            <p>
+                After changing your browser settings, <strong>exit and restart your web browser</strong> and log on to the chat room.
+                When going on webcam, hopefully your browser should ask you for permission for your webcam and microphone: be sure to
+                click on "Allow" when prompted.
+            </p>
+
+            <p>
+                If the change in your web browser's settings doesn't resolve the permission error, then check in your operating system's settings.
+            </p>
+
+            <h4>2. Check in your operating system's settings</h4>
+
+            <p>
+                For example, <strong>if you are on <i class="fab fa-apple"></i> Mac OS:</strong>
+            </p>
+
+            <ul>
+                <li>Click on the Apple icon in your top menu bar and open "System Settings"</li>
+                <li>Click on "Privacy &amp; Security"</li>
+                <li>Look for the Camera and Microphone settings and ensure that they are <strong>allowed</strong> for your web browser.</li>
+                <li>For more information, try: <a href="https://support.apple.com/guide/mac-help/control-access-to-your-camera-mchlf6d108da/mac">https://support.apple.com/guide/mac-help/control-access-to-your-camera-mchlf6d108da/mac</a></li>
+            </ul>
+
+            <p>
+                Or for example, <strong>if you are on <i class="fab fa-windows"></i> Windows 10 or Windows 11:</strong>
+            </p>
+
+            <ul>
+                <li>Click on the Start button > Settings > Privacy & Security > Camera, and make sure Camera access is turned <strong>on.</strong></li>
+                <li>Make sure that "Let apps access your camera" is also turned on.</li>
+                <li>Ensure that your web browser (e.g. Google Chrome) has permission to access your camera and microphone.</li>
+                <li>For more information, try: <a href="https://support.microsoft.com/en-us/windows/manage-app-permissions-for-your-camera-in-windows-87ebc757-1f87-7bbf-84b5-0686afb6ca6b">https://support.microsoft.com/en-us/windows/manage-app-permissions-for-your-camera-in-windows-87ebc757-1f87-7bbf-84b5-0686afb6ca6b</a></li>
+            </ul>
+
+            <h3>Other Webcam Errors</h3>
+
+            <p>
+                The most common error is a Permission Error as described above, but there are some less common
+                error messages you may experience. Here is a short list of some of them:
+            </p>
+
+            <ul>
+                <li>
+                    <strong>AbortError:</strong> e.g. "Starting videoinput failed"
+                    <br><br>
+                    A common cause for this error may be that your webcam device is already in use by a different program,
+                    so that your web browser was not able to open it. Please make sure that you are not running another video
+                    chat program (such as Skype or Zoom) which has your camera active, and try again.
+                </li>
+                <li>
+                    <strong>NotFoundError</strong> or <strong>NotReadableError</strong>
+                    <br><br>
+                    This error may indicate that your camera device was not available to your web browser. For example, your
+                    webcam might not be plugged in to USB or you may be missing hardware drivers for it. To begin diagnosing
+                    this problem, check whether <other>other</other> websites or apps are able to use your camera: if none of
+                    them can either, it heavily points toward a hardware or driver error.
+                </li>
+            </ul>
+
+            <p>
+                Other possible errors should be uncommon. If this troubleshooting guide has not been helpful, try copying
+                the error message into a search engine and find information online: all of the text following "Webcam error:"
+                will be coming from your web browser, so relevant results may be found online. A possible place to start may
+                be the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia">Mozilla documentation for getUserMedia.</a>
+            </p>
+
+            <h3>Other peoples' webcams don't load</h3>
+
+            <p>
+                It may sometimes happen that you clicked to watch somebody else's webcam on chat, and their video doesn't
+                load. If it only happens with <em>some</em> cameras (but other cameras load correctly), then the problem is
+                most likely on <em>that person's</em> side and not your own: their camera likely doesn't work for anybody
+                else who is trying to watch it, either.
+            </p>
+
+            <p>
+                Webcam sharing on the chat room works by "peer to peer" direct connections between chatters. Usually, this
+                tends to "just work" for most people, but sometimes your network connection or firewall can get in the way
+                and prevent a connection from being established.
+            </p>
+
+            <p>
+                The most common kinds of network conditions that cause problems connecting to webcams include:
+            </p>
+
+            <ul>
+                <li>
+                    If you are on a heavily firewalled network, such as in a school or workplace.
+                </li>
+                <li>
+                    If you are on a cellular network, e.g. from a smartphone or tablet. Some cell phone carriers
+                    add firewalls to their network to prevent direct peer-to-peer connections with mobile devices.
+                </li>
+                <li>
+                    If you are using a Virtual Private Network, or VPN: some VPN providers don't forward the kind
+                    of network messages that are needed to establish a peer-to-peer connection.
+                </li>
+            </ul>
+
+            <p>
+                For some specific advice:
+            </p>
+
+            <ul>
+                <li>
+                    If you can not connect to <strong>any</strong> webcam at all (e.g. many people are on webcam but you
+                    can not get <strong>any</strong> of them to work): most likely it is because you are on a firewalled
+                    network, like those listed above. If you are on a cell network, try switching to WiFi; or if you are
+                    using a VPN, try turning off your VPN.
+                </li>
+                <li>
+                    If <strong>only one or two webcams</strong> won't open for you, but others on the chat room are working:
+                    the problem is likely not on your end! It is likely that the people whose cameras are not working are
+                    on a firewalled network, and they are likely having worse problems than you are!
+                </li>
+                <li>
+                    If somebody's webcam button has a slash \ through it, like <i class="fa fa-video-slash has-text-info"></i>
+                    then it <em>probably</em> means that this person requires <strong>you</strong> to share your webcam first
+                    before you can open theirs. You can click on their camera button to see an exact reason why their camera
+                    has the \ slash through it.
                 </li>
             </ul>
         </div>

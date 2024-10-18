@@ -109,7 +109,8 @@ func AboutPage() http.HandlerFunc {
 			"CacheHash": util.RandomString(8),
 
 			// The current website settings.
-			"Config": config.Current,
+			"Config":   config.Current,
+			"Hostname": r.Host,
 		}
 
 		tmpl.Funcs(template.FuncMap{

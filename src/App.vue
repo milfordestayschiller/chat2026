@@ -2237,7 +2237,7 @@ export default {
                 // Begin dark video detection.
                 this.initDarkVideoDetection();
             }).catch(err => {
-                this.ChatClient(`Webcam error: ${err}`);
+                this.ChatClient(`Webcam error: ${err}<br><br>Please see the <a href="/about#troubleshooting">troubleshooting guide</a> for help.`);
             }).finally(() => {
                 this.webcam.busy = false;
             })
