@@ -230,7 +230,7 @@ export default {
 
                     // Configuration thresholds: how dark is too dark? (0-255)
                     // NOTE: 0=disable the feature.
-                    threshold: 0, // 10,
+                    threshold: 10,
                 },
             },
 
@@ -382,6 +382,9 @@ export default {
         this.setupConfig(); // localSettings persisted settings
         this.setupIdleDetection();
         this.setupDropZone(); // file upload drag/drop
+
+        // Export a handy sendMessage function to the global window scope.
+        window.SendMessage = this.sendCommand;
 
         // Configure the StatusMessage controller.
         StatusMessage.nsfw = this.config.permitNSFW;
@@ -1138,11 +1141,23 @@ export default {
                 if (this.webcam.darkVideo.lastImage === null) {
                     this.ChatClient("There is no recent image available.");
                 } else {
-                    this.ChatClient(
-                        `Last average color of your video: ${JSON.stringify(this.webcam.darkVideo.lastAverage)} ` +
-                        `<span style="background-color: ${this.webcam.darkVideo.lastAverageColor}">${this.webcam.darkVideo.lastAverageColor}</span>` +
-                        `<br><img src="${this.webcam.darkVideo.lastImage}" width="160" height="120">`
-                    );
+                    this.ChatClient(`
+                        <strong>Dark Video Detector: Diagnostics</strong><br><br>
+                        If your camera has been detected as being "too dark" but you believe this was an error, please
+                        find a chat moderator (or visit the main website and contact the support team) for assistance:
+                        you may be able to help us to resolve this error.<br><br>
+                        In your message to an admin, please copy the following information:<br><br>
+                        * The last average color detected from your video: ${JSON.stringify(this.webcam.darkVideo.lastAverage)}
+                          <span style="background-color: ${this.webcam.darkVideo.lastAverageColor}">${this.webcam.darkVideo.lastAverageColor}</span><br>
+                        * Your web browser user-agent: ${navigator.userAgent}<br><br>
+                        Below is a recent screenshot from your webcam, which the chat page uses to find the average color
+                        of your video feed. Note: if this image appears to be solid black, but your webcam was <strong>not</strong>
+                        actually this dark, definitely let us know! It may point to a bug in the dark video detector:<br><br>
+                        <img src="${this.webcam.darkVideo.lastImage}" width="160" height="120"><br><br>
+                        For a troubleshooting tip: if your webcam is a removable USB device, please try <strong>closing your web browser,
+                        unplugging and reconnecting your webcam, and then open your web browser again</strong> and see if the issue
+                        is resolved. If that worked, also let a chat moderator know!
+                    `);
                 }
                 this.message = "";
                 return;
@@ -2976,9 +2991,13 @@ export default {
                 if (this.wasTooDark) {
                     // Last sample was too dark too, = cut the camera.
                     this.stopVideo();
-                    this.ChatClient(
-                        "Your webcam was too dark to see anything and has been turned off.",
-                    );
+                    this.ChatClient(`
+                        Your webcam was too dark to see anything and has been turned off.<br><br>
+                        <strong>Note:</strong> if your camera did not look dark to you and you believe there
+                        may have been an error, please
+                        <button type="button" onclick="SendMessage('/debug-dark-video')" class="button is-small is-link is-outlined">click here</button> to see
+                        diagnostic information and contact a chat room moderator for assistance.
+                    `);
                 } else {
                     // Mark that this frame was too dark, if the next sample is too,
                     // cut their camera.
