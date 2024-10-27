@@ -1374,6 +1374,23 @@ export default {
                 }
             }
 
+            // Common callback handler after the confirmation box.
+            const callback = () => {
+                // Hang up videos both ways.
+                this.closeVideo(username);
+
+                this.sendMute(username, mute);
+                if (mute) {
+                    this.ChatClient(
+                        `You have muted <strong>${username}</strong> and will no longer see their chat messages, ` +
+                        `and they will not see whether your webcam is active. You may unmute them via the Who Is Online list.`);
+                } else {
+                    this.ChatClient(
+                        `You have unmuted <strong>${username}</strong> and can see their chat messages from now on.`,
+                    );
+                }
+            };
+
             if (mute) {
                 this.modalConfirm({
                     title: `Mute ${username}`,
@@ -1383,6 +1400,7 @@ export default {
                         `not be able to see whether your webcam is active until you unmute them.`,
                 }).then(() => {
                     this.muted[username] = true;
+                    callback();
                 });
             } else {
                 this.modalConfirm({
@@ -1393,21 +1411,8 @@ export default {
                         `they may be able to watch your webcam now if you are broadcasting!`,
                 }).then(() => {
                     delete this.muted[username];
+                    callback();
                 });
-            }
-
-            // Hang up videos both ways.
-            this.closeVideo(username);
-
-            this.sendMute(username, mute);
-            if (mute) {
-                this.ChatClient(
-                    `You have muted <strong>${username}</strong> and will no longer see their chat messages, ` +
-                    `and they will not see whether your webcam is active. You may unmute them via the Who Is Online list.`);
-            } else {
-                this.ChatClient(
-                    `You have unmuted <strong>${username}</strong> and can see their chat messages from now on.`,
-                );
             }
         },
         sendMute(username, mute) {
