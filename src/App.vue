@@ -4,6 +4,7 @@ import FloatingVue from 'floating-vue';
 import 'floating-vue/dist/style.css';
 import { Mentionable } from 'vue-mention';
 import EmojiPicker from 'vue3-emoji-picker';
+import hark from 'hark';
 
 import AlertModal from './components/AlertModal.vue';
 import LoginModal from './components/LoginModal.vue';
@@ -244,6 +245,7 @@ export default {
                 muted: {}, // muted bool per username
                 booted: {}, // booted bool per username
                 poppedOut: {}, // popped-out video per username
+                speaking: {}, // speaking boolean per username
 
                 // RTCPeerConnections per username.
                 pc: {},
@@ -1760,6 +1762,9 @@ export default {
                         this.WebRTC.muted[username] = true;
                         $ref.muted = true;
                     }
+
+                    // Set up the speech detector.
+                    this.initSpeakingEvents(username, $ref);
                 });
 
                 // Inform them they are being watched.
@@ -1789,7 +1794,7 @@ export default {
                     this.WebRTC.frozenStreamInterval[username] = setInterval(() => {
                         if (videoTrack.muted) freezeDetected();
                     }, 3000);
-                })
+                });
             };
 
             // ANSWERER: add our video to the connection so that the offerer (the one who
@@ -2256,6 +2261,9 @@ export default {
 
                 // Begin dark video detection.
                 this.initDarkVideoDetection();
+
+                // Begin monitoring for speaking events.
+                this.initSpeakingEvents(this.username, this.webcam.elem);
             }).catch(err => {
                 this.ChatClient(`Webcam error: ${err}<br><br>Please see the <a href="/about#troubleshooting">troubleshooting guide</a> for help.`);
             }).finally(() => {
@@ -2941,6 +2949,27 @@ export default {
 
                 inertia: true
             })
+        },
+
+        // Webcam "is speaking" functions.
+        initSpeakingEvents(username, element) {
+            // element is the <video> element, with the video stream
+            // (whether from getUserMedia or WebRTC) on srcObject.
+
+            let stream = element.srcObject,
+                feedElem = element.closest('div.feed'),
+                options = {},
+                speechEvents = hark(stream, options);
+
+            speechEvents.on('speaking', () => {
+                feedElem.classList.add('is-speaking');
+                this.WebRTC.speaking[username] = true;
+            });
+
+            speechEvents.on('stopped_speaking', () => {
+                feedElem.classList.remove('is-speaking');
+                this.WebRTC.speaking[username] = false;
+            });
         },
 
         // Dark video detection.
@@ -4749,6 +4778,7 @@ export default {
                         :is-explicit="webcam.nsfw"
                         :is-muted="webcam.muted"
                         :is-source-muted="webcam.muted"
+                        :is-speaking="WebRTC.speaking[username]"
                         :watermark-image="webcam.watermark"
                         @mute-video="muteMe()"
                         @popout="popoutVideo"
@@ -4761,6 +4791,7 @@ export default {
                         v-bind:key="username"
                         :username="username"
                         :popped-out="WebRTC.poppedOut[username]"
+                        :is-speaking="WebRTC.speaking[username]"
                         :is-explicit="isUsernameCamNSFW(username)"
                         :is-source-muted="isSourceMuted(username)"
                         :is-muted="isMuted(username)"

@@ -11,6 +11,7 @@ export default {
         isSourceMuted: Boolean, // camera is muted on the broadcaster's end
         isWatchingMe: Boolean, // other video is watching us back
         isFrozen: Boolean,     // video is detected as frozen
+        isSpeaking: Boolean,   // video is registering audio
         watermarkImage: Image, // watermark image to overlay (nullable)
     },
     components: {
@@ -38,6 +39,24 @@ export default {
         textColorClass() {
             return this.isExplicit ? 'has-text-camera-red' : 'has-text-camera-blue';
         },
+        muteButtonClass() {
+            let classList = [
+                'button is-small ml-1 px-2',
+            ]
+
+            if (this.isMuted) {
+                classList.push('is-danger');
+            } else {
+                classList.push('is-success is-outlined');
+            }
+            return classList.join(' ');
+        },
+        muteIconClass() {
+            if (this.localVideo) {
+                return this.isMuted ? 'fa-microphone-slash' : 'fa-microphone';
+            }
+            return this.isMuted ? 'fa-volume-xmark' : 'fa-volume-high';
+        }
     },
     methods: {
         closeVideo() {
@@ -103,7 +122,7 @@ export default {
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
-        <video class="feed"
+        <video
             :id="videoID"
             autoplay
             disablepictureinpicture
@@ -127,6 +146,11 @@ export default {
             <!-- Frozen stream detection -->
             <a class="fa fa-mountain ml-1" href="#" v-if="!localVideo && isFrozen" style="color: #00FFFF"
                 @click.prevent="reopenVideo()" title="Frozen video detected!"></a>
+
+            <!-- Is speaking -->
+            <span v-if="isSpeaking" class="ml-1" title="Speaking">
+                <i class="fa fa-volume-high has-text-info"></i>
+            </span>
         </div>
 
         <!-- Close button (others' videos only) -->
@@ -139,21 +163,9 @@ export default {
         <!-- Controls -->
         <div class="controls">
             <!-- Mute Button -->
-            <button type="button" v-if="!isMuted" class="button is-small is-success is-outlined ml-1 px-2"
-                :class="{'seethru': !mouseOver}"
+            <button type="button" :class="muteButtonClass"
                 @click="muteVideo()">
-                <i class="fa" :class="{
-                    'fa-microphone': localVideo,
-                    'fa-volume-high': !localVideo
-                }"></i>
-            </button>
-            <button type="button" v-else class="button is-small is-danger ml-1 px-2"
-                :class="{'seethru': !mouseOver}"
-                @click="muteVideo()">
-                <i class="fa" :class="{
-                    'fa-microphone-slash': localVideo,
-                    'fa-volume-xmark': !localVideo
-                }"></i>
+                <i class="fa" :class="muteIconClass"></i>
             </button>
 
             <!-- Pop-out Video -->

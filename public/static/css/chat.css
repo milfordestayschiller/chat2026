@@ -241,9 +241,15 @@ img {
     width: 168px;
     height: 112px;
     background-color: black;
+    border: 1px solid black;
     margin: 3px;
     overflow: hidden;
     resize: both;
+}
+
+/* A speaking webcam */
+.feed.is-speaking {
+    border: 1px solid #09F;
 }
 
 /* A popped-out video feed window */
