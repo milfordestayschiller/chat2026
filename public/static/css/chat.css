@@ -249,13 +249,12 @@ img {
 
 /* A speaking webcam */
 .feed.is-speaking {
-    border: 1px solid #09F;
+    border: 1px solid #09F !important;
 }
 
 /* A popped-out video feed window */
 div.feed.popped-out {
     position: absolute;
-    border: 1px solid #FFF;
     cursor: move;
     top: 0;
     left: 0;
