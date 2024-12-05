@@ -3109,6 +3109,14 @@ export default {
             }
         },
         pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient, messageID, timestamp = null, unshift = false }) {
+
+            // Ignore possibly-confusing ChatServer messages sent to admins.
+            // TODO: add a 'super-admin' tier separately to operator that still sees these.
+            if (isChatServer && (message.match(/ has booted you off of their camera!$/) || message.match(/ had booted you off their camera before, and won't be notified of your watch.$/))) {
+                // Redirect it to the debug log channel.
+                channel = DebugChannelID;
+            }
+
             // Default channel = your current channel.
             if (!channel) {
                 channel = this.channel;
