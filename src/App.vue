@@ -41,8 +41,15 @@ const configuration = {
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 const DebugChannelID = "barertc-debug";
 
+// Webcam sizes: ideal is 640x480 as this is the most friendly for end users, e.g. if everyone
+// broadcasted at 720p users on weaker hardware would run into problems sooner.
 const WebcamWidth = 640,
     WebcamHeight = 480;
+
+// For webcams that can not transmit at 640x480 (e.g. ultra widescreen), allow them to choose
+// the nearest resolution but no more than 720p.
+const WebcamMaxWidth = 1280,
+    WebcamMaxHeight = 720;
 
 export default {
     name: 'BareRTC',
@@ -2197,8 +2204,8 @@ export default {
             let mediaParams = {
                 audio: true,
                 video: {
-                    width: { max: WebcamWidth },
-                    height: { max: WebcamHeight },
+                    width: { ideal: WebcamWidth, max: WebcamMaxWidth },
+                    height: { ideal: WebcamHeight, max: WebcamMaxHeight },
                 },
             };
 
@@ -2246,6 +2253,10 @@ export default {
                 // Record the selected device IDs.
                 this.webcam.videoDeviceID = stream.getVideoTracks()[0].getSettings().deviceId;
                 this.webcam.audioDeviceID = stream.getAudioTracks()[0].getSettings().deviceId;
+
+                // For debugging: log to the debug channel what the chosen resolution is for the user.
+                let videoSettings = stream.getVideoTracks()[0].getSettings();
+                this.DebugChannel(`navigator.getUserMedia(): chosen video resolution is ${videoSettings.width}x${videoSettings.height}`);
 
                 // Collect video and audio devices to let the user change them in their settings.
                 this.getDevices().then(() => {
