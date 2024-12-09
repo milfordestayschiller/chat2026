@@ -1116,6 +1116,19 @@ export default {
                 return;
             }
 
+            // DEBUGGING: manual takeback admin command.
+            match = this.message.match(/^\/takeback (\d+)$/i);
+            if (match) {
+                let msgID = parseInt(match[1]);
+                this.client.send({
+                    action: "takeback",
+                    msgID: msgID,
+                });
+                this.ChatClient(`Takeback command send for message ID ${msgID}.`);
+                this.message = "";
+                return;
+            }
+
             // DEBUGGING: fake open a broken video to see the error graphic
             if (this.message.toLowerCase().indexOf("/debug-broken-video") === 0) {
                 this.WebRTC.streams["#broken"] = null;
@@ -2134,9 +2147,9 @@ export default {
                 message: "Do you want to take this message back? Doing so will remove this message from everybody's view in the chat room."
             }).then(() => {
                 this.client.send({
-                action: "takeback",
-                msgID: msg.msgID,
-            });
+                    action: "takeback",
+                    msgID: msg.msgID,
+                });
             });
         },
         removeMessage(msg) {

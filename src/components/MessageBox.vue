@@ -299,7 +299,8 @@ export default {
                         <!-- Owner or admin: take back the message -->
                         <button type="button" v-if="message.username === username || isOp"
                             class="button is-small px-2 ml-1"
-                            title="Take back this message (delete it for everybody)" @click="takeback()">
+                            title="Take back this message (delete it for everybody)" @click="takeback()"
+                            :data-msgid="message.msgID">
                             <i class="fa fa-rotate-left has-text-danger"></i>
                         </button>
 
@@ -483,7 +484,7 @@ export default {
                             </a>
 
                             <a href="#" class="dropdown-item" v-if="message.username === username || isOp"
-                                @click.prevent="takeback()">
+                                @click.prevent="takeback()" :data-msgid="message.msgID">
                                 <i class="fa fa-rotate-left has-text-danger mr-1"></i>
                                 Take back
                             </a>
