@@ -3838,6 +3838,11 @@ export default {
             // Set the "reported" flag.
             this.reportModal.origMessage.reported = true;
         },
+        doCustomReport({ message, classification, comment }) {
+            // A fully custom report, e.g. for the Ban Modal.
+            this.reportModal.message = message;
+            this.doReport({ classification, comment });
+        },
     }
 };
 </script>
@@ -4558,6 +4563,7 @@ export default {
         @mute-user="muteUser"
         @boot-user="bootUser"
         @send-command="sendCommand"
+        @report="doCustomReport"
         @cancel="profileModal.visible = false"></ProfileModal>
 
     <div class="chat-container">

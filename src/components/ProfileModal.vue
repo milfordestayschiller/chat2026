@@ -22,6 +22,11 @@ export default {
             // Profile data
             profileFields: [],
 
+            // Ban account data
+            banModalVisible: false,
+            banReason: "",
+            banDuration: 24,
+
             // Error messaging from backend
             error: null,
         };
@@ -148,13 +153,37 @@ export default {
             this.$emit('send-command', `/kick ${this.user.username}`);
         },
         banUser() {
-            let hours = window.prompt(
-                "Ban this user for how many hours? (Default 24)",
-                "24",
-            );
-            if (!/^\d+$/.test(hours)) return;
+            this.banModalVisible = true;
+            this.banReason = "";
+            this.banDuration = 24;
+            window.requestAnimationFrame(() => {
+                let reason = document.querySelector("#ban_reason");
+                if (reason) {
+                    reason.focus();
+                }
+            });
+        },
+        confirmBan() {
+            // Send the ban command.
+            this.$emit('send-command', `/ban ${this.user.username} ${this.banDuration}`);
 
-            this.$emit('send-command', `/ban ${this.user.username} ${hours}`);
+            // Also send an admin report to the main website.
+            this.$emit('report', {
+                message: {
+                    channel: `n/a`,
+                    username: this.user.username,
+                    at: new Date(),
+                    message: 'Ban reason: ' + this.banReason,
+                },
+                classification: 'User banned by admin',
+                comment: `A chat admin has banned ${this.user.username} from the chat room!\n\n` +
+                    `* Chat admin: <a href="/u/${this.username}">${this.username}</a>\n` +
+                    `* Reason: ${this.banReason}\n` +
+                    `* Duration: ${this.banDuration} hours`,
+            });
+
+            this.banModalVisible = false;
+            this.cancel();
         },
 
         urlFor(url) {
@@ -336,6 +365,48 @@ export default {
                     </a>
                 </footer>
             </div>
+        </div>
+    </div>
+
+    <!-- Ban User Modal (for chat admins) -->
+    <div class="modal" :class="{ 'is-active': banModalVisible }">
+        <div class="modal-background" @click="banModalVisible = false"></div>
+        <div class="modal-content">
+            <form @submit.prevent="confirmBan">
+                <div class="card">
+                    <header class="card-header has-background-danger">
+                        <p class="card-header-title">Ban User</p>
+                    </header>
+                    <div class="card-content">
+                        <div class="field">
+                            <label class="label" for="ban_reason">Reason for the ban:</label>
+                            <input type="text" class="input"
+                                id="ban_reason"
+                                placeholder="Please describe why this user will be banned."
+                                v-model="banReason"
+                                required>
+                            <p class="help">
+                                This reason is NOT shown to the banned user, but will be sent to the main website
+                                in an admin report so that it may be documented in this user's history.
+                            </p>
+                        </div>
+
+                        <div class="field">
+                            <label class="label" for="ban_duration">How long for the ban? (1-96 hours)</label>
+                            <input type="number" min="1" max="96" v-model="banDuration" class="input">
+                        </div>
+
+                        <div class="field has-text-centered">
+                            <button type="submit" class="button is-danger">
+                                Confirm Ban
+                            </button>
+                            <a href="#" @click.prevent="banModalVisible = false" class="button ml-2">
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </template>
