@@ -1,6 +1,7 @@
 <script>
 import EmojiPicker from 'vue3-emoji-picker';
 import LocalStorage from '../lib/LocalStorage';
+import ScamDetection from './ScamDetection.vue';
 import 'vue3-emoji-picker/css';
 
 export default {
@@ -23,6 +24,7 @@ export default {
     },
     components: {
         EmojiPicker,
+        ScamDetection,
     },
     data() {
         return {
@@ -161,6 +163,13 @@ export default {
                 }
             }
             return false;
+        },
+
+        // Google Translate link.
+        translate() {
+            let message = this.message?.message.replace(/<(.|\n)+?>/g, "");
+            let url = `https://translate.google.com/?sl=auto&tl=en&text=${encodeURIComponent(message)}&op=translate`;
+            window.open(url);
         },
 
         // TODO: DRY
@@ -317,12 +326,21 @@ export default {
 
         <!-- Report & Emoji buttons -->
         <div v-if="message.msgID && !noButtons" class="emoji-button columns is-mobile is-gapless mb-0">
+            <!-- Translate message button -->
+            <div class="column">
+                <button class="button is-small mr-1 py-2 has-text-success"
+                    title="Translate this message using Google Translate"
+                    @click.prevent="translate()">
+                    <i class="fab fa-google"></i>
+                </button>
+            </div>
+
             <!-- Report message button -->
             <div class="column" v-if="reportEnabled && message.username !== username">
                 <button class="button is-small is-outlined mr-1 py-2" :class="{
                     'is-danger': !message.reported,
                     'has-text-grey': message.reported
-                }" title="Report this message" @click="reportMessage()">
+                }" title="Report this message" @click.prevent="reportMessage()">
                     <i class="fa fa-flag"></i>
                     <i class="fa fa-check ml-1" v-if="message.reported"></i>
                 </button>
@@ -333,7 +351,7 @@ export default {
                 @click="showEmojiPicker = true">
                 <div class="dropdown-trigger">
                     <button type="button" class="button is-small px-2" aria-haspopup="true"
-                        :aria-controls="`react-menu-${message.msgID}`" @click="hideEmojiPicker()">
+                        :aria-controls="`react-menu-${message.msgID}`" @click.prevent="hideEmojiPicker()">
                         <span>
                             <i class="fa fa-heart has-text-grey"></i>
                             <i class="fa fa-plus has-text-grey pl-1"></i>
@@ -355,6 +373,12 @@ export default {
         <div class="content pl-5 pb-3 pt-1 mb-5">
             <em v-if="message.action === 'presence'">{{ message.message }}</em>
             <div v-else v-html="message.message"></div>
+
+            <!-- Possible scam message disclaimer -->
+            <ScamDetection v-if="message.username !== username"
+                :username="message.username"
+                :message="message.message">
+            </ScamDetection>
 
             <!-- Reactions so far? -->
             <div v-if="hasReactions" class="mt-1">
@@ -424,6 +448,12 @@ export default {
                 </strong>
 
                 <span v-html="compactMessage"></span>
+
+                <!-- Possible scam message disclaimer -->
+                <ScamDetection v-if="message.username !== username"
+                    :username="message.username"
+                    :message="message.message">
+                </ScamDetection>
             </div>
 
             <!-- Reactions so far? -->
@@ -493,6 +523,13 @@ export default {
                                 @click.prevent="removeMessage()">
                                 <i class="fa fa-trash mr-1"></i>
                                 Hide message
+                            </a>
+
+                            <!-- Google Translate -->
+                            <a href="#" class="dropdown-item"
+                                @click.prevent="translate()">
+                                <i class="fab fa-google mr-1"></i>
+                                Google Translate <i class="fa fa-external-link ml-1"></i>
                             </a>
 
                             <!-- Report button -->
