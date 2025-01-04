@@ -331,7 +331,7 @@ export default {
                 <button class="button is-small mr-1 py-2 has-text-success"
                     title="Translate this message using Google Translate"
                     @click.prevent="translate()">
-                    <i class="fab fa-google"></i>
+                    <i class="fab fa-google has-text-success"></i>
                 </button>
             </div>
 
@@ -528,7 +528,7 @@ export default {
                             <!-- Google Translate -->
                             <a href="#" class="dropdown-item"
                                 @click.prevent="translate()">
-                                <i class="fab fa-google mr-1"></i>
+                                <i class="fab fa-google has-text-success mr-1"></i>
                                 Google Translate <i class="fa fa-external-link ml-1"></i>
                             </a>
 

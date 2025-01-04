@@ -30,6 +30,9 @@ func (sub *Subscriber) GetModerationRule() *config.ModerationRule {
 			if rule.IsNoBroadcastRule() {
 				rules.NoBroadcast = true
 			}
+			if rule.IsNoDarkVideoRule() {
+				rules.NoDarkVideo = true
+			}
 		}
 	}
 

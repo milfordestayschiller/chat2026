@@ -138,6 +138,7 @@ type ModerationRule struct {
 	NoBroadcast      bool
 	NoVideo          bool
 	NoImage          bool
+	NoDarkVideo      bool
 }
 
 // Current loaded configuration.

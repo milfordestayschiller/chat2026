@@ -3043,6 +3043,9 @@ export default {
             this.webcam.darkVideo.lastAverage = rgb;
             this.webcam.darkVideo.lastAverageColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`;
 
+            // If they are exempt from the dark video rule, do not check their camera color.
+            if (this.jwt.rules.IsNoDarkVideoRule) return;
+
             // If the average total color is below the threshold (too dark of a video).
             let averageBrightness = Math.floor((rgb[0] + rgb[1] + rgb[2]) / 3);
             if (averageBrightness < this.webcam.darkVideo.threshold) {

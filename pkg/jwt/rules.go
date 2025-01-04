@@ -14,6 +14,7 @@ const (
 	NoBroadcastRule = Rule("nobroadcast") // They can not share their webcam
 	NoImageRule     = Rule("noimage")     // Can not upload or see images
 	RedCamRule      = Rule("redcam")      // Their camera is force marked NSFW
+	NoDarkVideoRule = Rule("nodvd")       // Exempt user from the dark video detector
 )
 
 func (r Rule) IsNoVideoRule() bool {
@@ -32,6 +33,10 @@ func (r Rule) IsRedCamRule() bool {
 	return r == RedCamRule
 }
 
+func (r Rule) IsNoDarkVideoRule() bool {
+	return r == NoDarkVideoRule
+}
+
 // Rules are the plural set of rules as shown on a JWT token (string array),
 // with some extra functionality attached such as an easy serializer to JSON.
 type Rules []Rule
@@ -44,6 +49,7 @@ func (r Rules) ToDict() map[string]bool {
 		"IsNoImageRule":     false,
 		"IsNoBroadcastRule": false,
 		"IsRedCamRule":      false,
+		"IsNoDarkVideoRule": false,
 	}
 
 	for _, rule := range r {
@@ -58,6 +64,9 @@ func (r Rules) ToDict() map[string]bool {
 		}
 		if v := rule.IsRedCamRule(); v {
 			result["IsRedCamRule"] = true
+		}
+		if v := rule.IsNoDarkVideoRule(); v {
+			result["IsNoDarkVideoRule"] = true
 		}
 	}
 
