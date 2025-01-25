@@ -2999,7 +2999,7 @@ export default {
         // Dark video detection.
         initDarkVideoDetection() {
             if (this.webcam.darkVideo.canvas === null) {
-                let canvas = document.createElement("canvas"),
+                let canvas = document.querySelector("#darkVideoCanvas"),
                     ctx = canvas.getContext('2d');
                 canvas.width = WebcamWidth;
                 canvas.height = WebcamHeight;
@@ -5139,6 +5139,31 @@ export default {
                 </div>
             </div>
         </div>
+    </div>
+
+    <!--
+        Dark Video Detector Canvas
+
+        Notes:
+        - Originally, we did document.createElement("canvas") to create a canvas
+          on the fly, not placed on the web page. This usually worked most of the time,
+          and most cameras could be screenshotted into it and read back out.
+        - Sometimes, certain webcam models or certain conditions caused the canvas
+          to read back as a solid black image, which would trigger a false positive
+          for their dark video and cut their camera off.
+        - From experimenting, it was found that by using a Canvas that existed on
+          the page, and *making sure the Canvas was visible on page*, it was able to
+          work in cases where the createElement() Canvas did not.
+        - The page canvas *MUST BE VISIBLE* though: if it was set to display:none, or
+          set to opacity:0, or put inside a 0x0 pixel container, or if its parent
+          element had ANY of those properties set: the Canvas would only get a solid
+          black screenshot still.
+
+        So, we stick the canvas into a 1x1 pixel container and put it in the
+        corner of the page.
+    -->
+    <div style="width: 1px; height: 1px; overflow: hidden; position: absolute; bottom: 0; right: 0">
+        <canvas id="darkVideoCanvas"></canvas>
     </div>
 
     <!-- Theme CSS (light/dark) -->
