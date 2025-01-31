@@ -9,15 +9,20 @@ export default {
         };
     },
     computed: {
+        // Message sans HTML tags, so we don't false positive on base64-encoded image data.
+        filteredMessage() {
+            return this.message.replace(/<(.|\n)+?>/g, "");
+        },
+
         // Scam/spam detection and warning.
         maybeWhatsAppScam() {
-            return this.message.match(/whats\s*app/i);
+            return this.filteredMessage.match(/whats\s*app/i);
         },
         maybePhoneNumberScam() {
-            return this.message.match(/\b(phone number|phone|digits|cell number|your number|ur number|text me)\b/i);
+            return this.filteredMessage.match(/\b(phone number|phone|digits|cell number|your number|ur number|text me)\b/i);
         },
         maybeOffPlatformScam() {
-            return this.message.match(/\b(telegram|signal|kik|session)\b/i);
+            return this.filteredMessage.match(/\b(telegram|signal|kik)\b/i);
         },
     },
     methods: {
