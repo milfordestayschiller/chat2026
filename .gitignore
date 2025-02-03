@@ -1,5 +1,11 @@
 settings.toml
 chatbot/
+*.sqlite
+
+# Binaries
+BareBot
+BareRTC
+
 # Logs
 logs
 *.log

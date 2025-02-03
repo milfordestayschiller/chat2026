@@ -5,12 +5,22 @@ This document will explain how to download and install BareRTC on your own web s
 At this time, BareRTC is not released as a versioned pre-built archive, but as source code. This may change in the future but for now you'll need to git clone or download the source code and compile it, all of which should be easy to do on a Linux or macOS server.
 
 - [Installing BareRTC](#installing-barertc)
+  - [Docker Compose](#docker-compose)
   - [Requirements \& Dependencies](#requirements--dependencies)
   - [Installation](#installation)
   - [Deploying to Production](#deploying-to-production)
   - [Developing This App](#developing-this-app)
 - [License](#license)
 
+## Docker Compose
+
+There is an easy docker-compose.yml in the git repo:
+
+```bash
+docker-compose up
+```
+
+Look inside the file for more information.
 
 ## Requirements & Dependencies
 
