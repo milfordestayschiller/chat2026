@@ -56,7 +56,7 @@ export default {
 
                         <p class="literal mb-4">{{ message }}</p>
 
-                        <div class="columns is-centered">
+                        <div class="columns is-centered is-mobile">
                             <div class="column is-narrow">
                                 <button type="submit"
                                     class="button is-success px-5">

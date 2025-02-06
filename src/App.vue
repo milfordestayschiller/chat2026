@@ -655,6 +655,11 @@ export default {
             // Is the current channel a DM?
             return this.channel.indexOf("@") === 0;
         },
+        currentDMPartner() {
+            // If you are currently in a DM channel, get the User object of your partner.
+            if (!this.isDM) return {};
+            return this.whoMap[this.normalizeUsername(this.channel)];
+        },
         pageTitleUnreadPrefix() {
             // When the page is not focused, put count of unread DMs in the title bar.
             if (this.windowFocused) return "";
@@ -2122,17 +2127,16 @@ export default {
             }
             return false;
         },
-        leaveDM() {
+        leaveDM(channel) {
             // Validate we're in a DM currently.
-            if (this.channel.indexOf("@") !== 0) return;
+            if (channel.indexOf("@") !== 0) return;
 
             this.modalConfirm({
                 title: "Close conversation thread",
                 icon: "fa fa-trash",
-                message: "Do you want to close this chat thread? This will remove the conversation from your view, but " +
+                message: `Do you want to close this chat with ${channel}? This will remove the conversation from your view, but ` +
                     "your chat partner may still have the conversation open on their device.",
             }).then(() => {
-                let channel = this.channel;
                 this.setChannel(this.config.channels[0].ID);
                 delete (this.channels[channel]);
                 delete (this.directMessageHistory[channel]);
@@ -2703,6 +2707,24 @@ export default {
 
             if (this.isVideoNotAllowed(user)) return 'fa-video-slash';
             return 'fa-video';
+        },
+        isUsernameOnCamera(username) {
+            return this.whoMap[username].video & VideoFlag.Active;
+        },
+        webcamButtonClass(username) {
+            // This styles the convenient video button that appears in the header bar
+            // of DM threads if your chat partner is on camera.
+            let video = this.whoMap[username].video;
+
+            if (!(video & VideoFlag.Active)) {
+                return "";
+            }
+
+            if (video & VideoFlag.NSFW) {
+                return "is-danger";
+            }
+
+            return "is-link";
         },
         isVideoNotAllowed(user) {
             // Returns whether the video button to open a user's cam will be not allowed (crossed out)
@@ -4665,7 +4687,7 @@ export default {
                 <header class="card-header has-background-success">
                     <div class="columns is-mobile card-header-title">
                         <div class="column is-narrow mobile-only">
-                            <button type="button" class="button is-success px-2" @click="openChatPanel">
+                            <button type="button" class="button is-success px-2 py-1" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>
                         </div>
@@ -4675,7 +4697,7 @@ export default {
                 <div class="card-content">
                     <aside class="menu">
                         <p class="menu-label">
-                            Chat Rooms
+                            Public Channels
                         </p>
 
                         <ul class="menu-list">
@@ -4709,14 +4731,18 @@ export default {
                                         </div>
 
                                         <div class="column">
-                                            <del v-if="isUserOffline(c.name)">
-                                                {{ c.name }}
-                                            </del>
-                                            <span v-else>{{ c.name }}</span>
+                                            <div class="forcibly-truncate-wrapper forcibly-single-line" style="height: 24px">
+                                                <div class="forcibly-truncate-body">
+                                                    <span v-if="c.unread" class="tag is-danger mr-1">
+                                                        {{ c.unread }}
+                                                    </span>
 
-                                            <span v-if="c.unread" class="tag is-danger ml-1">
-                                                {{ c.unread }}
-                                            </span>
+                                                    <del v-if="isUserOffline(c.name)">
+                                                        {{ c.name }}
+                                                    </del>
+                                                    <span v-else>{{ c.name }}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -4748,11 +4774,11 @@ export default {
             <div class="card grid-card">
                 <header class="card-header" :class="{ 'has-background-private': isDM, 'has-background-link': !isDM }">
                     <div class="columns is-mobile card-header-title has-text-light">
+
+                        <!-- Responsive mobile button to pan to Left Column -->
                         <div class="column is-narrow mobile-only pr-0">
-                            <!-- Responsive mobile button to pan to Left Column -->
-                            <button type="button" class="button is-success px-2" @click="openChannelsPanel">
-                                <i v-if="isDM" class="fa fa-arrow-left"></i>
-                                <i v-else class="fa fa-comments"></i>
+                            <button type="button" class="button is-success px-2 py-1" @click="openChannelsPanel">
+                                <i class="fa fa-comments"></i>
 
                                 <!-- Indicator badge for unread messages -->
                                 <span v-if="hasAnyUnread() > 0" class="tag ml-1" :class="{ 'is-danger': anyUnreadDMs() }">
@@ -4760,8 +4786,37 @@ export default {
                                 </span>
                             </button>
                         </div>
+
+                        <!-- If this is a DM thread and the chat partner is on webcam, show the video button -->
+                        <div v-if="isDM && isUsernameOnCamera(currentDMPartner.username)"
+                            class="column is-narrow pr-0">
+                            <button type="button" class="button px-2 py-1"
+                                :class="webcamButtonClass(currentDMPartner.username)"
+                                :title="`View ${channel}'s camera`"
+                                @click="openVideo(currentDMPartner)">
+                                <i class="fa" :class="webcamIconClass(currentDMPartner)"></i>
+                            </button>
+                        </div>
+
+                        <!-- Channel title -->
                         <div class="column">
-                            {{ channelName }}
+
+                            <!-- This forcibly crops the title in case someone's username is too long -->
+                            <div class="forcibly-truncate-wrapper">
+                                &nbsp; <!-- For natural height of parent (relative) container -->
+
+                                <div class="forcibly-truncate-body">
+                                    <!-- On a DM thread, clicking the username opens their profile card. -->
+                                    <div v-if="isDM">
+                                        <a href="#" class="has-text-light" @click.prevent="showProfileModal(currentDMPartner.username)">
+                                            {{ channelName }}
+                                        </a>
+                                    </div>
+                                    <div v-else>
+                                        {{ channelName }}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Easy video zoom buttons -->
@@ -4783,25 +4838,17 @@ export default {
                         </div>
 
                         <!-- DM thread buttons -->
-                        <div class="column is-narrow" v-if="channel.indexOf('@') === 0">
-                            <!-- If the user has a profile URL -->
-                            <button type="button" v-if="profileURLForUsername(channel)"
-                                class="button is-small is-outlined is-light mr-1"
-                                @click="openProfile({ username: channel })">
-                                <i class="fa fa-user"></i>
-                            </button>
-
+                        <div class="column is-narrow" v-if="isDM">
                             <!-- DMs: Leave convo button -->
                             <button type="button" class="float-right button is-small is-warning is-outlined"
-                                @click="leaveDM()">
+                                @click="leaveDM(channel)">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>
 
-                        <!-- Who List button, only shown on public channel view -->
-                        <div v-if="!isDM" class="column is-narrow mobile-only">
-                            <!-- Responsive mobile button to pan to Right Column -->
-                            <button type="button" class="button is-success px-2" @click="openWhoPanel">
+                        <!-- Who List button: Responsive mobile button to pan to Right Column -->
+                        <div class="column is-narrow pl-0 mobile-only">
+                            <button type="button" class="button is-success px-2 py-1" @click="openWhoPanel">
                                 <i class="fa fa-user-group"></i>
                             </button>
                         </div>
@@ -5020,7 +5067,7 @@ export default {
                     <div class="columns is-mobile card-header-title">
                         <div class="column">Who Is Online</div>
                         <div class="column is-narrow mobile-only">
-                            <button type="button" class="button is-success px-2" @click="openChatPanel">
+                            <button type="button" class="button is-success px-2 py-1" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
                             </button>
                         </div>
@@ -5186,5 +5233,20 @@ export default {
 
 .mention-selected {
     background: rgb(192, 250, 153);
+}
+
+/* Forcibly truncating long texts */
+.forcibly-truncate-wrapper {
+    position: relative;
+    overflow: hidden !important;
+}
+.forcibly-truncate-body {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+}
+.forcibly-single-line {
+    white-space: nowrap;
 }
 </style>
