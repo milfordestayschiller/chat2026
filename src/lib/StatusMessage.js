@@ -64,6 +64,12 @@ const StatusOptions = [
                 icon: "fa fa-film"
             },
             {
+                name: "workout",
+                label: "Working out",
+                emoji: "🏋️",
+                icon: "fa-solid fa-dumbbell who-status-wide-icon-2",
+            },
+            {
                 name: "travel",
                 label: "Traveling",
                 emoji: "✈️",
