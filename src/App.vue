@@ -14,6 +14,7 @@ import MessageBox from './components/MessageBox.vue';
 import WhoListRow from './components/WhoListRow.vue';
 import VideoFeed from './components/VideoFeed.vue';
 import ProfileModal from './components/ProfileModal.vue';
+import MessageHistoryModal from './components/MessageHistoryModal.vue';
 
 import ChatClient from './lib/ChatClient';
 import LocalStorage from './lib/LocalStorage';
@@ -68,6 +69,7 @@ export default {
         WhoListRow,
         VideoFeed,
         ProfileModal,
+        MessageHistoryModal,
     },
     data() {
         return {
@@ -234,7 +236,8 @@ export default {
                     lastImage: null, // data: uri of last screenshot taken
                     lastAverage: [], // last average RGB color
                     lastAverageColor: "rgba(255, 0, 255, 1)",
-                    wasTooDark: false, // previous average was too dark
+                    tooDarkFrames: 0,  // frame counter for dark videos
+                    tooDarkFramesLimit: 4, // frames in a row of too dark before cut
 
                     // Configuration thresholds: how dark is too dark? (0-255)
                     // NOTE: 0=disable the feature.
@@ -384,6 +387,10 @@ export default {
                 visible: false,
                 user: {},
                 username: "",
+            },
+
+            messageHistoryModal: {
+                visible: false,
             },
         }
     },
@@ -658,7 +665,14 @@ export default {
         currentDMPartner() {
             // If you are currently in a DM channel, get the User object of your partner.
             if (!this.isDM) return {};
-            return this.whoMap[this.normalizeUsername(this.channel)];
+
+            // If the user is not in the Who Map (e.g. from the history modal and the user is not online)
+            let username = this.normalizeUsername(this.channel);
+            if (this.whoMap[username] == undefined) {
+                return {};
+            }
+
+            return this.whoMap[username];
         },
         pageTitleUnreadPrefix() {
             // When the page is not focused, put count of unread DMs in the title bar.
@@ -2287,8 +2301,8 @@ export default {
                     this.updateWebRTCStreams();
                 }
 
-                // Begin dark video detection.
-                this.initDarkVideoDetection();
+                // Begin dark video detection as soon as the video is ready to capture frames.
+                this.webcam.elem.addEventListener("canplaythrough", this.initDarkVideoDetection);
 
                 // Begin monitoring for speaking events.
                 this.initSpeakingEvents(this.username, this.webcam.elem);
@@ -2709,7 +2723,7 @@ export default {
             return 'fa-video';
         },
         isUsernameOnCamera(username) {
-            return this.whoMap[username].video & VideoFlag.Active;
+            return this.whoMap[username]?.video & VideoFlag.Active;
         },
         webcamButtonClass(username) {
             // This styles the convenient video button that appears in the header bar
@@ -3029,6 +3043,9 @@ export default {
                 this.webcam.darkVideo.ctx = ctx;
             }
 
+            // Reset the dark frame counter.
+            this.webcam.darkVideo.tooDarkFrames = 0;
+
             if (this.webcam.darkVideo.interval !== null) {
                 clearInterval(this.webcam.darkVideo.interval);
             }
@@ -3040,6 +3057,9 @@ export default {
             if (this.webcam.darkVideo.interval !== null) {
                 clearInterval(this.webcam.darkVideo.interval);
             }
+
+            // Remove the canplaythrough event, it will be re-added if the user restarts their cam.
+            this.webcam.elem.removeEventListener("canplaythrough", this.initDarkVideoDetection);
         },
         darkVideoInterval() {
             if (!this.webcam.active) { // safety
@@ -3071,8 +3091,12 @@ export default {
             // If the average total color is below the threshold (too dark of a video).
             let averageBrightness = Math.floor((rgb[0] + rgb[1] + rgb[2]) / 3);
             if (averageBrightness < this.webcam.darkVideo.threshold) {
-                if (this.wasTooDark) {
-                    // Last sample was too dark too, = cut the camera.
+
+                // Count for how many frames their camera is too dark.
+                this.webcam.darkVideo.tooDarkFrames++;
+
+                // After too long, cut their camera.
+                if (this.webcam.darkVideo.tooDarkFrames >= this.webcam.darkVideo.tooDarkFramesLimit) {
                     this.stopVideo();
                     this.ChatClient(`
                         Your webcam was too dark to see anything and has been turned off.<br><br>
@@ -3081,13 +3105,9 @@ export default {
                         <button type="button" onclick="SendMessage('/debug-dark-video')" class="button is-small is-link is-outlined">click here</button> to see
                         diagnostic information and contact a chat room moderator for assistance.
                     `);
-                } else {
-                    // Mark that this frame was too dark, if the next sample is too,
-                    // cut their camera.
-                    this.wasTooDark = true;
                 }
             } else {
-                this.wasTooDark = false;
+                this.webcam.darkVideo.tooDarkFrames = 0;
             }
         },
         getAverageRGB(ctx) {
@@ -4591,6 +4611,14 @@ export default {
         @report="doCustomReport"
         @cancel="profileModal.visible = false"></ProfileModal>
 
+    <!-- DMs History of Usernames Modal -->
+    <MessageHistoryModal
+        :visible="messageHistoryModal.visible"
+        :jwt="jwt.token"
+        @open-chat="openDMs"
+        @cancel="messageHistoryModal.visible = false"
+    ></MessageHistoryModal>
+
     <div class="chat-container">
 
         <!-- Top header panel -->
@@ -4746,6 +4774,14 @@ export default {
                                         </div>
                                     </div>
 
+                                </a>
+                            </li>
+
+                            <!-- History button -->
+                            <li v-if="jwt.token">
+                                <a href="#" @click.prevent="messageHistoryModal.visible = !messageHistoryModal.visible">
+                                    <i class="fa fa-clock mr-1"></i>
+                                    History
                                 </a>
                             </li>
                         </ul>

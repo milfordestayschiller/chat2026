@@ -221,6 +221,102 @@ func PaginateDirectMessages(fromUsername, toUsername string, beforeID int64) ([]
 	return result, remaining, nil
 }
 
+// PaginateUsernames returns a page of usernames that the current user has conversations with.
+//
+// Returns the usernames, total count, pages, and error.
+func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, int, int, error) {
+	if DB == nil {
+		return nil, 0, 0, ErrNotInitialized
+	}
+
+	var (
+		result  = []string{}
+		count   int // Total count of usernames
+		pages   int // Number of pages available
+		offset  = (page - 1) * perPage
+		orderBy string
+
+		// Channel IDs.
+		channelIDs = []string{
+			fmt.Sprintf(`@%s:%%`, fromUsername),
+			fmt.Sprintf(`%%:@%s`, fromUsername),
+		}
+	)
+
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Whitelist the sort strings.
+	switch sort {
+	case "a-z":
+		orderBy = "username ASC"
+	case "z-a":
+		orderBy = "username DESC"
+	case "oldest":
+		orderBy = "timestamp ASC"
+	default:
+		// default = newest
+		orderBy = "timestamp DESC"
+	}
+
+	rows, err := DB.Query(
+		// Note: for some reason, the SQLite driver doesn't allow a parameterized
+		// query for ORDER BY (e.g. "ORDER BY ?") - so, since we have already
+		// whitelisted acceptable orders, use a Sprintf to interpolate that
+		// directly into the query.
+		fmt.Sprintf(`
+			SELECT distinct(username)
+			FROM direct_messages
+			WHERE (
+				channel_id LIKE ?
+				OR channel_id LIKE ?
+			)
+			AND username <> ?
+			ORDER BY %s
+			LIMIT ?
+			OFFSET ?`,
+			orderBy,
+		),
+		channelIDs[0], channelIDs[1], fromUsername, perPage, offset,
+	)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	for rows.Next() {
+		var username string
+		if err := rows.Scan(
+			&username,
+		); err != nil {
+			return nil, 0, 0, err
+		}
+
+		result = append(result, username)
+	}
+
+	// Get a total count of usernames.
+	row := DB.QueryRow(`
+		SELECT COUNT(distinct(username))
+		FROM direct_messages
+		WHERE (
+			channel_id LIKE ?
+			OR channel_id LIKE ?
+		)
+		AND username <> ?
+	`, channelIDs[0], channelIDs[1], fromUsername)
+	if err := row.Scan(&count); err != nil {
+		return nil, 0, 0, err
+	}
+
+	pages = int(math.Ceil(float64(count) / float64(perPage)))
+	if pages < 1 {
+		pages = 1
+	}
+
+	return result, count, pages, nil
+}
+
 // CreateChannelID returns a deterministic channel ID for a direct message conversation.
 //
 // The usernames (passed in any order) are sorted alphabetically and composed into the channel ID.

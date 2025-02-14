@@ -58,6 +58,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
 	mux.Handle("/api/profile", s.UserProfile())
 	mux.Handle("/api/message/history", s.MessageHistory())
+	mux.Handle("/api/message/usernames", s.MessageUsernameHistory())
 	mux.Handle("/api/message/clear", s.ClearMessages())
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("dist/assets"))))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("dist/static"))))

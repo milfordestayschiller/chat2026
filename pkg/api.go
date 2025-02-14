@@ -881,6 +881,139 @@ func (s *Server) MessageHistory() http.HandlerFunc {
 	})
 }
 
+// MessageUsernameHistory (/api/message/usernames) fetches past conversation threads for a user.
+//
+// This endpoint will paginate the distinct usernames that the current user has
+// conversation history with. It drives the 'History' button that enables users to
+// load previous chats even if their chat partner is not presently online.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"JWTToken": "the caller's jwt token",
+//		"Sort": "newest",
+//		"Page": 1
+//	}
+//
+// The "Sort" parameter takes the following options:
+//
+// - "newest": the most recently updated threads are first (default).
+// - "oldest": the oldest threads are first.
+// - "a-z": sort usernames ascending.
+// - "z-a": sort usernames descending.
+//
+// The response JSON will look like the following:
+//
+//	{
+//		"OK": true,
+//		"Error": "only on error responses",
+//		"Usernames": [
+//			"alice",
+//			"bob"
+//		],
+//		"Pages": 42,
+//	}
+//
+// The Remaining value is how many older messages still exist to be loaded.
+func (s *Server) MessageUsernameHistory() http.HandlerFunc {
+	type request struct {
+		JWTToken string
+		Sort     string
+		Page     int
+	}
+
+	type result struct {
+		OK        bool
+		Error     string `json:",omitempty"`
+		Usernames []string
+		Count     int
+		Pages     int
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Are JWT tokens enabled on the server?
+		if !config.Current.JWT.Enabled || params.JWTToken == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "JWT authentication is not available.",
+			})
+			return
+		}
+
+		// Validate the user's JWT token.
+		claims, _, err := jwt.ParseAndValidate(params.JWTToken)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Get the user from the chat roster.
+		sub, err := s.GetSubscriber(claims.Subject)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "You are not logged into the chat room.",
+			})
+			return
+		}
+
+		// Fetch a page of message history.
+		usernames, count, pages, err := models.PaginateUsernames(sub.Username, params.Sort, params.Page, 9)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		enc.Encode(result{
+			OK:        true,
+			Usernames: usernames,
+			Count:     count,
+			Pages:     pages,
+		})
+	})
+}
+
 // ClearMessages (/api/message/clear) deletes all the stored direct messages for a user.
 //
 // It can be called by the authenticated user themself (with JWTToken), or from your website

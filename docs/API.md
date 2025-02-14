@@ -279,6 +279,37 @@ The "Remaining" integer in the result shows how many older messages still
 remain to be retrieved, and tells the front-end page that it can request
 another page.
 
+## POST /api/message/usernames
+
+This endpoint lists and paginates the usernames that the current user has DM
+chat history stored with. It powers the History modal on the chat room for
+authenticated users.
+
+The request body payload looks like:
+
+```json
+{
+    "JWTToken": "the caller's chat jwt token",
+    "Sort": "newest",
+    "Page": 1
+}
+```
+
+Valid options for "Sort" include: newest, oldest, a-z, z-a. The latter two are
+to sort by usernames ascending and descending, instead of message timestamp.
+
+The response JSON looks like:
+
+```json
+{
+    "OK": true,
+    "Error": "only on error responses",
+    "Usernames": [ "alice", "bob" ],
+    "Count": 18,
+    "Pages": 2
+}
+```
+
 ## POST /api/message/clear
 
 Clear stored direct message history for a user.
