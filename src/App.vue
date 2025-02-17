@@ -1211,6 +1211,16 @@ export default {
                 return;
             }
 
+            // DEBUGGING: manually open a user camera. Note: chat server will still
+            // enforce permissions and access.
+            match = this.message.match(/^\/watch (.+?)$/i);
+            if (match) {
+                let username = match[1];
+                this.openVideoByUsername(username, true);
+                this.message = "";
+                return;
+            }
+
             // Clear user chat history.
             if (this.message.toLowerCase().indexOf("/clear-history") === 0) {
                 this.clearMessageHistory();

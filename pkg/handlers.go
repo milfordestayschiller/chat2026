@@ -539,7 +539,7 @@ func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, st
 			Error: "You do not have permission to view that camera.",
 		},
 		{
-			If:    (other.Mutes(sub.Username) || other.Blocks(sub)) && !sub.IsAdmin(),
+			If:    (other.Mutes(sub.Username) || other.Boots(sub.Username) || other.Blocks(sub)) && !sub.IsAdmin(),
 			Error: "You do not have permission to view that camera.",
 		},
 	}
@@ -654,18 +654,14 @@ func (s *Server) OnReport(sub *Subscriber, msg messages.Message) {
 	}
 
 	// Post to the report webhook.
-	if _, err := PostWebhook(WebhookReport, WebhookRequest{
-		Action: WebhookReport,
-		APIKey: config.Current.AdminAPIKey,
-		Report: WebhookRequestReport{
-			FromUsername:  sub.Username,
-			AboutUsername: msg.Username,
-			Channel:       msg.Channel,
-			Timestamp:     msg.Timestamp,
-			Reason:        msg.Reason,
-			Message:       msg.Message,
-			Comment:       msg.Comment,
-		},
+	if err := PostWebhookReport(WebhookRequestReport{
+		FromUsername:  sub.Username,
+		AboutUsername: msg.Username,
+		Channel:       msg.Channel,
+		Timestamp:     msg.Timestamp,
+		Reason:        msg.Reason,
+		Message:       msg.Message,
+		Comment:       msg.Comment,
 	}); err != nil {
 		sub.ChatServer("Error sending the report to the website: %s", err)
 	} else {

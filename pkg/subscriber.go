@@ -250,10 +250,14 @@ func (sub *Subscriber) SendCut() {
 
 // ChatServer is a convenience function to deliver a ChatServer error to the client.
 func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
+	if len(v) > 0 {
+		message = fmt.Sprintf(message, v...)
+	}
+
 	sub.SendJSON(messages.Message{
 		Action:   messages.ActionError,
 		Username: "ChatServer",
-		Message:  fmt.Sprintf(message, v...),
+		Message:  message,
 	})
 }
 

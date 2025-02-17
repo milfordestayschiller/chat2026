@@ -81,3 +81,13 @@ func PostWebhook(name string, payload any) ([]byte, error) {
 
 	return body, nil
 }
+
+// PostWebhookReport posts a report message via webhook to your website.
+func PostWebhookReport(report WebhookRequestReport) error {
+	_, err := PostWebhook(WebhookReport, WebhookRequest{
+		Action: WebhookReport,
+		APIKey: config.Current.AdminAPIKey,
+		Report: report,
+	})
+	return err
+}

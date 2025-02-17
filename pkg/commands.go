@@ -97,19 +97,6 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 		case "/deop":
 			s.DeopCommand(words, sub)
 			return true
-		case "/debug-dangerous-force-deadlock":
-			// TEMPORARY debug command to willfully force a deadlock.
-			s.Broadcast(messages.Message{
-				Action:   messages.ActionError,
-				Username: "ChatServer",
-				Message:  "NOTICE: The admin is testing a force deadlock of the chat server; things may become unresponsive soon.",
-			})
-			go func() {
-				time.Sleep(2 * time.Second)
-				s.subscribersMu.Lock()
-				s.subscribersMu.Lock()
-			}()
-			return true
 		}
 
 	}
@@ -153,6 +140,19 @@ func (s *Server) NSFWCommand(words []string, sub *Subscriber) {
 		other.SendMe()
 		s.SendWhoList()
 		sub.ChatServer("%s now has their camera marked as Explicit", username)
+
+		// Send an admin report to your main website.
+		if err := PostWebhookReport(WebhookRequestReport{
+			FromUsername:  sub.Username,
+			AboutUsername: username,
+			Channel:       "n/a",
+			Timestamp:     time.Now().Format(time.RFC3339),
+			Reason:        "NSFW Command Issued",
+			Message:       fmt.Sprintf("The admin @%s marks the webcam red for user @%s", sub.Username, username),
+			Comment:       "An admin marked their webcam as explicit.",
+		}); err != nil {
+			log.Error("Error delivering a report to your website about the /nsfw command by %s: %s", sub.Username, err)
+		}
 	}
 }
 
