@@ -94,18 +94,21 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 	sub.loginAt = time.Now()
 	log.Debug("OnLogin: %s joins the room", sub.Username)
 
+	// Send the user back their settings.
+	sub.SendMe()
+
+	// Send the WhoList to everybody.
+	s.SendWhoList()
+
+	// Echo recent public channel messages to the user.
+	sub.SendEchoedMessages()
+
 	// Tell everyone they joined.
 	s.Broadcast(messages.Message{
 		Action:   messages.ActionPresence,
 		Username: msg.Username,
 		Message:  messages.PresenceJoined,
 	})
-
-	// Send the user back their settings.
-	sub.SendMe()
-
-	// Send the WhoList to everybody.
-	s.SendWhoList()
 
 	// Send the initial ChatServer messages to the public channels.
 	for _, channel := range config.Current.PublicChannels {
@@ -250,6 +253,9 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 		LogChannel(s, msg.Channel, sub.Username, msg)
 	}
 
+	// Append it to the public channel's echo buffer.
+	s.EchoPushPublicMessage(sub, message.Channel, message)
+
 	// Broadcast a chat message to the room.
 	s.Broadcast(message)
 }
@@ -278,6 +284,9 @@ func (s *Server) OnTakeback(sub *Subscriber, msg messages.Message) {
 			}
 		}
 	}
+
+	// Remove it from cached echo buffers for public channels.
+	s.EchoTakebackMessage(msg.MessageID)
 
 	// Broadcast to everybody to remove this message.
 	s.Broadcast(messages.Message{

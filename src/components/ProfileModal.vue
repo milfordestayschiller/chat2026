@@ -1,4 +1,5 @@
 <script>
+import AlertModal from './AlertModal.vue';
 import VideoFlag from '../lib/VideoFlag';
 
 export default {
@@ -15,6 +16,9 @@ export default {
         profileWebhookEnabled: Boolean,
         vipConfig: Object,  // VIP config settings for BareRTC
     },
+    components: {
+        AlertModal,
+    },
     data() {
         return {
             busy: false,
@@ -26,6 +30,16 @@ export default {
             banModalVisible: false,
             banReason: "",
             banDuration: 24,
+
+            // Alert modal
+            alertModal: {
+                visible: false,
+                isConfirm: false,
+                title: "Alert",
+                icon: "fa-exclamation-triangle",
+                message: "",
+                callback() {},
+            },
 
             // Error messaging from backend
             error: null,
@@ -136,21 +150,38 @@ export default {
 
         // Operator commands (may be rejected by server if not really Op)
         markNsfw() {
-            if (!window.confirm("Mark this user's webcam as 'Explicit'?")) return;
-            this.$emit('send-command', `/nsfw ${this.user.username}`);
+            this.modalConfirm({
+                message: "Mark this user's webcam as 'Explicit'?\n\n" +
+                    `If @${this.user.username} is behaving sexually while on a Blue camera, click OK to confirm ` +
+                    "that their camera should be marked as Red (explicit).",
+                title: "Mark a webcam as Explicit",
+                icon: "fa fa-fire",
+            }).then(() => {
+                this.$emit('send-command', `/nsfw ${this.user.username}`);
 
-            // Close the modal immediately: our view of the user's cam data is a copy
-            // and we can't follow the current value.
-            this.cancel();
+                // Close the modal immediately: our view of the user's cam data is a copy
+                // and we can't follow the current value.
+                this.cancel();
+            });
         },
         cutCamera() {
-            if (!window.confirm("Make this user stop broadcasting their camera?")) return;
-            this.$emit('send-command', `/cut ${this.user.username}`);
-            this.cancel();
+            this.modalConfirm({
+                message: "Make this user stop broadcasting their camera?",
+                title: "Cut Camera",
+                icon: "fa fa-video-slash",
+            }).then(() => {
+                this.$emit('send-command', `/cut ${this.user.username}`);
+                this.cancel();
+            });
         },
         kickUser() {
-            if (!window.confirm("Really kick this user from the chat room?")) return;
-            this.$emit('send-command', `/kick ${this.user.username}`);
+            this.modalConfirm({
+                message: "Really kick this user from the chat room?",
+                title: "Kick User",
+            }).then(() => {
+                this.$emit('send-command', `/kick ${this.user.username}`);
+                this.cancel();
+            });
         },
         banUser() {
             this.banModalVisible = true;
@@ -192,6 +223,31 @@ export default {
                 return url;
             }
             return this.websiteUrl.replace(/\/+$/, "") + url;
+        },
+
+        // Alert Modal funcs, copied from/the same as App.vue (TODO: make it D.R.Y.)
+        async modalAlert({ message, title="Alert", icon="", isConfirm=false }) {
+            return new Promise((resolve, reject) => {
+                this.alertModal.isConfirm = isConfirm;
+                this.alertModal.title = title;
+                this.alertModal.icon = icon;
+                this.alertModal.message = message;
+                this.alertModal.callback = () => {
+                    resolve();
+                };
+                this.alertModal.visible = true;
+            });
+        },
+        async modalConfirm({ message, title="Confirmation", icon=""}) {
+            return this.modalAlert({
+                isConfirm: true,
+                message,
+                title,
+                icon,
+            })
+        },
+        modalClose() {
+            this.alertModal.visible = false;
         },
     },
 }
@@ -367,6 +423,15 @@ export default {
             </div>
         </div>
     </div>
+
+    <!-- Alert modal (for alert/confirm prompts) -->
+    <AlertModal :visible="alertModal.visible"
+        :is-confirm="alertModal.isConfirm"
+        :title="alertModal.title"
+        :icon="alertModal.icon"
+        :message="alertModal.message"
+        @callback="alertModal.callback"
+        @close="modalClose()"></AlertModal>
 
     <!-- Ban User Modal (for chat admins) -->
     <div class="modal" :class="{ 'is-active': banModalVisible }">

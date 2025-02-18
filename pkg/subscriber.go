@@ -354,6 +354,15 @@ func (s *Server) Broadcast(msg messages.Message) {
 		log.Debug("Broadcast: %+v", msg)
 	}
 
+	// Don't send Presence actions within 30 seconds of server startup, to reduce spam
+	// during a chat server reboot.
+	if time.Since(s.upSince) < 30*time.Second {
+		if msg.Action == messages.ActionPresence {
+			log.Debug("Skip sending Presence messages within 30 seconds of server reboot")
+			return
+		}
+	}
+
 	// Get the sender of this message.
 	sender, err := s.GetSubscriber(msg.Username)
 	if err != nil {

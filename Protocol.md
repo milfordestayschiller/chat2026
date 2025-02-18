@@ -149,6 +149,33 @@ If the message is a DM, the channel will be the username prepended by an @ symbo
 Every message or file share originated from a user has a "msgID" attached
 which is useful for [takebacks](#takeback).
 
+## Echo
+
+Sent by: Server.
+
+This supports the feature for the server to echo recent public messages that took place before a user joined chat.
+
+It is basically a wrapper around a list of Messages that happened in these channels.
+
+```javascript
+// Server message
+{
+    "action": "echo",
+    "messages": [
+        {
+            "action": "message",
+            "channel": "lobby",
+            "username": "senderName",
+            "message": "Hello!",
+            "msgID": 123,
+            "timestamp": "2024-01-01 00:00:00"
+        }
+    ]
+}
+```
+
+A notable feature compared to how those Messages originally were sent is that the echoed ones carry a "timestamp" since it is sending outdated messages to the client.
+
 ## File
 
 Sent by: Client.

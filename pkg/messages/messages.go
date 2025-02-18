@@ -61,6 +61,9 @@ type Message struct {
 	Reason    string `json:"reason,omitempty"`
 	Comment   string `json:"comment,omitempty"`
 
+	// Sent on `echo` actions to condense multiple messages into one packet.
+	Messages []Message `json:"messages,omitempty"`
+
 	// WebRTC negotiation messages: proxy their signaling messages
 	// between the two users to negotiate peer connection.
 	Candidate   string `json:"candidate,omitempty"`   // candidate
@@ -80,6 +83,7 @@ const (
 
 	// Actions sent by server or client
 	ActionMessage  = "message"  // post a message to the room
+	ActionEcho     = "echo"     // echo recent public message on join
 	ActionMe       = "me"       // user self-info sent by FE or BE
 	ActionOpen     = "open"     // user wants to view a webcam (open WebRTC)
 	ActionRing     = "ring"     // receiver of a WebRTC open request

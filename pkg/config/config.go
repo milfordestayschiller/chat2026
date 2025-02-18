@@ -1,34 +1,33 @@
 package config
 
 import (
-	"bytes"
 	"encoding/json"
 	"html/template"
 	"os"
 
 	"git.kirsle.net/apps/barertc/pkg/log"
-	"github.com/BurntSushi/toml"
 	"github.com/google/uuid"
+	"github.com/pelletier/go-toml/v2"
 )
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 15
+var currentVersion = 16
 
 // Config for your BareRTC app.
 type Config struct {
-	Version int // will re-save your settings.toml on migrations
+	Version int `toml:"" comment:"Version of your config file (do not touch). When new features are added to BareRTC,\nthe Version is incremented and your settings.toml is written with sensible defaults added"` // will re-save your settings.toml on migrations
 
 	JWT struct {
 		Enabled        bool
 		Strict         bool
 		SecretKey      string
 		LandingPageURL string
-	}
+	} `toml:"" comment:"Use JWT tokens to log users into chat from your main website."`
 
-	Title      string
-	Branding   string
-	WebsiteURL string
+	Title      string `toml:"" comment:"Your chat room title (plain text)"`
+	Branding   string `toml:"" comment:"Your logo in the top-left corner of page. This can just be your Title again,\nOr you can use HTML here for custom style or image."`
+	WebsiteURL string `toml:"" comment:"Your main website's base URL, for e.g. avatars and profile URLs to be relative to"`
 
 	CORSHosts       []string
 	AdminAPIKey     string
@@ -42,9 +41,9 @@ type Config struct {
 	MaxImageWidth        int
 	PreviewImageWidth    int
 
-	TURN TurnConfig
+	TURN TurnConfig `toml:"" comment:"Configure your TURN or STUN servers here.\n\nSTUN servers help WebRTC clients connect peer-to-peer for video, which is\npreferable as it saves on your bandwidth. You should list at least one, and\nthere are many public servers available such as Google's.\n\nTURN servers help WebRTC clients connect when a direct connection isn't\npossible. An open source server called 'coturn' can do both STUN and TURN."`
 
-	PublicChannels []Channel
+	PublicChannels []Channel `toml:"" comment:"Your pre-defined common public chat rooms.\n"`
 
 	WebhookURLs []WebhookURL
 
@@ -106,6 +105,8 @@ type Channel struct {
 
 	// ChatServer messages to send to the user immediately upon connecting.
 	WelcomeMessages []string
+
+	EchoMessagesOnJoin int
 }
 
 // WebhookURL allows tighter integration with your website.
@@ -167,6 +168,7 @@ func DefaultConfig() Config {
 					"Welcome to the chat server!",
 					"Please follow the basic rules:\n\n1. Have fun\n2. Be kind",
 				},
+				EchoMessagesOnJoin: 10,
 			},
 			{
 				ID:   "offtopic",
@@ -259,8 +261,7 @@ func LoadSettings() error {
 		return err
 	}
 
-	_, err = toml.Decode(string(data), &Current)
-	if err != nil {
+	if err = toml.Unmarshal(data, &Current); err != nil {
 		return err
 	}
 
@@ -279,12 +280,12 @@ func LoadSettings() error {
 // WriteSettings will commit the settings.toml to disk.
 func WriteSettings() error {
 	log.Error("Note: initial settings.toml was written to disk.")
-	var buf = new(bytes.Buffer)
-	err := toml.NewEncoder(buf).Encode(Current)
+	buf, err := toml.Marshal(Current)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile("./settings.toml", buf.Bytes(), 0644)
+
+	return os.WriteFile("./settings.toml", buf, 0644)
 }
 
 // GetModerationRule returns a matching ModerationRule for the given user, or nil if no rule is found.

@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
@@ -12,6 +13,9 @@ import (
 
 // Server is the primary back-end server struct for BareRTC, see main.go
 type Server struct {
+	// Timestamp when the server started.
+	upSince time.Time
+
 	// HTTP router.
 	mux *http.ServeMux
 
@@ -71,6 +75,7 @@ func (s *Server) Setup() error {
 // ListenAndServe starts the web server.
 func (s *Server) ListenAndServe(address string) error {
 	// Run the polling user idle kicker.
+	s.upSince = time.Now()
 	go s.KickIdlePollUsers()
 	return http.ListenAndServe(address, s.mux)
 }
