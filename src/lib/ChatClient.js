@@ -177,8 +177,10 @@ class ChatClient {
                 break;
             case "echo":
                 // An echo is basically a wrapper for batch messages.
-                for (let sub of msg.messages) {
-                    this.handle(sub);
+                if (msg.messages != undefined) {
+                    for (let sub of msg.messages) {
+                        this.handle(sub);
+                    }
                 }
                 break;
             case "takeback":
