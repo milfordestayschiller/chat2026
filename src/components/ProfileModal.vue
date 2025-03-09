@@ -180,6 +180,19 @@ export default {
                 title: "Kick User",
             }).then(() => {
                 this.$emit('send-command', `/kick ${this.user.username}`);
+
+                // Also send an admin report to the main website.
+                this.$emit('report', {
+                    message: {
+                        channel: `n/a`,
+                        username: this.user.username,
+                        at: new Date(),
+                        message: 'User kicked from chat by an admin',
+                    },
+                    classification: 'User kicked by admin',
+                    comment: `The chat admin @${this.username} has kicked ${this.user.username} from the room!`,
+                });
+
                 this.cancel();
             });
         },
