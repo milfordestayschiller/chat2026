@@ -27,11 +27,27 @@ var (
 func (sub *Subscriber) SendEchoedMessages() {
 	var echoes []messages.Message
 
+	// Gather the subscriber's block list, so we don't echo users who are on it.
+	var blocks = map[string]interface{}{}
+	sub.muteMu.RLock()
+	for username := range sub.blocked {
+		blocks[username] = nil
+	}
+	for username := range sub.muted {
+		blocks[username] = nil
+	}
+	sub.muteMu.RUnlock()
+
 	// Read lock to collect the messages.
 	echoLock.RLock()
 
 	for _, msgs := range echoMessages {
-		echoes = append(echoes, msgs...)
+		for _, msg := range msgs {
+			if _, ok := blocks[msg.Username]; ok {
+				continue
+			}
+			echoes = append(echoes, msg)
+		}
 	}
 
 	// Release the lock.
