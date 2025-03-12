@@ -2839,7 +2839,9 @@ export default {
                     `You have booted ${username} off your camera. They will no longer be able ` +
                     `to connect to your camera, or even see that your camera is active at all -- ` +
                     `to them it appears as though you had turned yours off.<br><br>This will be ` +
-                    `in place for the remainder of your time in chat, until you log off.`
+                    `in place for the remainder of your time in chat, until you log off. ` +
+                    `<strong>Note:</strong> If you wish to undo this, you can allow them to watch again ` +
+                    `by opening their profile card.`
                 );
             });
         },
