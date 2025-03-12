@@ -9,6 +9,19 @@ export default {
             dontShowAgain: false,
         };
     },
+    mounted() {
+        window.addEventListener('keyup', (e) => {
+            if (!this.visible) return;
+
+            if (e.key === 'Enter') {
+                return this.accept();
+            }
+
+            if (e.key == 'Escape') {
+                return this.cancel();
+            }
+        })
+    },
     methods: {
         accept() {
             if (this.dontShowAgain) {

@@ -503,6 +503,14 @@ export default {
             LocalStorage.set('scrollback', this.scrollback);
         },
         status() {
+            // Notify if going hidden.
+            if (this.status === 'hidden' && this.isOp) {
+                this.ChatClient(
+                    "Your status is now set to 'hidden' which makes it appear as though you have logged out of chat.\n\n" +
+                    "Try not to break the illusion by interacting with chat in this state. For safety, your message " +
+                    "entry box will be disabled in public channels.",
+                );
+            }
             // Send presence updates to the server.
             this.sendMe();
         },
@@ -1067,6 +1075,12 @@ export default {
 
             if (!this.connected) {
                 this.ChatClient("You are not connected to the server.");
+                return;
+            }
+
+            // Safety for hidden status.
+            if (this.status === 'hidden' && !this.isDM) {
+                this.ChatClient("Your status is currently set to 'hidden' and it would break the illusion to talk in public channels.");
                 return;
             }
 
@@ -2049,7 +2063,9 @@ export default {
             this.makeLinksExternal();
 
             // Focus the message entry box.
-            this.messageBox.focus();
+            window.requestAnimationFrame(() => {
+                this.messageBox.focus();
+            });
         },
         hasAnyUnread() {
             // Returns total unread count (for mobile responsive view to show in the left drawer button)
@@ -2475,6 +2491,12 @@ export default {
 
             if (user.username === this.username) {
                 this.ChatClient("You can already see your own webcam.");
+                return;
+            }
+
+            // Operator safety when hidden.
+            if (this.status === 'hidden') {
+                this.ChatClient("Your chat status is currently set to 'hidden' and you would break the illusion by opening this camera.");
                 return;
             }
 
@@ -5055,8 +5077,8 @@ export default {
 
                                     <!-- My text box -->
                                     <input type="text" class="input" id="messageBox" v-model="message"
-                                        placeholder="Write a message" @keydown="sendTypingNotification()" autocomplete="off"
-                                        :disabled="!client.connected">
+                                        :placeholder="status === 'hidden' ? 'Your status is hidden, be careful not to break the illusion' : 'Write a message'" @keydown="sendTypingNotification()" autocomplete="off"
+                                        :disabled="!client.connected || (status === 'hidden' && !isDM)">
 
                                     <!-- At Mention templates-->
                                     <template #no-result>

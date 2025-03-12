@@ -480,6 +480,9 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	// Look up the other subscriber.
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
+		sub.ChatServer(
+			"Could not open that video: %s appears to be offline.", msg.Username,
+		)
 		return
 	}
 
