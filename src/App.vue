@@ -536,6 +536,10 @@ export default {
             if (this.webcam.active) {
                 this.sendMe();
             }
+
+            // Respect users who have the NonExplicit cam setting checked, and close
+            // their cameras when you toggle to red.
+            this.unWatchNonExplicitVideo();
         },
         "webcam.mutual": function () {
             LocalStorage.set('videoMutual', this.webcam.mutual);
@@ -551,7 +555,12 @@ export default {
         },
         "webcam.nonExplicit": function () {
             LocalStorage.set('videoNonExplicit', this.webcam.nonExplicit);
-            if (this.webcam.active) {
+
+            // Turn off NSFW if this is on.
+            if (this.webcam.nonExplicit && this.webcam.nsfw) {
+                // Note: this toggle will also sendMe().
+                this.webcam.nsfw = false;
+            } else if (this.webcam.active) {
                 this.sendMe();
             }
         },
@@ -1386,6 +1395,7 @@ export default {
             // Hang up on mutual cameras, if they changed their setting while we
             // are already watching them.
             this.unMutualVideo();
+            this.unWatchNonExplicitVideo();
 
             // If we have any webcams open with users who are no longer in the Who List
             // (e.g.: can happen during a server reboot when the Who List goes empty),
@@ -2316,6 +2326,9 @@ export default {
                     this.webcam.muted = true;
                 }
 
+                // If we started as Explicit, hang up on any NonExplicit camera we had open.
+                this.unWatchNonExplicitVideo();
+
                 // Tell backend the camera is ready.
                 this.sendMe();
 
@@ -2557,6 +2570,15 @@ export default {
                 this.closeVideo(user.username, "offerer");
             }
 
+            // If this user is NonExplicit and your camera is red...
+            let theirVideo = this.whoMap[user.username].video;
+            if (this.webcam.active && this.webcam.nsfw && (theirVideo & VideoFlag.Active) && (theirVideo & VideoFlag.NonExplicit)) {
+                this.ChatClient(
+                    `<strong>${user.username}</strong> prefers not to have Explicit cammers watch their video, and your camera is currently marked as Explicit.`
+                );
+                return;
+            }
+
             // If this user requests mutual viewership...
             if (this.isVideoNotAllowed(user) && !this.isOp) {
                 this.ChatClient(
@@ -2741,6 +2763,18 @@ export default {
                 }
             }
         },
+        unWatchNonExplicitVideo() {
+            // If we are watching cameras with the NonExplicit setting, and our camera has become
+            // explicit, excuse ourselves from their watch list.
+            if (this.webcam.nsfw) {
+                for (let username of Object.keys(this.WebRTC.streams)) {
+                    let user = this.whoMap[username];
+                    if ((user.video & VideoFlag.Active) && (user.video & VideoFlag.NonExplicit)) {
+                        this.closeVideo(username);
+                    }
+                }
+            }
+        },
         webcamIconClass(user) {
             // Return the icon to show on a video button.
             // - Usually a video icon
@@ -2811,6 +2845,11 @@ export default {
                 return true;
             }
 
+            // This person is NonExplicit and our camera is Explicit.
+            if (this.webcam.active && this.webcam.nsfw && (user.video & VideoFlag.Active) && (user.video & VideoFlag.NonExplicit)) {
+                return true;
+            }
+
             return false;
         },
 
@@ -2864,16 +2903,7 @@ export default {
                 // Ping their rate limiter.
                 if (this.rateLimitPreemptiveBoots(username, true)) return;
 
-                this.sendBoot(username);
-                this.WebRTC.booted[username] = true;
-
-                // Close the WebRTC peer connections.
-                if (this.WebRTC.pc[username] != undefined) {
-                    this.closeVideo(username);
-                }
-
-                // Remove them from our list.
-                delete (this.webcam.watching[username]);
+                this.doBootUser(username);
 
                 this.ChatClient(
                     `You have booted ${username} off your camera. They will no longer be able ` +
@@ -2884,6 +2914,19 @@ export default {
                     `by opening their profile card.`
                 );
             });
+        },
+        doBootUser(username) {
+            // Inner function to actually boot a user, bypassing any confirm or rate limit modals.
+            this.sendBoot(username);
+            this.WebRTC.booted[username] = true;
+
+            // Close the WebRTC peer connections.
+            if (this.WebRTC.pc[username] != undefined) {
+                this.closeVideo(username);
+            }
+
+            // Remove them from our list.
+            delete (this.webcam.watching[username]);
         },
         isBooted(username) {
             return this.WebRTC.booted[username] === true;
@@ -4322,7 +4365,7 @@ export default {
 
                         <div class="field mb-1" v-if="config.permitNSFW">
                             <label class="checkbox">
-                                <input type="checkbox" v-model="webcam.nsfw">
+                                <input type="checkbox" v-model="webcam.nsfw" :disabled="webcam.nonExplicit">
                                 Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
                                 <span class="has-text-danger">Explicit</span> or sexual content
                             </label>
@@ -4331,11 +4374,13 @@ export default {
                         <div class="field" v-if="config.permitNSFW">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.nonExplicit">
-                                I prefer not to see Explicit cameras from other chatters
+                                I prefer not to see or be watched by Explicit cameras
                             </label>
                             <p class="help">
                                 Don't auto-open explicit cameras when they open mine; and automatically
-                                close a camera I am watching if it toggles to become explicit.
+                                close a camera I am watching if it toggles to become explicit.<br>
+                                <strong class="has-text-success">New:</strong>
+                                People on explicit cameras can not watch your camera.
                             </p>
                         </div>
 
@@ -4586,7 +4631,7 @@ export default {
 
                     <div class="field" v-if="config.permitNSFW">
                         <label class="checkbox">
-                            <input type="checkbox" v-model="webcam.nsfw">
+                            <input type="checkbox" v-model="webcam.nsfw" :disabled="webcam.nonExplicit">
                             Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
                             <span class="has-text-danger">Explicit</span> or sexual content
                         </label>
@@ -4599,11 +4644,13 @@ export default {
                     <div class="field" v-if="config.permitNSFW">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.nonExplicit">
-                            I prefer not to see Explicit cameras from other chatters
+                            I prefer not to see or be watched by Explicit cameras
                         </label>
                         <p class="help">
                             Close, and don't automatically open, other peoples' cameras when they toggle
-                            to become explicit.
+                            to become explicit.<br>
+                            <strong class="has-text-success">New:</strong>
+                            People on explicit cameras can not watch your camera.
                         </p>
                     </div>
 
@@ -4760,7 +4807,8 @@ export default {
                             'is-outlined is-dark': !webcam.nsfw,
                             'is-danger': webcam.nsfw
                         }" @click.prevent="topNavExplicitButtonClicked()"
-                        title="Toggle the NSFW setting for your camera broadcast">
+                        :title="webcam.nonExplicit ? 'You prefer non-Explicit cameras so you can not go Explicit' : 'Toggle the NSFW setting for your camera broadcast'"
+                        :disabled="webcam.nonExplicit">
                         <i class="fa fa-fire mr-1" :class="{ 'has-text-danger': !webcam.nsfw }"></i> Explicit
                     </button>
                 </div>
