@@ -292,7 +292,7 @@ export default {
 
                     // Configuration settings:
                     maxFreeBoots: 10, // first 10 are free
-                    cooldownTTL: 120, // then must wait this number of seconds before each boot
+                    cooldownTTL: 60, // then must wait this number of seconds before each boot
                 }
             },
 
