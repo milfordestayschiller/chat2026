@@ -283,6 +283,17 @@ export default {
                 // and usernames are removed when we expressly re-open their
                 // video (e.g., by clicking their Who List video button).
                 expresslyClosed: {},  // bool per username
+
+                // Rate limit pre-emptive boots: to avoid a user coming thru the entire Who List
+                // and kicking everyone off their cam when they aren't even watching yet.
+                preemptBootRateLimit: {
+                    counter: 0,       // how many people have they booted so far
+                    cooldownAt: null, // Date for cooldown once they reach the threshold
+
+                    // Configuration settings:
+                    maxFreeBoots: 10, // first 10 are free
+                    cooldownTTL: 120, // then must wait this number of seconds before each boot
+                }
             },
 
             // Chat history.
@@ -2838,6 +2849,10 @@ export default {
                 return;
             }
 
+            // Check if they are currently rate limited from pre-emptive boots of folks
+            // who are not even watching their camera yet.
+            if (this.rateLimitPreemptiveBoots(username, false)) return;
+
             // Boot them off our webcam.
             this.modalConfirm({
                 title: "Boot user",
@@ -2846,6 +2861,9 @@ export default {
                     `from seeing that your camera is active for the remainder of your ` +
                     `chat session.`
             }).then(() => {
+                // Ping their rate limiter.
+                if (this.rateLimitPreemptiveBoots(username, true)) return;
+
                 this.sendBoot(username);
                 this.WebRTC.booted[username] = true;
 
@@ -2874,6 +2892,49 @@ export default {
             return (this.WebRTC.booted[username] === true || this.muted[username] === true) &&
                 this.whoMap[username] != undefined &&
                 this.whoMap[username].op;
+        },
+        rateLimitPreemptiveBoots(username, ping=false) {
+            // Rate limit abusive pre-emptive booting behavior: if the target is not even currently watching
+            // your camera, limit how many and how frequently you can boot them off.
+            //
+            // Returns true if limited, false otherwise.
+
+            let cooldownAt = this.WebRTC.preemptBootRateLimit.cooldownAt,
+                cooldownTTL = this.WebRTC.preemptBootRateLimit.cooldownTTL,
+                now = new Date().getTime();
+
+            if (!this.isWatchingMe(username)) {
+                // Within the 'free' boot limits?
+                if (this.WebRTC.preemptBootRateLimit.counter < this.WebRTC.preemptBootRateLimit.maxFreeBoots) {
+                    if (!ping) return false;
+                    this.WebRTC.preemptBootRateLimit.counter++;
+                }
+
+                // Begin enforcing a cooldown TTL after a while.
+                if (this.WebRTC.preemptBootRateLimit.counter >= this.WebRTC.preemptBootRateLimit.maxFreeBoots) {
+
+                    // Currently throttled?
+                    if (cooldownAt !== null) {
+                        if (now < cooldownAt) {
+                            let delta = cooldownAt - now;
+                            this.modalAlert({
+                                title: "You are doing that too often",
+                                message: "You have been pre-emptively booting an unusual number of people who weren't even watching your camera yet.\n\n" +
+                                    `Please wait ${cooldownTTL} seconds between any additional pre-emptive boots.\n\n` +
+                                    `You may try again after ${delta/1000} seconds.`,
+                            });
+                            return true;
+                        }
+                    }
+
+                    // Refresh the timer on pings.
+                    if (ping) {
+                        this.WebRTC.preemptBootRateLimit.cooldownAt = now + (cooldownTTL * 1000);
+                    }
+                }
+            }
+
+            return false;
         },
 
         // Stop broadcasting.

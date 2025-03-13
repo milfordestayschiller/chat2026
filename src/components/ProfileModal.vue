@@ -353,7 +353,6 @@ export default {
 
                         <!-- Un-Boot button -->
                         <button type="button"
-                            v-if="isBooted"
                             class="button is-small px-2 ml-1 mb-1"
                             @click="bootUser()" title="Boot user off your webcam">
                             <i class="fa fa-user-xmark mr-1" :class="{

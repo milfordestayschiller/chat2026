@@ -37,6 +37,7 @@ func (dm DirectMessage) CreateTable() error {
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_direct_messages_channel_id ON direct_messages(channel_id);
+		CREATE INDEX IF NOT EXISTS idx_direct_messages_username ON direct_messages(username);
 		CREATE INDEX IF NOT EXISTS idx_direct_messages_timestamp ON direct_messages(timestamp);
 	`)
 	if err != nil {
