@@ -2579,6 +2579,14 @@ export default {
                 return;
             }
 
+            // Conversely: if we are NonExplicit we should not open NSFW videos.
+            if (this.webcam.active && this.webcam.nonExplicit && (theirVideo & VideoFlag.Active) && (theirVideo & VideoFlag.NSFW)) {
+                this.ChatClient(
+                    `You have said you do not want to see Explicit videos and <strong>${user.username}</strong> has an Explicit camera.`
+                );
+                return;
+            }
+
             // If this user requests mutual viewership...
             if (this.isVideoNotAllowed(user) && !this.isOp) {
                 this.ChatClient(
@@ -2769,7 +2777,20 @@ export default {
             if (this.webcam.nsfw) {
                 for (let username of Object.keys(this.WebRTC.streams)) {
                     let user = this.whoMap[username];
+
+                    // Our video is Explicit and theirs is NonExplicit.
                     if ((user.video & VideoFlag.Active) && (user.video & VideoFlag.NonExplicit)) {
+                        this.closeVideo(username);
+                    }
+                }
+            }
+
+            // Conversely: if we are NonExplicit we do not watch Explicit videos.
+            if (this.webcam.nonExplicit) {
+                for (let username of Object.keys(this.WebRTC.streams)) {
+                    let user = this.whoMap[username];
+
+                    if ((user.video & VideoFlag.Active) && (user.video & VideoFlag.NSFW)) {
                         this.closeVideo(username);
                     }
                 }
@@ -2847,6 +2868,11 @@ export default {
 
             // This person is NonExplicit and our camera is Explicit.
             if (this.webcam.active && this.webcam.nsfw && (user.video & VideoFlag.Active) && (user.video & VideoFlag.NonExplicit)) {
+                return true;
+            }
+
+            // Conversely: if we are NonExplicit we should not be able to watch Explicit videos.
+            if (this.webcam.active && this.webcam.nonExplicit && (user.video & VideoFlag.Active) && (user.video & VideoFlag.NSFW)) {
                 return true;
             }
 
