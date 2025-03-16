@@ -279,6 +279,16 @@ func (h *BotHandlers) OnReact(msg messages.Message) {
 		return
 	}
 
+	// Avoid upvoting any 'negative' or mean emoji.
+	negativeEmoji := []string{
+		"🤢", "🤮", "😡", "🤬", "💩", "🤡", "🖕", "👎",
+	}
+	for _, check := range negativeEmoji {
+		if strings.Contains(msg.Message, check) {
+			return
+		}
+	}
+
 	// Sanity check that we can actually see the message being reacted to: so we don't
 	// upvote reactions posted to messageIDs in other peoples' DM threads.
 	if _, ok := h.getMessageByID(msg.MessageID); !ok {
