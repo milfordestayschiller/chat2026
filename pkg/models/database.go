@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
-	_ "github.com/glebarez/go-sqlite"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -13,7 +13,7 @@ var (
 )
 
 func Initialize(connString string) error {
-	db, err := sql.Open("sqlite", connString)
+	db, err := sql.Open("sqlite3", connString)
 	if err != nil {
 		return err
 	}
