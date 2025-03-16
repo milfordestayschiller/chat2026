@@ -31,6 +31,10 @@ export default {
             banReason: "",
             banDuration: 24,
 
+            // Kick user modal.
+            kickModalVisible: false,
+            kickReason: "",
+
             // Alert modal
             alertModal: {
                 visible: false,
@@ -85,6 +89,23 @@ export default {
         isOnCamera() {
             // User's camera is enabled.
             return (this.user.video & VideoFlag.Active);
+        },
+        onlineSince() {
+            let date = new Date(this.user.loginAt * 1000),
+                year = date.getFullYear(),
+                month = String(date.getMonth() + 1).padStart(2, '0'),
+                day = String(date.getDate()).padStart(2, '0'),
+                hours = String(date.getHours()).padStart(2, '0'),
+                minutes = String(date.getMinutes()).padStart(2, '0'),
+                seconds = String(date.getSeconds()).padStart(2, '0'),
+                ampm = 'AM';
+            if (hours >= 12) {
+                if (hours > 12) {
+                    hours -= 12;
+                }
+                ampm = 'PM';
+            }
+            return `${year}-${month}-${day} @ ${hours}:${minutes}:${seconds} ${ampm}`;
         },
     },
     methods: {
@@ -175,26 +196,34 @@ export default {
             });
         },
         kickUser() {
-            this.modalConfirm({
-                message: "Really kick this user from the chat room?",
-                title: "Kick User",
-            }).then(() => {
-                this.$emit('send-command', `/kick ${this.user.username}`);
-
-                // Also send an admin report to the main website.
-                this.$emit('report', {
-                    message: {
-                        channel: `n/a`,
-                        username: this.user.username,
-                        at: new Date(),
-                        message: 'User kicked from chat by an admin',
-                    },
-                    classification: 'User kicked by admin',
-                    comment: `The chat admin @${this.username} has kicked ${this.user.username} from the room!`,
-                });
-
-                this.cancel();
+            this.kickModalVisible = true;
+            this.kickReason = "";
+            window.requestAnimationFrame(() => {
+                let reason = document.querySelector("#kick_reason");
+                if (reason) {
+                    reason.focus();
+                }
             });
+        },
+        confirmKick() {
+            this.$emit('send-command', `/kick ${this.user.username}`);
+
+            // Also send an admin report to the main website.
+            this.$emit('report', {
+                message: {
+                    channel: `n/a`,
+                    username: this.user.username,
+                    at: new Date(),
+                    message: 'Kick reason: ' + this.kickReason,
+                },
+                classification: 'User kicked by admin',
+                comment: `The chat admin @${this.username} has kicked ${this.user.username} from the room!\n\n` +
+                    `* Chat admin: <a href="/u/${this.username}">${this.username}</a>\n` +
+                    `* Reason: ${this.kickReason}`,
+            });
+
+            this.kickModalVisible = false;
+            this.cancel();
         },
         banUser() {
             this.banModalVisible = true;
@@ -400,6 +429,11 @@ export default {
                         </div>
                     </div>
 
+                    <!-- Login At -->
+                    <div class="mt-3 is-size-7">
+                        <em>Online since: {{ onlineSince }}</em>
+                    </div>
+
                     <!-- Profile Fields spinner/error -->
                     <div class="notification is-info is-light p-2 my-2" v-if="busy">
                         <i class="fa fa-spinner fa-spin mr-2"></i>
@@ -479,6 +513,43 @@ export default {
                                 Confirm Ban
                             </button>
                             <a href="#" @click.prevent="banModalVisible = false" class="button ml-2">
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Kick User Modal (for chat admins) -->
+    <div class="modal" :class="{ 'is-active': kickModalVisible }">
+        <div class="modal-background" @click="kickModalVisible = false"></div>
+        <div class="modal-content">
+            <form @submit.prevent="confirmKick">
+                <div class="card">
+                    <header class="card-header has-background-danger">
+                        <p class="card-header-title">Kick User</p>
+                    </header>
+                    <div class="card-content">
+                        <div class="field">
+                            <label class="label" for="kick_reason">Reason for the kick:</label>
+                            <input type="text" class="input"
+                                id="kick_reason"
+                                placeholder="Please describe why this user will be kicked from the room."
+                                v-model="kickReason"
+                                required>
+                            <p class="help">
+                                This reason is NOT shown to the kicked user, but will be sent to the main website
+                                in an admin report so that it may be documented in this user's history.
+                            </p>
+                        </div>
+
+                        <div class="field has-text-centered">
+                            <button type="submit" class="button is-danger">
+                                Confirm Kick
+                            </button>
+                            <a href="#" @click.prevent="kickModalVisible = false" class="button ml-2">
                                 Cancel
                             </a>
                         </div>

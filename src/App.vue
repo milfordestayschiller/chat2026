@@ -5323,19 +5323,21 @@ export default {
                         <div class="column">
                             <div class="select is-small is-fullwidth">
                                 <select v-model="whoSort">
-                                    <optgroup label="Users">
+                                    <optgroup label="By Name">
                                         <option value="a-z">Username (a-z)</option>
                                         <option value="z-a">Username (z-a)</option>
-                                        <option value="login">Login Time</option>
-                                        <option value="status">Status</option>
-                                        <option value="emoji">Emoji/country flag</option>
-                                        <option value="gender">Gender</option>
-                                        <option value="op">☮ Operators</option>
                                     </optgroup>
                                     <optgroup label="Webcam Status">
                                         <option value="broadcasting">Broadcasting</option>
                                         <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
                                         <option value="blue" v-show="config.permitNSFW">Blue cameras</option>
+                                    </optgroup>
+                                    <optgroup label="Other">
+                                        <option value="login">Login Time</option>
+                                        <option value="status">Status</option>
+                                        <option value="emoji">Emoji/country flag</option>
+                                        <option value="gender">Gender</option>
+                                        <option value="op">☮ Operators</option>
                                     </optgroup>
                                 </select>
                             </div>
