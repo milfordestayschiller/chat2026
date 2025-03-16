@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
@@ -261,25 +262,47 @@ func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, 
 		orderBy = "timestamp DESC"
 	}
 
+	// Get all our distinct channel IDs to filter the query down: otherwise doing an ORDER BY timestamp
+	// causes a full table scan index which is very inefficient!
+	channelIDs, err := GetDistinctChannelIDs(fromUsername)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	// No channel IDs = no response to fetch.
+	if len(channelIDs) == 0 {
+		return nil, 0, 0, errors.New("you have no direct messages stored on this chat server")
+	}
+
+	var (
+		cidPlaceholders = "?" + strings.Repeat(",?", len(channelIDs)-1)
+		params          = []interface{}{}
+	)
+	for _, cid := range channelIDs {
+		params = append(params, cid)
+	}
+
+	// Note: for some reason, the SQLite driver doesn't allow a parameterized
+	// query for ORDER BY (e.g. "ORDER BY ?") - so, since we have already
+	// whitelisted acceptable orders, use a Sprintf to interpolate that
+	// directly into the query.
+	queryStr := fmt.Sprintf(`
+		SELECT distinct(username)
+		FROM direct_messages
+		WHERE channel_id IN (%s)
+		AND username <> ?
+		ORDER BY %s
+		LIMIT ?
+		OFFSET ?`,
+		cidPlaceholders,
+		orderBy,
+	)
+	params = append(params, fromUsername, perPage, offset)
+	// fmt.Println(queryStr)
+	// fmt.Printf("%v\n", params)
 	rows, err := DB.Query(
-		// Note: for some reason, the SQLite driver doesn't allow a parameterized
-		// query for ORDER BY (e.g. "ORDER BY ?") - so, since we have already
-		// whitelisted acceptable orders, use a Sprintf to interpolate that
-		// directly into the query.
-		fmt.Sprintf(`
-			SELECT distinct(username)
-			FROM direct_messages
-			WHERE (
-				channel_id LIKE ?
-				OR channel_id LIKE ?
-			)
-			AND username <> ?
-			ORDER BY %s
-			LIMIT ?
-			OFFSET ?`,
-			orderBy,
-		),
-		channelIDs[0], channelIDs[1], fromUsername, perPage, offset,
+		queryStr,
+		params...,
 	)
 	if err != nil {
 		return nil, 0, 0, err
@@ -296,19 +319,8 @@ func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, 
 		result = append(result, username)
 	}
 
-	// Get a total count of usernames.
-	row := DB.QueryRow(`
-		SELECT COUNT(distinct(username))
-		FROM direct_messages
-		WHERE (
-			channel_id LIKE ?
-			OR channel_id LIKE ?
-		)
-		AND username <> ?
-	`, channelIDs[0], channelIDs[1], fromUsername)
-	if err := row.Scan(&count); err != nil {
-		return nil, 0, 0, err
-	}
+	// The count of distinct channel IDs earlier.
+	count = len(channelIDs)
 
 	pages = int(math.Ceil(float64(count) / float64(perPage)))
 	if pages < 1 {
@@ -316,6 +328,39 @@ func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, 
 	}
 
 	return result, count, pages, nil
+}
+
+// GetDistinctChannelIDs collects all of the conversation thread IDs the current user is a party to.
+func GetDistinctChannelIDs(username string) ([]string, error) {
+	var (
+		result     = []string{}
+		channelIDs = []string{
+			fmt.Sprintf(`@%s:%%`, username),
+			fmt.Sprintf(`%%:@%s`, username),
+		}
+	)
+
+	rows, err := DB.Query(`
+		SELECT distinct(channel_id)
+		FROM direct_messages
+		WHERE (
+			channel_id LIKE ?
+			OR channel_id LIKE ?
+		)
+	`, channelIDs[0], channelIDs[1])
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var channelID string
+		if err := rows.Scan(&channelID); err != nil {
+			return nil, err
+		}
+		result = append(result, channelID)
+	}
+
+	return result, nil
 }
 
 // CreateChannelID returns a deterministic channel ID for a direct message conversation.
