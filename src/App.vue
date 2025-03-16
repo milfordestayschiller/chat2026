@@ -864,6 +864,13 @@ export default {
                         return right - left;
                     });
                     break;
+                case "blue":
+                    result.sort((a, b) => {
+                        let left = (a.video & this.VideoFlag.Active) ? (a.video & this.VideoFlag.NSFW ? 1 : 2) : 0,
+                            right = (b.video & this.VideoFlag.Active) ? (b.video & this.VideoFlag.NSFW ? 1 : 2) : 0;
+                        return right - left;
+                    });
+                    break;
                 case "status":
                     result.sort((a, b) => {
                         if (a.status === b.status) return 0;
@@ -918,6 +925,13 @@ export default {
                     result.sort((a, b) => {
                         let left = (a.video & (this.VideoFlag.Active | this.VideoFlag.NSFW)),
                             right = (b.video & (this.VideoFlag.Active | this.VideoFlag.NSFW));
+                        return right - left;
+                    });
+                    break;
+                case "blue":
+                    result.sort((a, b) => {
+                        let left = (a.video & this.VideoFlag.Active) ? (a.video & this.VideoFlag.NSFW ? 1 : 2) : 0,
+                            right = (b.video & this.VideoFlag.Active) ? (b.video & this.VideoFlag.NSFW ? 1 : 2) : 0;
                         return right - left;
                     });
                     break;
@@ -5309,15 +5323,20 @@ export default {
                         <div class="column">
                             <div class="select is-small is-fullwidth">
                                 <select v-model="whoSort">
-                                    <option value="a-z">Username (a-z)</option>
-                                    <option value="z-a">Username (z-a)</option>
-                                    <option value="login">Login Time</option>
-                                    <option value="broadcasting">Broadcasting</option>
-                                    <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
-                                    <option value="status">Status</option>
-                                    <option value="emoji">Emoji/country flag</option>
-                                    <option value="gender">Gender</option>
-                                    <option value="op">User level (operators)</option>
+                                    <optgroup label="Users">
+                                        <option value="a-z">Username (a-z)</option>
+                                        <option value="z-a">Username (z-a)</option>
+                                        <option value="login">Login Time</option>
+                                        <option value="status">Status</option>
+                                        <option value="emoji">Emoji/country flag</option>
+                                        <option value="gender">Gender</option>
+                                        <option value="op">☮ Operators</option>
+                                    </optgroup>
+                                    <optgroup label="Webcam Status">
+                                        <option value="broadcasting">Broadcasting</option>
+                                        <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
+                                        <option value="blue" v-show="config.permitNSFW">Blue cameras</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
