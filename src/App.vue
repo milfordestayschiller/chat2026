@@ -41,6 +41,7 @@ const configuration = {
 
 const FileUploadMaxSize = 1024 * 1024 * 8; // 8 MB
 const DebugChannelID = "barertc-debug";
+const ReactNudgeNsfwMessageID = -451;
 
 // Webcam sizes: ideal is 640x480 as this is the most friendly for end users, e.g. if everyone
 // broadcasted at 720p users on weaker hardware would run into problems sooner.
@@ -1307,6 +1308,12 @@ export default {
                 who = msg.username,
                 emoji = msg.message;
 
+            // Special react cases: nudge NSFW.
+            if (msgID === ReactNudgeNsfwMessageID) {
+                this.onNudgeNsfw(msg);
+                return;
+            }
+
             if (this.messageReactions[msgID] == undefined) {
                 this.messageReactions[msgID] = {};
             }
@@ -2039,6 +2046,13 @@ export default {
                 action: watching ? "watch" : "unwatch",
                 username: username,
             });
+        },
+        isWatching(username) {
+            // Is the current user watching this target user?
+            if (this.WebRTC.pc[username] != undefined && this.WebRTC.streams[username] != undefined) {
+                return true;
+            }
+            return false;
         },
         isWatchingMe(username) {
             // Return whether the user is watching your camera
@@ -2891,6 +2905,44 @@ export default {
             }
 
             return false;
+        },
+
+        // Functions to help users 'nudge' each other into marking their cams as Explicit.
+        sendNudgeNsfw(username) {
+            // Send a nudge to the username. This is triggered by their profile modal: if the user is
+            // on blue camera, others on chat can anonymously nudge them into marking their camera as red.
+
+            // Nudges are a special kind of emoji reaction (so we could add this feature in frontend only without
+            // a server side deployment to support it).
+            this.client.send({
+                action: 'react',
+                msgID: ReactNudgeNsfwMessageID,
+                message: username,
+            });
+        },
+        onNudgeNsfw(msg) {
+            // Handler for a nudge NSFW react message.
+            if (msg.message !== this.username) {
+                return; // Not for us
+            }
+
+            // Sanity check that we are on blue camera.
+            if (!this.webcam.active || this.webcam.nsfw) {
+                return;
+            }
+
+            // Only show this if we have at least 2 watchers.
+            let watchers = Object.keys(this.webcam.watching).length;
+            if (watchers < 2) {
+                return;
+            }
+
+            // Show a nice message on chat.
+            this.ChatServer(
+                `<strong>Your webcam is <span class="has-text-danger">Hot!</span></strong> <i class="fa fa-fire has-text-danger"></i><br><br>` +
+                    `Somebody who is watching your camera thinks that your webcam should be tagged as <span class="has-text-danger"><i class="fa fa-fire mx-1"></i> Explicit</span>.<br><br>` +
+                    `In case you forgot to do so, please click on the '<i class="fa fa-fire has-text-danger"></i> Explicit' button at the top of the page to turn your camera 'red.' Thank you! <i class="fa fa-heart has-text-danger"></i>`,
+            );
         },
 
         // Show who watches our video.
@@ -4787,10 +4839,12 @@ export default {
         :is-booted="isBooted(profileModal.username)"
         :profile-webhook-enabled="isWebhookEnabled('profile')"
         :vip-config="config.VIP"
+        :is-watching="isWatching(profileModal.username)"
         @send-dm="openDMs"
         @mute-user="muteUser"
         @boot-user="bootUser"
         @send-command="sendCommand"
+        @nudge-nsfw="sendNudgeNsfw"
         @report="doCustomReport"
         @cancel="profileModal.visible = false"></ProfileModal>
 

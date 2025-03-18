@@ -10,6 +10,7 @@ export default {
         username: String, // the local user
         isViewerOp: Boolean, // the viewer is an operator (show buttons)
         websiteUrl: String,
+        isWatching: Boolean, // chat user is currently watching the profile user
         isDnd: Boolean,
         isMuted: Boolean,
         isBooted: Boolean,
@@ -44,6 +45,9 @@ export default {
                 message: "",
                 callback() {},
             },
+
+            // The local user has sent a NSFW nudge already.
+            sentNsfwNudge: false,
 
             // Error messaging from backend
             error: null,
@@ -113,6 +117,7 @@ export default {
             if (!this.profileWebhookEnabled) return;
             if (!this.user || !this.user?.username) return;
             this.busy = true;
+            this.sentNsfwNudge = false;
             return fetch("/api/profile", {
                 method: "POST",
                 mode: "same-origin",
@@ -183,6 +188,23 @@ export default {
                 // Close the modal immediately: our view of the user's cam data is a copy
                 // and we can't follow the current value.
                 this.cancel();
+            });
+        },
+        nudgeNsfw() {
+            // Gentler, public user-facing version to gently remind the user that
+            // their webcam should probably be marked as Explicit.
+            if (this.sentNsfwNudge) return;
+
+            this.modalConfirm({
+                title: "Mark a webcam as Explicit",
+                message: `Should @${this.user.username}'s webcam be marked as Explicit?\n\n` +
+                    `If their webcam is 'blue' and they are behaving sexually on camera, you may send them a gentle reminder ` +
+                    `and ask them to tag their webcam as Explicit.\n\n` +
+                    `They will not know for sure that it was you who did this.`,
+                icon: "fa fa-fire",
+            }).then(() => {
+                this.$emit('nudge-nsfw', this.user.username);
+                this.sentNsfwNudge = true;
             });
         },
         cutCamera() {
@@ -431,7 +453,22 @@ export default {
 
                     <!-- Login At -->
                     <div class="mt-3 is-size-7">
-                        <em>Online since: {{ onlineSince }}</em>
+                        <div class="columns is-multiline is-mobile">
+                            <div class="column is-half">
+                                <em>Online since: {{ onlineSince }}</em>
+                            </div>
+
+                            <!-- Public user button to 'gently nudge this blue camera as NSFW' -->
+                            <div class="column is-half" v-if="isOnBlueCam && isWatching">
+                                <a href="#" v-if="isOnBlueCam && isWatching"
+                                    type="button"
+                                    class="has-text-danger"
+                                    @click="nudgeNsfw()" title="Should their webcam be marked as Explicit?">
+                                    <i class="fa fa-fire mr-1"></i>
+                                    {{ sentNsfwNudge ? 'Thank you for helping tag this camera as Explicit!' : 'Should their camera be marked as Explicit?' }}
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Profile Fields spinner/error -->
