@@ -5416,6 +5416,12 @@ export default {
 
                     <!-- Who Is Online -->
                     <div v-if="whoTab === 'online'">
+
+                        <!-- Show a loading spinner if we are connected but the Who List hasn't arrived -->
+                        <div v-if="connected && sortedWhoList.length === 0" class="is-size-7">
+                            <i class="fa fa-spinner fa-spin mr-1"></i> Waiting for Who List...
+                        </div>
+
                         <div v-for="(u, i) in sortedWhoList" v-bind:key="i">
                             <WhoListRow
                                 :user="u"

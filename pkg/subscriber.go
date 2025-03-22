@@ -429,6 +429,18 @@ func (s *Server) SendTo(username string, msg messages.Message) error {
 
 // SendWhoList broadcasts the connected members to everybody in the room.
 func (s *Server) SendWhoList() {
+
+	// Don't send WhoList messages in the first 15 seconds of the server launch. This is to minimize
+	// messages sent during a server reboot if a lot of chatters were online: Presence messages are
+	// suppressed for 30 seconds, WhoList updates for 15, so that each user who reconnects doesn't
+	// spam updates to every other user, which would fill their message buffer and kick them off and
+	// makes for a rocky reboot. Instead: the server will send a WhoList to everyone at the 15 second
+	// mark, and then send them normally from then on.
+	if time.Since(s.upSince) < 15*time.Second {
+		log.Debug("skip sending WhoList messages within 15 seconds of server reboot")
+		return
+	}
+
 	var (
 		subscribers = s.IterSubscribers()
 		usernames   = []string{} // distinct and sorted usernames

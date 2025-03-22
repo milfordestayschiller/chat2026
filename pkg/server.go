@@ -77,5 +77,16 @@ func (s *Server) ListenAndServe(address string) error {
 	// Run the polling user idle kicker.
 	s.upSince = time.Now()
 	go s.KickIdlePollUsers()
+	go s.sendWhoListAfterReady()
 	return http.ListenAndServe(address, s.mux)
+}
+
+// Send first WhoList update 15 seconds after the server reboots. This is in case a lot of chatters
+// are online during a reboot: we avoid broadcasting Presence for 30 seconds and WhoList for 15 to
+// reduce chatter and avoid kicking clients offline repeatedly for filling up their message buffer
+// as everyone rejoins the chat all at once.
+func (s *Server) sendWhoListAfterReady() {
+	time.Sleep(16 * time.Second)
+	log.Info("Up 15 seconds, sending WhoList to any online chatters")
+	s.SendWhoList()
 }
