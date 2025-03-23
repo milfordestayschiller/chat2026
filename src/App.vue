@@ -3743,6 +3743,14 @@ export default {
                 this.profileModal.user = this.whoMap[username];
                 this.profileModal.username = username;
                 this.profileModal.visible = true;
+            } else {
+                // An offline user - profile minimal basic details.
+                this.profileModal.user = {
+                    username: username,
+                    loginAt: 0,
+                }
+                this.profileModal.username = username;
+                this.profileModal.visible = true;
             }
         },
 
