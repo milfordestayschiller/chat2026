@@ -3654,7 +3654,11 @@ export default {
             $body.addEventListener("dragenter", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                $dropArea.classList.add("is-active");
+
+                // Chrome bug: do not manipulate the DOM on drag start or it'll fire dragleave right away.
+                window.requestAnimationFrame(() => {
+                    $dropArea.classList.add("is-active");
+                });
             });
             $body.addEventListener("dragover", (e) => {
                 e.preventDefault();
