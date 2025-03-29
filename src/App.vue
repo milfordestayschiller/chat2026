@@ -5004,7 +5004,8 @@ export default {
                                         <div class="column is-narrow pr-0" style="position: relative">
                                             <img v-if="avatarForUsername(normalizeUsername(c.channel))"
                                                 :src="avatarForUsername(normalizeUsername(c.channel))" width="24"
-                                                height="24" alt="">
+                                                height="24" alt=""
+                                                :class="{ 'offline-avatar': isUserOffline(c.name) }">
                                             <img v-else src="/static/img/shy.png" width="24" height="24">
                                         </div>
 
@@ -5247,13 +5248,32 @@ export default {
 
                         <div v-for="(msg, i) in chatHistory" v-bind:key="i">
 
-                            <MessageBox :message="msg" :action="msg.action" :appearance="messageStyle"
-                                :position="i" :user="getUser(msg.username)" :is-offline="isUserOffline(msg.username)"
-                                :username="username" :website-url="config.website" :is-dnd="isUsernameDND(msg.username)"
-                                :is-muted="isMutedUser(msg.username)" :reactions="getReactions(msg)"
-                                :report-enabled="isWebhookEnabled('report')" :is-dm="isDM" :is-op="isOp"
-                                @open-profile="showProfileModal" @send-dm="openDMs" @mute-user="muteUser"
-                                @takeback="takeback" @remove="removeMessage" @report="reportMessage" @react="sendReact">
+                            <MessageBox
+                                :message="msg"
+                                :action="msg.action"
+                                :appearance="messageStyle"
+                                :position="i"
+                                :total-count="chatHistory.length"
+                                :user="getUser(msg.username)"
+                                :is-offline="isUserOffline(msg.username)"
+                                :username="username"
+                                :website-url="config.website"
+                                :is-dnd="isUsernameDND(msg.username)"
+                                :is-muted="isMutedUser(msg.username)"
+                                :reactions="getReactions(msg)"
+                                :report-enabled="isWebhookEnabled('report')"
+                                :is-dm="isDM"
+                                :is-op="isOp"
+                                :is-video-not-allowed="isVideoNotAllowed(getUser(msg.username))"
+                                :video-icon-class="webcamIconClass(getUser(msg.username))"
+                                @open-profile="showProfileModal"
+                                @open-video="openVideo"
+                                @send-dm="openDMs"
+                                @mute-user="muteUser"
+                                @takeback="takeback"
+                                @remove="removeMessage"
+                                @report="reportMessage"
+                                @react="sendReact">
                             </MessageBox>
 
                         </div>
@@ -5547,5 +5567,10 @@ export default {
 }
 .forcibly-single-line {
     white-space: nowrap;
+}
+
+/* Grey avatar for offline user on your DMs */
+.offline-avatar {
+    filter: grayscale();
 }
 </style>
