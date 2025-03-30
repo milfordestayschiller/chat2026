@@ -3,6 +3,7 @@ import EmojiPicker from 'vue3-emoji-picker';
 import LocalStorage from '../lib/LocalStorage';
 import ScamDetection from './ScamDetection.vue';
 import VideoFlag from '../lib/VideoFlag';
+import WebRTC from '../lib/WebRTC';
 import 'vue3-emoji-picker/css';
 
 export default {
@@ -118,45 +119,10 @@ export default {
 
         // TODO: make DRY, copied from WhoListRow.
         videoButtonClass() {
-            let result = "";
-
-            // VIP background if their cam is set to VIPs only
-            if ((this.user.video & VideoFlag.Active) && (this.user.video & VideoFlag.VipOnly)) {
-                result = "has-background-vip ";
-            }
-
-            // Colors and/or cursors.
-            if ((this.user.video & VideoFlag.Active) && (this.user.video & VideoFlag.NSFW)) {
-                result += "is-danger is-outlined";
-            } else if ((this.user.video & VideoFlag.Active) && !(this.user.video & VideoFlag.NSFW)) {
-                result += "is-link is-outlined";
-            } else if (this.isVideoNotAllowed) {
-                result += "cursor-notallowed";
-            }
-
-            return result;
+            return WebRTC.videoButtonClass(this.user, this.isVideoNotAllowed);
         },
         videoButtonTitle() {
-            // Mouse-over title text for the video button.
-            let parts = ["Open video stream"];
-
-            if (this.user.video & VideoFlag.MutualRequired) {
-                parts.push("mutual video sharing required");
-            }
-
-            if (this.user.video & VideoFlag.MutualOpen) {
-                parts.push("will auto-open your video");
-            }
-
-            if (this.user.video & VideoFlag.VipOnly) {
-                parts.push(`${this.vipConfig.Name} only`);
-            }
-
-            if (this.user.video & VideoFlag.NonExplicit) {
-                parts.push("prefers non-explicit video");
-            }
-
-            return parts.join("; ");
+            return WebRTC.videoButtonTitle(this.user);
         },
     },
     methods: {
