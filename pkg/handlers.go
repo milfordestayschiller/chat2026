@@ -464,6 +464,17 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 	}
 }
 
+// OnVideoInvite is a client inviting another to watch their camera.
+func (s *Server) OnVideoInvite(sub *Subscriber, msg messages.Message) {
+	sub.muteMu.Lock()
+	for _, username := range msg.Usernames {
+		sub.invited[username] = struct{}{}
+	}
+	sub.muteMu.Unlock()
+
+	s.SendWhoList()
+}
+
 // OnOpen is a client wanting to start WebRTC with another, e.g. to see their camera.
 func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	// Moderation rules?
@@ -531,6 +542,7 @@ func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, st
 		theirVideoActive    = (other.VideoStatus & messages.VideoFlagActive) == messages.VideoFlagActive
 		theirMutualRequired = (other.VideoStatus & messages.VideoFlagMutualRequired) == messages.VideoFlagMutualRequired
 		theirVIPRequired    = (other.VideoStatus & messages.VideoFlagOnlyVIP) == messages.VideoFlagOnlyVIP
+		theyInvitedUs       = other.InvitesVideo(sub.Username)
 	)
 
 	// Conditions in which we can not watch their video.
@@ -543,11 +555,11 @@ func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, st
 			Error: "Their video is not currently enabled.",
 		},
 		{
-			If:    theirMutualRequired && !ourVideoActive,
+			If:    !theyInvitedUs && (theirMutualRequired && !ourVideoActive),
 			Error: fmt.Sprintf("%s has requested that you should share your own camera too before opening theirs.", other.Username),
 		},
 		{
-			If:    theirVIPRequired && !sub.IsVIP() && !sub.IsAdmin(),
+			If:    !theyInvitedUs && (theirVIPRequired && !sub.IsVIP() && !sub.IsAdmin()),
 			Error: "You do not have permission to view that camera.",
 		},
 		{

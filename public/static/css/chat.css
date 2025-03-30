@@ -55,6 +55,11 @@ img {
     color: #ff9999 !important;
 }
 
+/* Video button outline for invited status */
+.video-button-invited {
+    border-color: hsl(153deg,53%,53%) !important;
+}
+
 /* Max height for message in report modal */
 .report-modal-message {
     max-height: 150px;

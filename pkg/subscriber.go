@@ -50,6 +50,7 @@ type Subscriber struct {
 	booted  map[string]struct{} // usernames booted off your camera
 	blocked map[string]struct{} // usernames you have blocked
 	muted   map[string]struct{} // usernames you muted
+	invited map[string]struct{} // usernames you invited to watch your camera
 
 	// Admin "unblockable" override command, e.g. especially for your chatbot so it can
 	// still moderate the chat even if users had blocked it. The /unmute-all admin command
@@ -75,6 +76,7 @@ func (s *Server) NewSubscriber(ctx context.Context, cancelFunc func()) *Subscrib
 		booted:     make(map[string]struct{}),
 		muted:      make(map[string]struct{}),
 		blocked:    make(map[string]struct{}),
+		invited:    make(map[string]struct{}),
 		messageIDs: make(map[int64]struct{}),
 		ChatStatus: "online",
 	}
@@ -154,6 +156,8 @@ func (s *Server) OnClientMessage(sub *Subscriber, msg messages.Message) {
 		s.OnReact(sub, msg)
 	case messages.ActionReport:
 		s.OnReport(sub, msg)
+	case messages.ActionVideoInvite:
+		s.OnVideoInvite(sub, msg)
 	case messages.ActionPing:
 	default:
 		sub.ChatServer("Unsupported message type: %s", msg.Action)
@@ -498,6 +502,9 @@ func (s *Server) SendWhoList() {
 						// Force their video to "off"
 						who.Video = 0
 					}
+				} else if user.InvitesVideo(sub.Username) {
+					// This user invited us to see their webcam, set the relevant flag.
+					who.Video |= messages.VideoFlagInvited
 				}
 
 				// If this person's VideoFlag is set to VIP Only, force their camera to "off"
@@ -533,6 +540,14 @@ func (s *Server) SendWhoList() {
 			WhoList: users,
 		})
 	}
+}
+
+// InvitesVideo checks whether the subscriber has invited the username to see their webcam.
+func (s *Subscriber) InvitesVideo(username string) bool {
+	s.muteMu.RLock()
+	defer s.muteMu.RUnlock()
+	_, ok := s.invited[username]
+	return ok
 }
 
 // Boots checks whether the subscriber has blocked username from their camera.

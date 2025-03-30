@@ -16,6 +16,8 @@ export default {
         isBooted: Boolean,
         profileWebhookEnabled: Boolean,
         vipConfig: Object,  // VIP config settings for BareRTC
+        myVideoActive: Boolean, // local user's camera is on
+        isInvitedVideo: Boolean, // we had already invited them to watch
     },
     components: {
         AlertModal,
@@ -172,6 +174,10 @@ export default {
 
         bootUser() {
             this.$emit('boot-user', this.user.username);
+        },
+
+        inviteVideo() {
+            this.$emit('invite-video', this.user.username);
         },
 
         // Operator commands (may be rejected by server if not really Op)
@@ -410,7 +416,16 @@ export default {
                                 'has-text-danger': !isBooted,
                                 'has-text-success': isBooted,
                             }"></i>
-                            {{  isBooted ? 'Allow to watch my webcam' : "Don't allow to watch my webcam" }}
+                            {{  isBooted ? 'Unboot from my webcam' : "Boot from my webcam" }}
+                        </button>
+
+                        <!-- Invite to watch me button -->
+                        <button type="button"
+                            v-if="myVideoActive && !isBooted && !isInvitedVideo"
+                            class="button is-small px-2 ml-1 mb-1"
+                            @click="inviteVideo()" title="Invite to watch my webcam">
+                            <i class="fa fa-video has-text-success mr-1"></i>
+                            Invite to watch me
                         </button>
 
                         <!-- Admin actions -->

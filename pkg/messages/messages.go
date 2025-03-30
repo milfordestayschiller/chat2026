@@ -72,14 +72,15 @@ type Message struct {
 
 const (
 	// Actions sent by the client side only
-	ActionLogin     = "login"  // post the username to backend
-	ActionBoot      = "boot"   // boot a user off your video feed
-	ActionUnboot    = "unboot" // unboot a user
-	ActionMute      = "mute"   // mute a user's chat messages
-	ActionUnmute    = "unmute"
-	ActionBlock     = "block"     // hard block another user
-	ActionBlocklist = "blocklist" // mute in bulk for usernames
-	ActionReport    = "report"    // user reports a message
+	ActionLogin       = "login"  // post the username to backend
+	ActionBoot        = "boot"   // boot a user off your video feed
+	ActionUnboot      = "unboot" // unboot a user
+	ActionMute        = "mute"   // mute a user's chat messages
+	ActionUnmute      = "unmute"
+	ActionBlock       = "block"        // hard block another user
+	ActionBlocklist   = "blocklist"    // mute in bulk for usernames
+	ActionReport      = "report"       // user reports a message
+	ActionVideoInvite = "video-invite" // user invites another to watch their webcam
 
 	// Actions sent by server or client
 	ActionMessage  = "message"  // post a message to the room
@@ -135,6 +136,7 @@ const (
 	VideoFlagMutualRequired                 // video wants viewers to share their camera too
 	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
 	VideoFlagOnlyVIP                        // can only shows as active to VIP members
+	VideoFlagInvited                        // user invites another to watch their camera
 )
 
 // Presence message templates.

@@ -43,6 +43,8 @@ VideoFlag: {
     NonExplicit:    1 << 3,
     MutualRequired: 1 << 4,
     MutualOpen:     1 << 5,
+    OnlyVIP:        1 << 6,
+    Invited:        1 << 7,
 }
 ```
 
@@ -352,6 +354,28 @@ The server tells the client to turn off their camera. This is done in response t
     "action": "cut"
 }
 ```
+
+## Video Invite
+
+Sent by: Client.
+
+The invite-video command allows the client to whitelist permission for other users on chat to watch their webcam, even if normally those other users would not be allowed.
+
+For example: if the user has the mutual webcam option enabled (to require their viewers to be on camera too before watching), the invite-video command will allow a user who is not on webcam to watch anyway.
+
+On the front-end app, this manifests as showing a green outline around the video button (with the video icon itself being blue or red as normal).
+
+Note: multiple usernames can be sent. This is so if the user experiences a temporary disconnect, their page can re-sync the list over when they reconnect.
+
+```javascript
+// Client Video Invite
+{
+    "action": "video-invite",
+    "usernames": [ "alice", "bob" ]
+}
+```
+
+The server does not send any response to this message. Instead, to the target users, the sender's video flag will have the Invited bit set on WhoList updates.
 
 ## Mute, Unmute
 

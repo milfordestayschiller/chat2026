@@ -137,6 +137,7 @@ class WebRTCController {
                 streams: {},
                 muted: {}, // muted bool per username
                 booted: {}, // booted bool per username
+                invited: {}, // usernames we had invited
                 poppedOut: {}, // popped-out video per username
                 speaking: {}, // speaking boolean per username
 
@@ -579,6 +580,26 @@ class WebRTCController {
                     action: "unboot",
                     username: username,
                 });
+            },
+            sendInviteVideo(username) {
+                this.WebRTC.invited[username] = true;
+                this.client.send({
+                    action: "video-invite",
+                    usernames: [username],
+                });
+            },
+            sendInviteVideoBulk() {
+                let usernames = Object.keys(this.WebRTC.invited);
+                if (usernames.length === 0) return;
+
+                // Re-send the invite list on reconnect to server.
+                this.client.send({
+                    action: "video-invite",
+                    usernames: usernames,
+                });
+            },
+            isInvited(username) {
+                return this.WebRTC.invited[username] != undefined;
             },
             onCandidate(msg) {
                 // Handle inbound WebRTC signaling messages proxied by the websocket.
@@ -1195,12 +1216,20 @@ class WebRTCController {
                 if (this.webcam.active) return;
                 for (let row of this.whoList) {
                     let username = row.username;
+
+                    // If this user expressly invited us to watch, skip.
+                    if ((row.video & this.VideoFlag.Active) && (row.video & this.VideoFlag.Invited)) {
+                        continue;
+                    }
+
                     if ((row.video & this.VideoFlag.MutualRequired) && this.WebRTC.pc[username] != undefined) {
                         this.closeVideo(username);
                     }
                 }
             },
             unWatchNonExplicitVideo() {
+                if (!this.webcam.active) return;
+
                 // If we are watching cameras with the NonExplicit setting, and our camera has become
                 // explicit, excuse ourselves from their watch list.
                 if (this.webcam.nsfw) {
@@ -1224,6 +1253,29 @@ class WebRTCController {
                         }
                     }
                 }
+            },
+
+            // Invite a user to watch your camera even if they normally couldn't see.
+            inviteToWatch(username) {
+                this.modalConfirm({
+                    title: "Invite to watch my webcam",
+                    icon: "fa fa-video",
+                    message: `Do you want to invite @${username} to watch your camera?\n\n` +
+                        `This will give them permission to see your camera even if, normally, they would not be able to. ` +
+                        `For example, if you have the option enabled to "require my viewer to be on webcam too" and @${username} is not on camera, ` +
+                        `by inviting them to watch they will be allowed to see your camera anyway.\n\n` +
+                        `This permission will be granted for the remainder of your chat session, but you can boot them ` +
+                        `off your camera if you change your mind later.`,
+                    buttons: ['Invite to watch', 'Cancel'],
+                }).then(() => {
+                    this.sendInviteVideo(username);
+
+                    this.ChatClient(
+                        `You have granted <strong>@${username}</strong> permission to watch your webcam. This will be in effect for the remainder of your chat session. ` +
+                            "Note: if you change your mind later, you can boot them from your camera or block them from watching by using the button " +
+                            "in their profile card.",
+                    );
+                });
             },
 
             isUsernameOnCamera(username) {
@@ -1277,7 +1329,12 @@ class WebRTCController {
     
                 // If the user is under the NoVideo rule, always cross it out.
                 if (this.jwt.rules.IsNoVideoRule) return true;
-    
+
+                // If this user expressly invited us to watch.
+                if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.Invited)) {
+                    return false;
+                }
+
                 // Mutual video sharing is required on this camera, and ours is not active
                 if ((user.video & this.VideoFlag.Active) && (user.video & this.VideoFlag.MutualRequired)) {
                     // A nuance to the mutual video required: if we DO have our cam on, but ours is VIP only, and the
@@ -1850,12 +1907,21 @@ class WebRTCController {
             result = "has-background-vip ";
         }
 
+        // Invited to watch: green border but otherwise red/blue icon.
+        if ((user.video & VideoFlag.Active) && (user.video & VideoFlag.Invited)) {
+            // Invited to watch; green border but blue/red icon.
+            result += "video-button-invited ";
+        }
+
         // Colors and/or cursors.
         if ((user.video & VideoFlag.Active) && (user.video & VideoFlag.NSFW)) {
+            // Explicit camera: red border
             result += "is-danger is-outlined";
         } else if ((user.video & VideoFlag.Active) && !(user.video & VideoFlag.NSFW)) {
+            // Normal camera: blue border
             result += "is-link is-outlined";
         } else if (isVideoNotAllowed) {
+            // Default: grey border and not-allowed cursor.
             result += "cursor-notallowed";
         }
 

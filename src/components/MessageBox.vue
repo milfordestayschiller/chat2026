@@ -26,8 +26,10 @@ export default {
         noButtons: Boolean,  // hide all message buttons (e.g. for Report Modal)
 
         // User webcam settings
+        myVideoActive: Boolean, // local user's camera is on
         isVideoNotAllowed: Boolean,
         videoIconClass: String,
+        isInvitedVideo: Boolean, // we had already invited them to watch
     },
     components: {
         EmojiPicker,
@@ -117,7 +119,6 @@ export default {
             return `${this.position}-${this.user.username}-${this.message.at}-${Math.random()*99999}`;
         },
 
-        // TODO: make DRY, copied from WhoListRow.
         videoButtonClass() {
             return WebRTC.videoButtonClass(this.user, this.isVideoNotAllowed);
         },
@@ -138,6 +139,10 @@ export default {
 
         openVideo() {
             this.$emit('open-video', this.user);
+        },
+
+        inviteVideo() {
+            this.$emit('invite-video', this.user.username);
         },
 
         muteUser() {
@@ -345,6 +350,13 @@ export default {
                         </div>
                         <div class="dropdown-menu" :id="`msg-overflow-menu-${uniqueID}`">
                             <div class="dropdown-content" role="menu">
+
+                                <!-- Invite this user to watch my camera -->
+                                <a href="#" class="dropdown-item" v-if="!(message.username === username) && myVideoActive && !isInvitedVideo"
+                                    @click.prevent="inviteVideo()">
+                                    <i class="fa fa-video mr-1 has-text-success"></i>
+                                    Invite to watch my webcam
+                                </a>
 
                                 <!-- Mute/Unmute User -->
                                 <a href="#" class="dropdown-item" v-if="!(message.username === username)"
@@ -558,6 +570,13 @@ export default {
                             <a href="#" class="dropdown-item" v-if="message.msgID && message.username !== username"
                                 @click.prevent="openDMs()">
                                 <i class="fa fa-comment mr-1"></i> Direct Message
+                            </a>
+
+                            <!-- Invite this user to watch my camera -->
+                            <a href="#" class="dropdown-item" v-if="!(message.username === username) && myVideoActive && !isInvitedVideo"
+                                @click.prevent="inviteVideo()">
+                                <i class="fa fa-video mr-1 has-text-success"></i>
+                                Invite to watch my webcam
                             </a>
 
                             <a href="#" class="dropdown-item" v-if="message.msgID && !message.username !== username"

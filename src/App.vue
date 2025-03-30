@@ -1094,7 +1094,7 @@ export default {
             for (let row of this.whoList) {
                 // If we were watching this user's (blue) camera and we prefer non-Explicit,
                 // and their camera is now becoming explicit (red), close it now.
-                if (this.webcam.nonExplicit && this.WebRTC.streams[row.username] != undefined) {
+                if (this.webcam.active && this.webcam.nonExplicit && this.WebRTC.streams[row.username] != undefined) {
                     if (!(this.whoMap[row.username].video & this.VideoFlag.NSFW)
                         && (row.video & this.VideoFlag.NSFW)) {
                         this.closeVideo(row.username, "offerer");
@@ -1281,6 +1281,9 @@ export default {
                 if (mapBlockedUsers[username]) continue;
                 this.sendMute(username, true);
             }
+
+            // Re-sync our video invite list on reconnect as well.
+            this.sendInviteVideoBulk();
         },
 
         onUserExited(msg) {
@@ -3085,12 +3088,15 @@ export default {
         :profile-webhook-enabled="isWebhookEnabled('profile')"
         :vip-config="config.VIP"
         :is-watching="isWatching(profileModal.username)"
+        :my-video-active="webcam.active"
+        :is-invited-video="isInvited(profileModal.username)"
         @send-dm="openDMs"
         @mute-user="muteUser"
         @boot-user="bootUser"
         @send-command="sendCommand"
         @nudge-nsfw="sendNudgeNsfw"
         @report="doCustomReport"
+        @invite-video="inviteToWatch"
         @cancel="profileModal.visible = false"></ProfileModal>
 
     <!-- DMs History of Usernames Modal -->
@@ -3497,10 +3503,13 @@ export default {
                                 :report-enabled="isWebhookEnabled('report')"
                                 :is-dm="isDM"
                                 :is-op="isOp"
+                                :my-video-active="webcam.active"
                                 :is-video-not-allowed="isVideoNotAllowed(getUser(msg.username))"
                                 :video-icon-class="webcamIconClass(getUser(msg.username))"
+                                :is-invited-video="isInvited(msg.username)"
                                 @open-profile="showProfileModal"
                                 @open-video="openVideo"
+                                @invite-video="inviteToWatch"
                                 @send-dm="openDMs"
                                 @mute-user="muteUser"
                                 @takeback="takeback"
