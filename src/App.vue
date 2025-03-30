@@ -5045,7 +5045,7 @@ export default {
                             Ignore unsolicited DMs
 
                             <a href="#"
-                                onclick="alert('When checked, your DMs will be closed to new conversations. You may still initiate new DMs with others.'); return false"
+                                @click.prevent="modalAlert({title: 'About Ignoring Unsolicited DMs', message: 'When this box is checked, your DMs will be closed to new conversations and the button for others to send you a DM will be greyed out/disabled.\n\nYou may still initiate new DMs with others yourself, and continue conversations with people who you already have DM threads open with.'})"
                                 class="fa fa-info-circle ml-2">
                             </a>
                         </label>
