@@ -400,7 +400,7 @@ export default {
                     title="Translate this message using Google Translate"
                     @click.prevent="translate()">
                     <i class="fab fa-google has-text-success"></i>
-                    <span class="has-text-success ml-2">Translate</span>
+                    
                 </button>
             </div>
 

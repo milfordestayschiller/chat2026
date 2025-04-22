@@ -4713,7 +4713,7 @@ fieldset[disabled] .select select:hover {
 
 .card-header-title {
   align-items: center;
-  color: #363636;
+  color: purple !important;
   display: flex;
   flex-grow: 1;
   font-weight: 700;

@@ -367,9 +367,9 @@ export default {
             // Notify if going hidden.
             if (this.status === 'hidden' && this.isOp) {
                 this.ChatClient(
-                    "Your status is now set to 'hidden' which makes it appear as though you have logged out of chat.\n\n" +
-                    "Try not to break the illusion by interacting with chat in this state. For safety, your message " +
-                    "entry box will be disabled in public channels.",
+                   "Tu estado ahora está configurado como 'oculto', lo que hace que parezca que has cerrado sesión en el chat.\n\n" +
+                    "Intenta no romper la ilusión interactuando con el chat en este estado. Por seguridad, tu mensaje " +
+                    "El cuadro de entrada estará deshabilitado en los canales públicos",
                 );
             }
             // Send presence updates to the server.
@@ -813,13 +813,13 @@ export default {
             }
 
             if (!this.connected) {
-                this.ChatClient("You are not connected to the server.");
+                this.ChatClient("Usted esta ahora conectado al Chat.");
                 return;
             }
 
             // Safety for hidden status.
             if (this.status === 'hidden' && !this.isDM) {
-                this.ChatClient("Your status is currently set to 'hidden' and it would break the illusion to talk in public channels.");
+                this.ChatClient("Su estado actualmente está configurado como 'oculto' y rompería la ilusión de hablar en canales públicos");
                 return;
             }
 
@@ -835,19 +835,19 @@ export default {
                     this.client.send({
                         action: "message",
                         channel: "lobby",
-                        message: "**(Message of Shame)** I have been naughty and posted spam in chat despite being warned, " +
-                            "and I am now being kicked from the room in shame. ☹️",
+                        message: "**(Mensaje de vergüenza)** He sido travieso y publiqué spam en el chat a pesar de haber sido advertido, " +
+                            "Y ahora me echan de la habitación avergonzado. ☹️",
                     });
 
                     this.ChatServer(
-                        "It is <strong>not allowed</strong> to promote your Onlyfans (or similar) " +
-                        "site on the chat room. You have been removed from the chat room, and this " +
-                        "incident has been reported to the site admin.",
+                       "No está <strong>no</strong> promocionar a tu Onlyfans (o similar) " +
+                        "sitio en la sala de chat. Te han eliminado de la sala de chat y esto " +
+                        "El incidente ha sido reportado al administrador del sitio.",
                     );
                     this.pushHistory({
                         channel: this.channel,
                         username: this.username,
-                        message: "has been kicked from the room!",
+                        message: "ha sido pateado de la sala",
                         action: "presence",
                     });
                     this.disconnect = true;
@@ -860,9 +860,8 @@ export default {
                 this.spamWarningCount++;
 
                 this.ChatClient(
-                    "Please <strong>do not</strong> send links to your Onlyfans (or similar sites) in the chat room. " +
-                    "Those links are widely regarded to be spam and make a lot of people uncomfortable. " +
-                    "If you violate this again, your account will be suspended.",
+                    "Por favor, <strong>no</strong> envíe enlaces a sus Onlyfans (o sitios similares) en la sala de chat"
+                   
                 );
                 this.message = "";
                 return;
@@ -1177,8 +1176,8 @@ export default {
                 for (let user of this.config.CachedBlocklist) {
                     if (user === username) {
                         this.ChatClient(
-                            `You can not unmute <strong>${username}</strong> because you have blocked them on the main website. ` +
-                            `To unmute them, you will need to unblock them on the website and then reload the chat room.`
+                            `No puedes desmutear <strong>${username}</strong> la has bloqueado del sitio principañ ` +
+                            `Para activarlos, deberá desbloquearlos en el sitio web y luego volver a cargar la sala de chat..`
                         );
                         return;
                     }
@@ -1193,11 +1192,11 @@ export default {
                 this.sendMute(username, mute);
                 if (mute) {
                     this.ChatClient(
-                        `You have muted <strong>${username}</strong> and will no longer see their chat messages, ` +
-                        `and they will not see whether your webcam is active. You may unmute them via the Who Is Online list.`);
+                        `Tu tienes muteado <strong>${username}</strong> y ya no verá sus mensajes de chat,, ` +
+                        `y no verán si su cámara web está activa. Puede reactivarlos a través de la lista Quién está en línea.`);
                 } else {
                     this.ChatClient(
-                        `You have unmuted <strong>${username}</strong> and can see their chat messages from now on.`,
+                        `tu tienes desmuteado <strong>${username}</strong> y poder ver sus mensajes de chat a partir de ahora.`,
                     );
                 }
             };
@@ -1206,9 +1205,9 @@ export default {
                 this.modalConfirm({
                     title: `Mute ${username}`,
                     icon: "fa fa-comment-slash",
-                    message: `Do you want to mute ${username}? If muted, you will no longer see their ` +
-                        `chat messages or any DMs they send you going forward. Also, ${username} will ` +
-                        `not be able to see whether your webcam is active until you unmute them.`,
+                    message: `Quieres silenciar ${username}? si esta muteado, ya no veras sus ` +
+                        `mensajes de char y ningun privado que ellos te envien en un futuri. Ademas, ${username} will ` +
+                        `No podrás ver si tu cámara web está activa hasta que la actives.`,
                 }).then(() => {
                     this.muted[username] = true;
                     callback();
@@ -1217,9 +1216,9 @@ export default {
                 this.modalConfirm({
                     title: `Un-mute ${username}`,
                     icon: "fa fa-comment",
-                    message: `Do you want to remove your mute on ${username}? If you un-mute them, you ` +
-                        `will be able to see their chat messages or DMs going forward, but most importantly, ` +
-                        `they may be able to watch your webcam now if you are broadcasting!`,
+                    message:`¿Quieres eliminar tu silencio en ${username}? Si los activas, ` +
+                        `podrá ver sus mensajes de chat o DM en el futuro, pero lo más importante, ` +
+                        `¡Es posible que puedan ver tu cámara web ahora si estás transmitiendo!`,
                 }).then(() => {
                     delete this.muted[username];
                     callback();
@@ -2409,27 +2408,27 @@ export default {
                         <ul>
                             <li :class="{ 'is-active': settingsModal.tab === 'prefs' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'prefs'">
-                                    Display
+                                    Mostrar
                                 </a>
                             </li>
                             <li :class="{ 'is-active': settingsModal.tab === 'sounds' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'sounds'">
-                                    Sounds
+                                    Soonidos
                                 </a>
                             </li>
                             <li :class="{ 'is-active': settingsModal.tab === 'webcam' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'webcam'">
-                                    Camera
+                                    Camara
                                 </a>
                             </li>
                             <li :class="{ 'is-active': settingsModal.tab === 'misc' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'misc'">
-                                    Misc
+                                    Miscelaneo
                                 </a>
                             </li>
                             <li :class="{ 'is-active': settingsModal.tab === 'advanced' }">
                                 <a href="#" @click.prevent="settingsModal.tab = 'advanced'">
-                                    Advanced
+                                    Avanzado
                                 </a>
                             </li>
                         </ul>
@@ -2439,7 +2438,7 @@ export default {
                     <div v-if="settingsModal.tab === 'prefs'">
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
-                                <label class="label">Theme</label>
+                                <label class="label">Tema</label>
                             </div>
                             <div class="field-body">
                                 <div class="field">
@@ -2448,7 +2447,7 @@ export default {
                                             <input type="radio"
                                                 v-model="prefs.theme"
                                                 value="auto">
-                                            Automatic
+                                            Automatico
                                         </label>
                                         <label class="radio">
                                             <input type="radio"
@@ -2460,7 +2459,7 @@ export default {
                                             <input type="radio"
                                                 v-model="prefs.theme"
                                                 value="dark">
-                                            Dark
+                                            Oscuro
                                         </label>
                                     </div>
                                 </div>
@@ -2469,7 +2468,7 @@ export default {
 
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
-                                <label class="label">Video size</label>
+                                <label class="label">Tamaño Video</label>
                             </div>
                             <div class="field-body">
                                 <div class="field">
@@ -2489,7 +2488,7 @@ export default {
 
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
-                                <label class="label">Text size</label>
+                                <label class="label">Tamaño de texto</label>
                             </div>
                             <div class="field-body">
                                 <div class="field">
@@ -2508,7 +2507,7 @@ export default {
 
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
-                                <label class="label">Text style</label>
+                                <label class="label">Estilo de texto</label>
                             </div>
                             <div class="field-body">
                                 <div class="field">
@@ -2528,7 +2527,7 @@ export default {
 
                         <div class="field is-horizontal">
                             <div class="field-label is-normal">
-                                <label class="label">Images</label>
+                                <label class="label">Imagenes</label>
                             </div>
                             <div class="field-body">
                                 <div class="field">
@@ -2547,14 +2546,14 @@ export default {
                         </div>
 
                         <div class="field">
-                            <label class="label">Scrollback buffer</label>
+                            <label class="label">Buffer</label>
                             <div class="control">
                                 <input type="number" class="input" v-model="scrollback" min="0" inputmode="numeric">
                             </div>
                             <p class="help">
-                                How many chat history messages to keep at once (per channel/DM thread).
-                                Older messages will be removed so your web browser doesn't run low on memory.
-                                A value of zero (0) will mean "unlimited" and the chat history is never trimmed.
+                                Cuántos mensajes del historial de chat conservar a la vez (por canal/hilo DM).
+                                Los mensajes más antiguos se eliminarán para que su navegador web no se quede sin memoria.
+                                Un valor de cero (0) significará "ilimitado" y el historial de chat nunca se recortará.
                             </p>
                         </div>
 
@@ -2567,20 +2566,20 @@ export default {
                             <div class="column">
                                 <label class="checkbox">
                                     <input type="checkbox" v-model="prefs.muteSounds" :value="true">
-                                    Mute all sound effects
+                                    Mutear todos los efectos de sonidos
                                 </label>
                             </div>
                             <div class="column">
                                 <label class="checkbox">
                                     <input type="checkbox" v-model="webcam.autoMuteWebcams" :value="true">
-                                    Automatically mute webcams
+                                    Automaticamente mutear webcams
                                 </label>
                             </div>
                         </div>
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">DM chat</label>
+                                <label class="label is-size-7">Imbox Chat (Privados)</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2593,7 +2592,7 @@ export default {
                             </div>
 
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">Public chat</label>
+                                <label class="label is-size-7">Chat Publico</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2608,7 +2607,7 @@ export default {
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">Room enter</label>
+                                <label class="label is-size-7">Entrar a la sala</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2621,7 +2620,7 @@ export default {
                             </div>
 
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">Room leave</label>
+                                <label class="label is-size-7">Salir de la sal</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2636,7 +2635,7 @@ export default {
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">Watched</label>
+                                <label class="label is-size-7">Deseado</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2649,7 +2648,7 @@ export default {
                             </div>
 
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">Unwatched</label>
+                                <label class="label is-size-7">No deseado</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth">
@@ -2664,7 +2663,7 @@ export default {
 
                         <div class="columns is-mobile">
                             <div class="column is-2 pr-1">
-                                <label class="label is-size-7">@ Mentioned</label>
+                                <label class="label is-size-7">@ Mencionado</label>
                             </div>
                             <div class="column">
                                 <div class="select is-fullwidth pr-2">
@@ -2689,83 +2688,83 @@ export default {
                     <!-- Webcam preferences -->
                     <div v-if="settingsModal.tab === 'webcam'">
                         <h3 class="subtitle mb-2">
-                            Camera Settings
+                            Configuraciones de Camara
                         </h3>
 
                         <p class="block mb-1 is-size-7">
-                            The settings on this tab will be relevant only when you are already
-                            broadcasting your camera. They allow you to modify your broadcast settings
-                            while you are already live (for example, to change your mutual camera
-                            preference or select another audio/video device to broadcast from).
+                            La configuración de esta pestaña será relevante sólo cuando ya estés
+                            transmitiendo tu cámara. Te permiten modificar la configuración de tu transmisión.
+                            mientras ya estás en vivo (por ejemplo, para cambiar tu cámara mutua
+                            preferencia o seleccione otro dispositivo de audio/video para transmitir).
                         </p>
 
                         <p class="block mb-1" v-if="config.permitNSFW">
-                            <label class="label">Explicit webcam options</label>
+                            <label class="label">Opciones de WebCam Explicitas</label>
                         </p>
 
                         <div class="field mb-1" v-if="config.permitNSFW">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.nsfw" :disabled="webcam.nonExplicit">
-                                Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
-                                <span class="has-text-danger">Explicit</span> or sexual content
+                                Marcar mi camara como destacada <i class="fa fa-fire has-text-danger mr-2"></i>
+                                <span class="has-text-danger">Explicito</span> o contenido sexual
                             </label>
                         </div>
 
                         <div class="field" v-if="config.permitNSFW">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.nonExplicit">
-                                I prefer not to see or be watched by Explicit cameras
+                                Prefiero no ver ni ser observado por cámaras explícitas
                             </label>
                             <p class="help">
-                                Don't auto-open explicit cameras when they open mine; and automatically
-                                close a camera I am watching if it toggles to become explicit.<br>
+                                No abra automáticamente cámaras explícitas cuando abran la mía; y automáticamente
+                                Cierra una cámara que estoy mirando si cambia para volverse explícita.<br>
                                 <strong class="has-text-success">New:</strong>
-                                People on explicit cameras can not watch your camera.
+                                Las personas en cámaras explícitas no pueden mirar tu cámara.
                             </p>
                         </div>
 
                         <p class="block mb-1">
-                            <label class="label">Mutual webcam options</label>
+                            <label class="label">Opciones de webcam mutuales</label>
                         </p>
 
                         <div class="field mb-1">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.mutual">
-                                People must be sharing their own camera before they can open mine
+                                Las personas deben compartir su propia cámara antes de poder abrir la mía.
                             </label>
                         </div>
 
                         <div class="field mb-1">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.mutualOpen">
-                                When someone opens my camera, I also open their camera automatically
+                                Cuando alguien abre mi cámara, también abro su cámara automáticamente.
                             </label>
                         </div>
 
                         <div class="field mb-1">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.autoMuteWebcams">
-                                <i class="fa fa-microphone-slash mx-1"></i> Automatically mute audio on other peoples' webcams
+                                <i class="fa fa-microphone-slash mx-1"></i> Silenciar automáticamente el audio en las cámaras web de otras personas
                             </label>
                         </div>
 
                         <div class="field mb-1" v-if="isVIP">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.vipOnly">
-                                Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
+                                Solo <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
                                     :class="config.VIP.Icon"></sup>
-                                members can see that my camera is broadcasting
+                                los miembros pueden ver que mi cámara está transmitiendo
                             </label>
                         </div>
 
                         <div class="field">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.rememberExpresslyClosed">
-                                Don't (automatically) reopen cameras that I have expressly closed
+                                No volver a abrir (automáticamente) cámaras que he cerrado expresamente
                             </label>
                             <p class="help">
-                                If I click the 'X' button to expressly close a webcam, that video won't
-                                auto-open again in case that person reopened my camera.
+                                Si hago clic en el botón 'X' para cerrar expresamente una cámara web, ese vídeo no
+                                se abrirá automáticamente nuevamente en caso de que esa persona vuelva a abrir mi cámara.
                             </p>
                         </div>
 
@@ -2781,24 +2780,24 @@ export default {
                             v-if="webcam.videoDevices.length > 0 || webcam.audioDevices.length > 0">
 
                             <div class="column">
-                                <label class="label">Video source</label>
+                                <label class="label">Video origen</label>
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.videoDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
                                         <option v-for="(d, i) in webcam.videoDevices" :value="d.id" v-bind:key="i">
-                                            {{ d.label || `Camera ${i}` }}
+                                            {{ d.label || `Camara ${i}` }}
                                         </option>
                                     </select>
                                 </div>
                             </div>
 
                             <div class="column">
-                                <label class="label">Audio source</label>
+                                <label class="label">Audio orien</label>
                                 <div class="select is-fullwidth">
                                     <select v-model="webcam.audioDeviceID"
                                         @change="startVideo({ changeCamera: true, force: true })">
                                         <option v-for="(d, i) in webcam.audioDevices" :value="d.id" v-bind:key="i">
-                                            {{ d.label || `Microphone ${i}` }}
+                                            {{ d.label || `Microfono ${i}` }}
                                         </option>
                                     </select>
                                 </div>
@@ -2806,18 +2805,17 @@ export default {
                         </div>
 
                         <p class="block mb-1" v-if="webcam.videoDevices.length > 0">
-                            <label class="label">Miscellaneous</label>
+                            <label class="label">Miscelaneo</label>
                         </p>
 
                         <div class="field mb-1" v-if="webcam.videoDevices.length > 0">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.autoshare">
-                                Automatically go on camera when I log onto the chat room
+                                Entrar automáticamente a la cámara cuando inicio sesión en la sala de chat
                             </label>
                             <p class="help">
-                                Note: be sure that your web browser has <strong>remembered</strong> your webcam and mic
-                                permission! This option can automatically share your webcam when you log onto chat again
-                                from this device.
+                                Nota: asegúrese de que su navegador web haya <strong>recordado</strong> su cámara web y su micrófono.
+                                Esta opción puede compartir automáticamente su cámara web cuando vuelva a iniciar sesión en el chat desde este dispositivo.
                             </p>
                         </div>
                     </div>
@@ -2826,43 +2824,42 @@ export default {
                     <div v-if="settingsModal.tab === 'misc'">
 
                         <div class="field">
-                            <label class="label">Presence messages <small>('has joined the room')</small> in public
-                                channels</label>
+                            <label class="label">Mensajes de presencia <small>('se a unido a la sana')</small> en canales publicos</label>
                             <div class="columns is-mobile mb-0">
                                 <div class="column py-1">
                                     <label class="checkbox" title="Show 'has joined the room' messages in public channels">
                                         <input type="checkbox" v-model="prefs.joinMessages" :value="true">
-                                        Join room
+                                        Ingresar a la sala
                                     </label>
                                 </div>
 
                                 <div class="column py-1">
                                     <label class="checkbox" title="Show 'has exited the room' messages in public channels">
                                         <input type="checkbox" v-model="prefs.exitMessages" :value="true">
-                                        Exit room
+                                       Salir de la sala
                                     </label>
                                 </div>
                             </div>
                         </div>
 
                         <div class="field">
-                            <label class="label mb-0">Server notification messages</label>
+                            <label class="label mb-0">Server notificacion de mensajes</label>
                             <label class="checkbox" title="Show 'has joined the room' messages in public channels">
                                 <input type="checkbox" v-model="prefs.watchNotif" :value="true">
-                                Notify when somebody opens my camera
+                                Notificacion de cuando alguien habra mi cara
                             </label>
                         </div>
 
                         <div class="field">
-                            <label class="label mb-0">Direct Messages</label>
+                            <label class="label mb-0">Mensajes Directos</label>
                             <label class="checkbox mb-0">
                                 <input type="checkbox" v-model="prefs.closeDMs" :value="true">
-                                Ignorar mensajes directos no solicitados de otros
+                                Ignorar mensajes directos 
                             </label>
                             <p class="help">
-                                If you check this box, other chatters may not initiate DMs with you: their messages
-                                will be (silently) ignored. You may still initiate DM chats with others, unless they
-                                also have closed their DMs with this setting.
+                                Si marca esta casilla, otros usuarios del chat no podrán iniciar mensajes directos con usted: sus mensajes
+                                será (silenciosamente) ignorado. Aún puedes iniciar chats DM con otras personas, a menos que ellas
+                                también han cerrado sus DM con esta configuración.
                             </p>
                         </div>
 
@@ -2948,32 +2945,32 @@ export default {
         <div class="modal-content">
             <div class="card">
                 <header class="card-header has-background-info">
-                    <p class="card-header-title">Select Webcam Options</p>
+                    <p class="card-header-title">Seleccionar opciones de WebCam</p>
                 </header>
                 <div class="card-content">
                     <p class="block mb-1">
-                        You can turn on your webcam and enable others in the room to connect to yours.
-                        The controls to <i class="fa fa-stop has-text-danger"></i> stop and <i
-                            class="fa fa-microphone-slash has-text-danger"></i> mute audio
-                        will be at the top of the page.
+                        Puede encender su cámara web y permitir que otras personas en la sala se conecten a la suya.
+                        Los controles para <i class="fa fa-stop has-text-danger"></i> detener y <i
+                            class="fa fa-microphone-slash has-text-danger"></i> mutear audio
+                        deberian estar arriba de la pagina
                     </p>
 
                     <div class="field">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.autoMute">
-                            Start with my microphone on mute by default
+                            Empezar con mi micrófono en silencio de forma predeterminada
                         </label>
                     </div>
 
                     <p v-if="config.permitNSFW" class="block mb-1">
-                        <label class="label">'Explicit' webcam options</label>
+                        <label class="label">'Explicitas' opciones de webcam</label>
                     </p>
 
                     <div class="field" v-if="config.permitNSFW">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.nsfw" :disabled="webcam.nonExplicit">
                             Mark my camera as featuring <i class="fa fa-fire has-text-danger mr-2"></i>
-                            <span class="has-text-danger">Explicit</span> or sexual content
+                            <span class="has-text-danger">Explicito</span> o contenido sexual
                         </label>
                         <p class="help">
                             You can toggle this at any time by clicking on the '<i class="fa fa-fire"></i> Explicit'
@@ -3001,14 +2998,14 @@ export default {
                     <div class="field mb-1">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.mutual">
-                            People must be sharing their own camera before they can open mine
+                            Las personas deben compartir su propia cámara antes de poder abrir la mía.
                         </label>
                     </div>
 
                     <div class="field mb-1">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.mutualOpen">
-                            When someone opens my camera, I also open their camera automatically
+                            Cuando alguien abre mi cámara, también abro su cámara automáticamente.
                         </label>
                     </div>
 
@@ -3055,9 +3052,9 @@ export default {
 
                     <div class="field">
                         <div class="control has-text-centered">
-                            <button type="button" class="button" @click="nsfwModalCast.visible = false">Cancel</button>
+                            <button type="button" class="button" @click="nsfwModalCast.visible = false">Cancelar</button>
                             <button type="button" class="button is-success ml-2"
-                                @click="startVideo({ force: true }); nsfwModalCast.visible = false">Start webcam</button>
+                                @click="startVideo({ force: true }); nsfwModalCast.visible = false">Comenzar mi transmision</button>
                         </div>
                     </div>
                 </div>
@@ -3119,24 +3116,24 @@ export default {
                     <!-- Stop/Start video buttons -->
                     <button type="button" v-if="webcam.active" class="button is-small is-danger px-1" @click="stopVideo()">
                         <i class="fa fa-stop mr-2"></i>
-                        Stop
+                        Detener
                     </button>
                     <button type="button" v-else class="button is-small is-success px-1" @click="startVideo({})"
                         :disabled="webcam.busy">
                         <i class="fa fa-video mr-2"></i>
-                        Share webcam
+                        Compartir WebCam
                     </button>
 
                     <!-- Mute/Unmute my mic buttons (if streaming)-->
                     <button type="button" v-if="webcam.active && !webcam.muted" class="button is-small is-success ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone mr-2"></i>
-                        Mute
+                        Mutear
                     </button>
                     <button type="button" v-if="webcam.active && webcam.muted" class="button is-small is-danger ml-1 px-1"
                         @click="muteMe()">
                         <i class="fa fa-microphone-slash mr-2"></i>
-                        Unmute
+                        Desmutear
                     </button>
 
                     <!-- Watchers button -->
@@ -3214,7 +3211,7 @@ export default {
                 <div class="card-content">
                     <aside class="menu">
                         <p class="menu-label">
-                            Public Channels
+                            Canales Publicos
                         </p>
 
                         <ul class="menu-list">
@@ -3281,10 +3278,10 @@ export default {
                     <div class="tag mt-2">
                         <label class="checkbox">
                             <input type="checkbox" v-model="prefs.closeDMs" :value="true">
-                            Ignorar mensajes directos no solicitados
+                            Ignorar mensajes directos 
 
                             <a href="#"
-                                @click.prevent="modalAlert({title: 'About Ignoring Unsolicited DMs', message: 'When this box is checked, your DMs will be closed to new conversations and the button for others to send you a DM will be greyed out/disabled.\n\nYou may still initiate new DMs with others yourself, and continue conversations with people who you already have DM threads open with.'})"
+                                @click.prevent="modalAlert({title: 'Acerca de ignorar mensajes directos no solicitados', message: 'Cuando esta casilla está marcada, sus mensajes directos se cerrarán a nuevas conversaciones y el botón para que otros le envíen un mensaje directo estará atenuado o deshabilitado.\n\nAún puedes iniciar nuevos mensajes directos con otras personas y continuar conversaciones con personas con las que ya tienes hilos de mensajes directos abiertos.'})"
                                 class="fa fa-info-circle ml-2">
                             </a>
                         </label>
@@ -3613,7 +3610,7 @@ export default {
             <div class="card grid-card">
                 <header class="card-header has-background-success">
                     <div class="columns is-mobile card-header-title">
-                        <div class="column">Who Is Online</div>
+                        <div class="column">En Linea</div>
                         <div class="column is-narrow mobile-only">
                             <button type="button" class="button is-success px-2 py-1" @click="openChatPanel">
                                 <i class="fa fa-arrow-left"></i>
@@ -3646,26 +3643,26 @@ export default {
 
                     <div class="columns is-mobile mb-0">
                         <div class="column is-one-quarter">
-                            Sort:
+                            Ordenar po:
                         </div>
                         <div class="column">
                             <div class="select is-small is-fullwidth">
                                 <select v-model="whoSort">
                                     <optgroup label="By Name">
-                                        <option value="a-z">Username (a-z)</option>
-                                        <option value="z-a">Username (z-a)</option>
+                                        <option value="a-z">Usuario (a-z)</option>
+                                        <option value="z-a">Ususaio (z-a)</option>
                                     </optgroup>
                                     <optgroup label="Webcam Status">
-                                        <option value="broadcasting">Broadcasting</option>
-                                        <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
-                                        <option value="blue" v-show="config.permitNSFW">Blue cameras</option>
+                                        <option value="broadcasting">Transmision en vivo</option>
+                                        <option value="nsfw" v-show="config.permitNSFW">Camaras rojas</option>
+                                        <option value="blue" v-show="config.permitNSFW">Camaras azules</option>
                                     </optgroup>
                                     <optgroup label="Other">
                                         <option value="login">Login Time</option>
                                         <option value="status">Status</option>
-                                        <option value="emoji">Emoji/country flag</option>
-                                        <option value="gender">Gender</option>
-                                        <option value="op">☮ Operators</option>
+                                        <option value="emoji">Emoji/pais</option>
+                                        <option value="gender">Genero</option>
+                                        <option value="op">☮ Operadores</option>
                                     </optgroup>
                                 </select>
                             </div>
@@ -3676,13 +3673,13 @@ export default {
                         <ul>
                             <li :class="{ 'is-active': whoTab === 'online' }">
                                 <a class="is-size-7" @click.prevent="whoTab = 'online'">
-                                    Online ({{ whoList.length }})
+                                    En Linea ({{ whoList.length }})
                                 </a>
                             </li>
                             <li v-if="webcam.active" :class="{ 'is-active': whoTab === 'watching' }">
                                 <a class="is-size-7" @click.prevent="whoTab = 'watching'">
                                     <i class="fa fa-eye mr-2"></i>
-                                    Watching ({{ Object.keys(webcam.watching).length }})
+                                    Mirando ({{ Object.keys(webcam.watching).length }})
                                 </a>
                             </li>
                         </ul>
@@ -3693,7 +3690,7 @@ export default {
 
                         <!-- Show a loading spinner if we are connected but the Who List hasn't arrived -->
                         <div v-if="connected && sortedWhoList.length === 0" class="is-size-7">
-                            <i class="fa fa-spinner fa-spin mr-1"></i> Waiting for Who List...
+                            <i class="fa fa-spinner fa-spin mr-1"></i> Cargando la lista...
                         </div>
 
                         <div v-for="(u, i) in sortedWhoList" v-bind:key="i">

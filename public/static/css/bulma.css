@@ -6561,7 +6561,7 @@ button.tag:active,
 
 .card-header-title {
   align-items: center;
-  color: var(--bulma-card-header-color);
+  color: purple !important;
   display: flex;
   flex-grow: 1;
   font-weight: var(--bulma-card-header-weight);
