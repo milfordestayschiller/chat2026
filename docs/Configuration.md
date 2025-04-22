@@ -30,7 +30,6 @@ PreviewImageWidth = 360
   ID = "lobby"
   Name = "Lobby"
   Icon = "fa fa-gavel"
-  WelcomeMessages = ["Welcome to the chat server!", "Please follow the basic rules:\n\n1. Have fun\n2. Be kind"]
 
 [[PublicChannels]]
   ID = "offtopic"

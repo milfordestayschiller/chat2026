@@ -165,8 +165,8 @@ func DefaultConfig() Config {
 				ID:   "lobby",
 				Name: "Lobby",
 				WelcomeMessages: []string{
-					"Bienvenidos a ElChatCaM.CoM!",
-					"Favor leer las siguientes reglas:\n\n1. Prohibido nombras otros sitios webs\n2. Respeta para ser respetado",
+					"Welcome to the chat server!",
+					"Please follow the basic rules:\n\n1. Have fun\n2. Be kind",
 				},
 				EchoMessagesOnJoin: 10,
 			},
