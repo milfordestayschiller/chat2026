@@ -2857,7 +2857,7 @@ export default {
                             <label class="label mb-0">Direct Messages</label>
                             <label class="checkbox mb-0">
                                 <input type="checkbox" v-model="prefs.closeDMs" :value="true">
-                                Ignore unsolicited DMs from others
+                                Ignorar mensajes directos no solicitados de otros
                             </label>
                             <p class="help">
                                 If you check this box, other chatters may not initiate DMs with you: their messages
@@ -3281,7 +3281,7 @@ export default {
                     <div class="tag mt-2">
                         <label class="checkbox">
                             <input type="checkbox" v-model="prefs.closeDMs" :value="true">
-                            Ignore unsolicited DMs
+                            Ignorar mensajes directos no solicitados
 
                             <a href="#"
                                 @click.prevent="modalAlert({title: 'About Ignoring Unsolicited DMs', message: 'When this box is checked, your DMs will be closed to new conversations and the button for others to send you a DM will be greyed out/disabled.\n\nYou may still initiate new DMs with others yourself, and continue conversations with people who you already have DM threads open with.'})"
