@@ -13,12 +13,12 @@ import (
 	"nhooyr.io/websocket"
 )
 
-// WebSocket handles the /ws websocket connection endpoint.
 func (s *Server) WebSocket() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := util.IPAddress(r)
 		log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
 		log.Debug("Headers: %+v", r.Header)
+
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			CompressionMode: websocket.CompressionDisabled,
 		})
@@ -32,17 +32,23 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		log.Debug("WebSocket: %s has connected", ip)
 		c.SetReadLimit(config.Current.WebSocketReadLimit)
 
-		// CloseRead starts a goroutine that will read from the connection
-		// until it is closed.
-		// ctx := c.CloseRead(r.Context())
 		ctx, cancel := context.WithCancel(r.Context())
 
 		sub := s.NewWebSocketSubscriber(ctx, c, cancel)
+
+		// Leer info del header JWT
+		if hdr := r.Header.Get("X-User"); hdr != "" {
+			sub.Username = hdr
+		}
+		if hdr := r.Header.Get("X-Op"); hdr == "true" {
+			sub.Op = true // <- Este campo sí existe
+		}
 
 		s.AddSubscriber(sub)
 		defer s.DeleteSubscriber(sub)
 
 		go sub.ReadLoop(s)
+
 		pinger := time.NewTicker(PingInterval)
 		for {
 			select {
@@ -52,26 +58,14 @@ func (s *Server) WebSocket() http.HandlerFunc {
 					return
 				}
 			case <-pinger.C:
-				// Send a ping, and a refreshed JWT token if the user sent one.
-				var token string
-				if sub.JWTClaims != nil {
-					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
-						log.Error("ReSign JWT token for %s#%d: %s", sub.Username, sub.ID, err)
-					} else {
-						token = jwt
-					}
-				}
-
 				sub.SendJSON(messages.Message{
-					Action:   messages.ActionPing,
-					JWTToken: token,
+					Action: messages.ActionPing,
 				})
 			case <-ctx.Done():
 				pinger.Stop()
 				return
 			}
 		}
-
 	})
 }
 

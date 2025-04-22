@@ -32,7 +32,8 @@ type Subscriber struct {
 	JWTClaims     *jwt.Claims
 	authenticated bool // has passed the login step
 	loginAt       time.Time
-
+	IsOp     bool 
+	Op bool
 	// Connection details (WebSocket).
 	conn      *websocket.Conn // WebSocket user
 	ctx       context.Context

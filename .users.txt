@@ -1,0 +1,3 @@
+diego:12345
+ernesto333:$2a$10$6IKzv8wB2nxpq7LAoxcbLu/qae2XZMAFRt29l80kSVS/VNip3HKYG
+killer:$2a$10$aLqxqmR9Q.7.ndAdaf1sTO9qmzPAdjYwAuoOe1pmyjX0sVciIqy8K

@@ -10,6 +10,7 @@ require (
 	github.com/aichaos/rivescript-go v0.4.0
 	github.com/edwvee/exiffix v0.0.0-20210922235313-0f6cbda5e58f
 	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.5.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mattn/go-sqlite3 v1.14.24
@@ -17,6 +18,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/shurcooL/github_flavored_markdown v0.0.0-20210228213109-c3a9aa474629
 	github.com/urfave/cli/v2 v2.25.7
+	golang.org/x/crypto v0.13.0
 	golang.org/x/image v0.12.0
 	nhooyr.io/websocket v1.8.7
 )
@@ -46,7 +48,6 @@ require (
 	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	github.com/tomnomnom/xtermcolor v0.0.0-20160428124646-b78803f00a7e // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.12.0 // indirect
