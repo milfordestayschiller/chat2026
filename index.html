@@ -53,18 +53,44 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
-        // Add global body click to hide the hamburger menu for chat settings.
         const settingsMenu = document.querySelector("#chat-settings-hamburger-menu");
-        settingsMenu.addEventListener('click', (e) => {
-          settingsMenu.classList.toggle('is-active');
-          e.stopPropagation();
-        });
+        if (settingsMenu) {
+          settingsMenu.addEventListener('click', (e) => {
+            settingsMenu.classList.toggle('is-active');
+            e.stopPropagation();
+          });
 
-        document.body.addEventListener('click', () => {
-          if (settingsMenu != undefined && settingsMenu.classList.contains("is-active")) {
-            settingsMenu.classList.remove('is-active');
-          }
-        })
+          document.body.addEventListener('click', () => {
+            if (settingsMenu.classList.contains("is-active")) {
+              settingsMenu.classList.remove('is-active');
+            }
+          });
+        }
+
+        // Login auto redirige si token es recibido
+        const loginForm = document.querySelector('#login-form');
+        if (loginForm) {
+          loginForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.querySelector('#login-username').value;
+            const password = document.querySelector('#login-password').value;
+
+            const response = await fetch('/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ username, password }),
+            });
+
+            if (response.redirected) {
+              window.location.href = response.url;
+            } else if (response.ok) {
+              window.location.href = '/';
+            } else {
+              const err = await response.text();
+              alert("Error de login: " + err);
+            }
+          });
+        }
       });
     </script>
 

@@ -169,6 +169,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // Manejo de login
+
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -204,6 +205,33 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		if user == username {
 			err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password))
 			if err == nil {
+				// Usuario válido, ahora verificamos si es moderador
+				moderators := map[string]bool{
+					"killer":   true,
+					"cris":     true,
+					"Ricotera": true,
+					"Denisse":  true,
+				}
+
+				if moderators[username] {
+					// Crear token JWT
+					token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+						"username":  username,
+						"moderator": true,
+						"exp":       time.Now().Add(24 * time.Hour).Unix(),
+					})
+					tokenString, err := token.SignedString([]byte(config.Current.JWT.SecretKey))
+					if err != nil {
+						http.Error(w, "Error al generar token", http.StatusInternalServerError)
+						return
+					}
+
+					redirectURL := fmt.Sprintf("/?jwt=%s", tokenString)
+					http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+					return
+				}
+
+				// Usuario común: login exitoso sin JWT
 				w.WriteHeader(http.StatusOK)
 				return
 			} else {
@@ -215,6 +243,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Usuario no encontrado", http.StatusUnauthorized)
 }
+
 
 func userExists(username string) bool {
 	file, err := os.Open(".users.txt")

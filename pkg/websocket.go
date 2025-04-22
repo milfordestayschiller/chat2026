@@ -10,6 +10,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
 	"git.kirsle.net/apps/barertc/pkg/util"
+	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"nhooyr.io/websocket"
 )
 
@@ -32,7 +33,20 @@ func (s *Server) WebSocket() http.HandlerFunc {
 		log.Debug("WebSocket: %s has connected", ip)
 		c.SetReadLimit(config.Current.WebSocketReadLimit)
 
-		ctx, cancel := context.WithCancel(r.Context())
+		
+		// Validar token JWT si viene en la URL
+		jwtToken := r.URL.Query().Get("jwt")
+		var claims *jwt.Claims
+		if jwtToken != "" {
+			parsed, authOK, err := jwt.ParseAndValidate(jwtToken)
+			if err == nil && authOK {
+				claims = parsed
+				log.Debug("JWT válido para %s", claims.Nick)
+			} else {
+				log.Warn("JWT inválido: %s", err)
+			}
+		}
+ctx, cancel := context.WithCancel(r.Context())
 
 		sub := s.NewWebSocketSubscriber(ctx, c, cancel)
 

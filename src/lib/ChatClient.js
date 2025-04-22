@@ -265,7 +265,10 @@ class ChatClient {
         this.ChatClient("Establishing connection to server...");
 
         const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-        const conn = new WebSocket(`${proto}://${location.host}/ws`);
+        const token = this.jwt?.token;
+const conn = token
+  ? new WebSocket(`${proto}://${location.host}/ws?jwt=${token}`)
+  : new WebSocket(`${proto}://${location.host}/ws`);
 
         conn.addEventListener("close", ev => {
             // Lost connection to server - scrub who list.
