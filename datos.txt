@@ -98,3 +98,7 @@ Nick: pedro77 | IP: [::1]:57164
 Nick: Cris | IP: [::1]:57172
 Nick: Cris | IP: [::1]:57172
 Nick: dasd | IP: [::1]:58172
+Nick: pedrote56 | IP: [::1]:58488
+Nick: vert | IP: [::1]:58705
+Nick: vert | IP: ::1
+Nick: emmet | IP: ::1

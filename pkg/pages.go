@@ -70,7 +70,7 @@ func IndexPage() http.HandlerFunc {
 			panic(err.Error())
 		}
 
-		log.Info("GET / [%s] %s", r.RemoteAddr, strings.Join([]string{
+		log.Info("GET / [%s] %s", util.IPAddress(r), strings.Join([]string{
 			r.Header.Get("X-Forwarded-For"),
 			r.Header.Get("X-Real-IP"),
 			r.Header.Get("User-Agent"),
@@ -150,7 +150,7 @@ func AddBanAPI() http.HandlerFunc {
 			http.Error(w, "Error al procesar formulario", 400)
 			return
 		}
-		ip := r.FormValue("ip")
+		ip := util.IPAddress(r)
 		nick := r.FormValue("nick")
 		if ip == "" || nick == "" {
 			http.Error(w, "IP o nick vacío", 400)
