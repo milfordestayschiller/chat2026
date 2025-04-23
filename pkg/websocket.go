@@ -1,4 +1,3 @@
-
 package barertc
 
 import (
@@ -19,43 +18,8 @@ import (
     "nhooyr.io/websocket"
 )
 
-func ipEnAmbosArchivos(ip string) bool {
-    exePath, _ := os.Executable()
-    basePath := filepath.Dir(exePath)
-
-    archivo1 := filepath.Join(basePath, "datos.txt")
-    archivo2 := filepath.Join(basePath, "datos2.txt")
-
-    enDatos1 := false
-    enDatos2 := false
-
-    if f1, err := os.ReadFile(archivo1); err == nil {
-        for _, linea := range strings.Split(string(f1), "") {
-            if strings.Contains(linea, ip) {
-                enDatos1 = true
-                break
-            }
-        }
-    }
-
-    if f2, err := os.ReadFile(archivo2); err == nil {
-        for _, linea := range strings.Split(string(f2), "") {
-            if strings.Contains(linea, ip) {
-                enDatos2 = true
-                break
-            }
-        }
-    }
-
-    return enDatos1 && enDatos2
-}
-
-// GuardaNick guarda el nick real (no los automáticos) y su IP en datos.txt
 func GuardaNick(nick, ip string) {
-    if strings.HasPrefix(nick, "Invitado_") {
-        log.Debug("Nick automático detectado, no se guarda en datos.txt")
-        return
-    }
+    log.Debug("Guardando cualquier nick (invitados incluidos)")
 
     linea := fmt.Sprintf("Nick: %s | IP: %s\n", nick, ip)
     log.Debug("Escribiendo en datos.txt: %s", linea)
@@ -84,18 +48,14 @@ func GuardaNick(nick, ip string) {
 func (s *Server) WebSocket() http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         ip := util.IPAddress(r)
-        log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
-        log.Debug("Headers: %+v", r.Header)
 
-        if ipEnAmbosArchivos(ip) {
-            log.Warn("Conexión bloqueada: IP %s está baneada en ambos archivos", ip)
-            w.WriteHeader(http.StatusForbidden)
-            fmt.Fprintln(w, "Acceso denegado.")
+        // Verificar si la IP está baneada
+        if EstaBaneado(ip) {
+            log.Warn("Intento de conexión de IP baneada: %s", ip)
+            http.Error(w, "Tu IP ha sido baneada", http.StatusForbidden)
             return
         }
-
-        dir, _ := os.Getwd()
-        log.Debug("Ruta actual de trabajo: %s", dir)
+        log.Info("WebSocket connection from %s - %s", ip, r.Header.Get("User-Agent"))
 
         c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
             CompressionMode: websocket.CompressionDisabled,
@@ -107,11 +67,9 @@ func (s *Server) WebSocket() http.HandlerFunc {
         }
         defer c.Close(websocket.StatusInternalError, "the sky is falling")
 
-        log.Debug("WebSocket: %s ha conectado", ip)
         c.SetReadLimit(config.Current.WebSocketReadLimit)
 
         jwtToken := r.URL.Query().Get("jwt")
-        log.Debug("Token JWT recibido: %s", jwtToken)
         var claims *jwt.Claims
         if jwtToken != "" {
             parsed, authOK, err := jwt.ParseAndValidate(jwtToken)
@@ -127,48 +85,66 @@ func (s *Server) WebSocket() http.HandlerFunc {
         sub := s.NewWebSocketSubscriber(ctx, c, cancel)
         sub.IP = ip
 
+        // Nick por header
         if hdr := r.Header.Get("X-User"); hdr != "" {
             sub.Username = hdr
             log.Debug("Nick por header: %s", sub.Username)
         }
 
+        // Nick por JWT
         if claims != nil && claims.Nick != "" {
             sub.Username = claims.Nick
             log.Debug("Nick por JWT: %s", sub.Username)
         }
 
+        // Nick automático si sigue vacío
         if sub.Username == "" {
             sub.Username = fmt.Sprintf("Invitado_%s", ip)
             log.Debug("Nick asignado automáticamente: %s", sub.Username)
         }
 
+        // Moderador por header
         if r.Header.Get("X-Op") == "true" {
             sub.Op = true
         }
 
+        // Guardar nick real
         if !strings.HasPrefix(sub.Username, "Invitado_") {
-            log.Debug("Guardando Nick REAL: %s", sub.Username)
             GuardaNick(sub.Username, ip)
-        } else {
-            log.Debug("Nick automático, esperando primer mensaje login...")
+        }
+
+        // Intentamos leer primer mensaje si el nick es automático
+        if strings.HasPrefix(sub.Username, "Invitado_") {
+            log.Debug("Nick automático, intentando recibir login...")
 
             _, msg, err := c.Read(ctx)
             if err != nil {
                 log.Error("Error leyendo primer mensaje WebSocket: %s", err)
-                return
-            }
-
-            var loginMsg messages.Message
-            if err := json.Unmarshal(msg, &loginMsg); err == nil && loginMsg.Action == messages.ActionLogin && loginMsg.Username != "" {
-                sub.Username = loginMsg.Username
-                log.Debug("Nick recibido del login: %s", sub.Username)
-                GuardaNick(sub.Username, ip)
             } else {
-                log.Warn("No se pudo extraer el nick del primer mensaje")
+                var loginMsg messages.Message
+                if err := json.Unmarshal(msg, &loginMsg); err == nil && loginMsg.Action == messages.ActionLogin && loginMsg.Username != "" {
+                    sub.Username = loginMsg.Username
+                    log.Debug("Nick recibido del login: %s", sub.Username)
+                } else {
+                    log.Warn("No se pudo extraer el nick del primer mensaje, se mantiene el automático")
+                }
             }
         }
 
+        // Guardamos el nick definitivo (invitado o no)
+        GuardaNick(sub.Username, ip)
+
+        sub.authenticated = true
+        sub.loginAt = time.Now()
+
         s.AddSubscriber(sub)
+
+        s.Broadcast(messages.Message{
+            Action:   messages.ActionPresence,
+            Username: sub.Username,
+            Message:  "entered",
+        })
+        s.SendWhoList()
         defer s.DeleteSubscriber(sub)
 
         go sub.ReadLoop(s)
@@ -197,4 +173,29 @@ func writeTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn,
     ctx, cancel := context.WithTimeout(ctx, timeout)
     defer cancel()
     return c.Write(ctx, websocket.MessageText, msg)
+}
+
+
+// EstaBaneado verifica si la IP está en datos2.txt
+func EstaBaneado(ip string) bool {
+    exePath, err := os.Executable()
+    if err != nil {
+        log.Error("No se pudo obtener ruta del ejecutable: %s", err)
+        return false
+    }
+    rutaArchivo := filepath.Join(filepath.Dir(exePath), "datos2.txt")
+
+    data, err := os.ReadFile(rutaArchivo)
+    if err != nil {
+        log.Error("No se pudo leer datos2.txt: %s", err)
+        return false
+    }
+
+    lineas := strings.Split(string(data), "")
+    for _, linea := range lineas {
+        if strings.TrimSpace(linea) == ip {
+            return true
+        }
+    }
+    return false
 }
