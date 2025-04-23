@@ -1,3 +1,4 @@
+
 package barertc
 
 import (
@@ -249,7 +250,6 @@ func UnbanAPI() http.HandlerFunc {
 			return
 		}
 
-		// Leer archivo actual
 		ruta := "datos2.txt"
 		data, err := os.ReadFile(ruta)
 		if err != nil {
@@ -257,7 +257,6 @@ func UnbanAPI() http.HandlerFunc {
 			return
 		}
 
-		// Filtrar líneas
 		lines := strings.Split(string(data), "\n")
 		var nuevasLineas []string
 		for _, line := range lines {
@@ -266,7 +265,6 @@ func UnbanAPI() http.HandlerFunc {
 			}
 		}
 
-		// Reescribir archivo
 		err = os.WriteFile(ruta, []byte(strings.Join(nuevasLineas, "\n")), 0644)
 		if err != nil {
 			http.Error(w, "Error escribiendo datos2.txt: "+err.Error(), 500)
@@ -277,20 +275,28 @@ func UnbanAPI() http.HandlerFunc {
 	}
 }
 
-// isIPBanned revisa si la IP está en datos.txt o datos2.txt
+// isIPBanned revisa si la IP está en ambos archivos: datos.txt y datos2.txt
 func isIPBanned(ip string) bool {
-	files := []string{"datos.txt", "datos2.txt"}
-	for _, file := range files {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			continue
-		}
-		lines := strings.Split(string(data), "\n")
-		for _, line := range lines {
-			if strings.Contains(line, "IP: "+ip) || strings.TrimSpace(line) == ip {
-				return true
+	foundInDatos := false
+	foundInDatos2 := false
+
+	if data, err := os.ReadFile("datos.txt"); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			if strings.Contains(line, "IP: "+ip) {
+				foundInDatos = true
+				break
 			}
 		}
 	}
-	return false
+
+	if data, err := os.ReadFile("datos2.txt"); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			if strings.TrimSpace(line) == ip {
+				foundInDatos2 = true
+				break
+			}
+		}
+	}
+
+	return foundInDatos && foundInDatos2
 }
