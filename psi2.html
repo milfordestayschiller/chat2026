@@ -1,0 +1,58 @@
+{{ define "psi2" }}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Baneo</title>
+</head>
+<body>
+  <h1>Agregar IP a la Lista de Baneos</h1>
+
+  <!-- Formulario para agregar una IP -->
+  <div>
+    <input type="text" id="ipInput" placeholder="Escribe la IP a banear">
+    <button onclick="agregarBan()">Agregar Ban</button>
+  </div>
+
+  <!-- Mensaje de estado -->
+  <p id="mensaje" style="margin-top: 1em; color: green;"></p>
+
+  <script>
+    function agregarBan() {
+      const ip = document.getElementById("ipInput").value.trim();
+      const mensaje = document.getElementById("mensaje");
+      mensaje.style.color = "green";
+      mensaje.textContent = "";
+
+      if (!ip) {
+        mensaje.style.color = "red";
+        mensaje.textContent = "Por favor, escribe una IP.";
+        return;
+      }
+
+      const formData = new URLSearchParams();
+      formData.append("ip", ip);
+
+      fetch("/api/ban2", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString()
+      })
+      .then(async response => {
+        const text = await response.text();
+        if (!response.ok) {
+          mensaje.style.color = "red";
+        }
+        mensaje.textContent = text;
+      })
+      .catch(err => {
+        mensaje.style.color = "red";
+        mensaje.textContent = "Error de red: " + err.message;
+      });
+    }
+  </script>
+</body>
+</html>
+{{ end }}

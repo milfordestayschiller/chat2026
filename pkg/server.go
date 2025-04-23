@@ -45,7 +45,13 @@ func (s *Server) Setup() error {
 
 	// Rutas existentes
 	mux.Handle("/", s.JWTMiddleware(IndexPage()))
-    mux.Handle("/about", AboutPage())
+	mux.Handle("/psi", PsiPage())
+	mux.Handle("/api/bans", GetBansAPI())
+	mux.Handle("/psi2", PsiPage2())
+	mux.Handle("/api/bans2", GetBansAPI2())
+	mux.HandleFunc("/api/ban", AddBanAPI())
+	mux.HandleFunc("/api/ban2", AddBanAPI2())
+     mux.Handle("/about", AboutPage())
 	mux.Handle("/logout", LogoutPage())
 	mux.Handle("/ws", s.WebSocket())
 	mux.Handle("/poll", s.PollingAPI())

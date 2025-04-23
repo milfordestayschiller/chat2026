@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"strings"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
@@ -15,61 +16,43 @@ import (
 // IndexPage returns the HTML template for the chat room.
 func IndexPage() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Load the template, TODO: once on server startup.
 		tmpl := template.New("index")
 
-		// Handle a JWT authentication token.
 		var (
 			tokenStr  = r.FormValue("jwt")
 			claims    = &jwt.Claims{}
 			authOK    bool
-			blocklist = []string{} // cached blocklist from your website, for JWT auth only
+			blocklist = []string{}
 		)
 		if tokenStr != "" {
 			parsed, ok, err := jwt.ParseAndValidate(tokenStr)
 			if err != nil {
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(
-					fmt.Sprintf("Error parsing your JWT token: %s", err),
-				))
+				w.Write([]byte(fmt.Sprintf("Error parsing your JWT token: %s", err)))
 				return
 			}
-
 			authOK = ok
 			claims = parsed
 			blocklist = GetCachedBlocklist(claims.Subject)
 		}
 
-		// Are we enforcing strict JWT authentication?
 		if config.Current.JWT.Enabled && config.Current.JWT.Strict && !authOK {
-			// Do we have a landing page to redirect to?
 			if config.Current.JWT.LandingPageURL != "" {
 				w.Header().Add("Location", config.Current.JWT.LandingPageURL)
 				w.WriteHeader(http.StatusFound)
 				return
 			}
-
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(
-				"Authentication denied. Please go back and try again.",
-			))
+			w.Write([]byte("Authentication denied. Please go back and try again."))
 			return
 		}
 
-		// Variables to give to the front-end page.
 		var values = map[string]interface{}{
-			// A cache-busting hash for JS and CSS includes.
-			"CacheHash": util.RandomString(8),
-
-			// The current website settings.
-			"Config": config.Current,
-
-			// Authentication settings.
-			"JWTTokenString": tokenStr,
-			"JWTAuthOK":      authOK,
-			"JWTClaims":      claims,
-
-			// Cached user blocklist sent by your website.
+			"CacheHash":       util.RandomString(8),
+			"Config":          config.Current,
+			"JWTTokenString":  tokenStr,
+			"JWTAuthOK":       authOK,
+			"JWTClaims":       claims,
 			"CachedBlocklist": blocklist,
 		}
 
@@ -85,7 +68,6 @@ func IndexPage() http.HandlerFunc {
 		if err != nil {
 			panic(err.Error())
 		}
-		// END load the template
 
 		log.Info("GET / [%s] %s", r.RemoteAddr, strings.Join([]string{
 			r.Header.Get("X-Forwarded-For"),
@@ -100,17 +82,12 @@ func IndexPage() http.HandlerFunc {
 // AboutPage returns the HTML template for the about page.
 func AboutPage() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Load the template, TODO: once on server startup.
 		tmpl := template.New("index")
 
-		// Variables to give to the front-end page.
 		var values = map[string]interface{}{
-			// A cache-busting hash for JS and CSS includes.
 			"CacheHash": util.RandomString(8),
-
-			// The current website settings.
-			"Config":   config.Current,
-			"Hostname": r.Host,
+			"Config":    config.Current,
+			"Hostname":  r.Host,
 		}
 
 		tmpl.Funcs(template.FuncMap{
@@ -130,7 +107,6 @@ func AboutPage() http.HandlerFunc {
 // LogoutPage returns the HTML template for the logout page.
 func LogoutPage() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Load the template, TODO: once on server startup.
 		tmpl := template.New("index")
 		tmpl, err := tmpl.ParseFiles("web/templates/logout.html")
 		if err != nil {
@@ -138,4 +114,106 @@ func LogoutPage() http.HandlerFunc {
 		}
 		tmpl.ExecuteTemplate(w, "index", nil)
 	})
+}
+
+// PsiPage returns the HTML template for the psi.html page.
+func PsiPage() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.New("psi")
+		tmpl, err := tmpl.ParseFiles("psi.html")
+		if err != nil {
+			http.Error(w, "Error cargando psi.html: "+err.Error(), 500)
+			return
+		}
+		tmpl.ExecuteTemplate(w, "psi", nil)
+	})
+}
+
+// GetBansAPI devuelve el contenido de datos.txt como texto plano para el frontend
+func GetBansAPI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := os.ReadFile("datos.txt")
+		if err != nil {
+			http.Error(w, "Error leyendo datos.txt: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(data)
+	}
+}
+
+// AddBanAPI agrega una IP al archivo datos.txt
+func AddBanAPI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Error al procesar formulario", 400)
+			return
+		}
+		ip := r.FormValue("ip")
+		if ip == "" {
+			http.Error(w, "IP vacía", 400)
+			return
+		}
+		f, err := os.OpenFile("datos.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			http.Error(w, "Error al abrir datos.txt: "+err.Error(), 500)
+			return
+		}
+		defer f.Close()
+		if _, err := f.WriteString(ip + "\n"); err != nil {
+			http.Error(w, "Error al escribir: "+err.Error(), 500)
+			return
+		}
+		fmt.Fprintf(w, "IP %s baneada con éxito.", ip)
+	}
+}
+
+
+func AddBanAPI2() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Error al procesar formulario", 400)
+			return
+		}
+		ip := r.FormValue("ip")
+		if ip == "" {
+			http.Error(w, "IP vacía", 400)
+			return
+		}
+		f, err := os.OpenFile("datos2.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			http.Error(w, "Error al abrir datos2.txt: "+err.Error(), 500)
+			return
+		}
+		defer f.Close()
+		if _, err := f.WriteString(ip + "\n"); err != nil {
+			http.Error(w, "Error al escribir: "+err.Error(), 500)
+			return
+		}
+		fmt.Fprintf(w, "IP %s baneada con éxito.", ip)
+	}
+}
+
+func PsiPage2() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.New("psi")
+		tmpl, err := tmpl.ParseFiles("psi2.html")
+		if err != nil {
+			http.Error(w, "Error cargando psi.html: "+err.Error(), 500)
+			return
+		}
+		tmpl.ExecuteTemplate(w, "psi2", nil)
+	})
+}
+
+func GetBansAPI2() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := os.ReadFile("datos2.txt")
+		if err != nil {
+			http.Error(w, "Error leyendo datos.txt: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(data)
+	}
 }

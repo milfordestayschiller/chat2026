@@ -40,7 +40,7 @@ type Subscriber struct {
 	cancel    context.CancelFunc
 	messages  chan []byte
 	closeSlow func()
-
+	IP string 
 	// Polling API users.
 	usePolling  bool
 	sessionID   string

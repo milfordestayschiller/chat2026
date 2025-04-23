@@ -16,8 +16,8 @@ import (
 )
 
 // OnLogin handles "login" actions from the client.
+// OnLogin handles "login" actions from the client.
 func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
-	// Using a JWT token for authentication?
 	var claims = &jwt.Claims{}
 	if msg.JWTToken != "" || (config.Current.JWT.Enabled && config.Current.JWT.Strict) {
 		parsed, ok, err := jwt.ParseAndValidate(msg.JWTToken)
@@ -26,19 +26,14 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 			sub.ChatServer("Your authentication has expired. Please go back and launch the chat room again.")
 			return
 		}
-
-		// Sanity check the username.
 		if msg.Username != parsed.Subject {
 			log.Error("JWT login had a different username: %s vs %s", parsed.Subject, msg.Username)
 		}
-
-		// Strict enforcement?
 		if config.Current.JWT.Strict && !ok {
 			log.Error("JWT enforcement is strict and user did not pass JWT checks")
 			sub.ChatServer("Server side authentication is required. Please go back and launch the chat room from your logged-in account.")
 			return
 		}
-
 		claims = parsed
 		msg.Username = claims.Subject
 		sub.JWTClaims = claims
@@ -48,69 +43,40 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 		log.Debug("JWT claims: %+v", claims)
 	}
 
-	// Somehow no username?
 	if msg.Username == "" {
 		msg.Username = "anonymous"
 	}
 
-	// Ensure the username is unique, or rename it.
-	username, err := s.UniqueUsername(msg.Username)
-	if err != nil {
-		// If JWT authentication was used: disconnect the original (conflicting) username.
-		if claims.Subject == msg.Username {
-			if other, err := s.GetSubscriber(msg.Username); err == nil {
-				other.ChatServer("You have been signed out of chat because you logged in from another location.")
-				other.SendJSON(messages.Message{
-					Action: messages.ActionKick,
-				})
-				other.authenticated = false
-				other.Username = ""
-			}
-
-			// They will take over their original username.
-			username = msg.Username
-		}
-
-		// If JWT auth was not used: UniqueUsername already gave them a uniquely spelled name.
+	existing, _ := s.GetSubscriber(msg.Username)
+	if existing != nil && existing != sub {
+		log.Warn("Usuario %s ya estaba conectado, cerrando sesión anterior", msg.Username)
+		s.DeleteSubscriber(existing)
 	}
-	msg.Username = username
 
-	// Is the username currently banned?
+	msg.Username, _ = s.UniqueUsername(msg.Username)
+
 	if IsBanned(msg.Username) {
-		sub.ChatServer(
-			"You are currently banned from entering the chat room. Chat room bans are temporarily and usually last for " +
-				"24 hours. Please try coming back later.",
-		)
-		sub.SendJSON(messages.Message{
-			Action: messages.ActionKick,
-		})
+		sub.ChatServer("You are currently banned from entering the chat room. Chat room bans are temporarily and usually last for 24 hours. Please try coming back later.")
+		sub.SendJSON(messages.Message{Action: messages.ActionKick})
 		return
 	}
 
-	// Use their username.
 	sub.Username = msg.Username
 	sub.authenticated = true
 	sub.DND = msg.DND
 	sub.loginAt = time.Now()
 	log.Debug("OnLogin: %s joins the room", sub.Username)
 
-	// Send the user back their settings.
 	sub.SendMe()
-
-	// Send the WhoList to everybody.
 	s.SendWhoList()
-
-	// Echo recent public channel messages to the user.
 	sub.SendEchoedMessages()
 
-	// Tell everyone they joined.
 	s.Broadcast(messages.Message{
 		Action:   messages.ActionPresence,
 		Username: msg.Username,
 		Message:  messages.PresenceJoined,
 	})
 
-	// Send the initial ChatServer messages to the public channels.
 	for _, channel := range config.Current.PublicChannels {
 		for _, msg := range channel.WelcomeMessages {
 			sub.SendJSON(messages.Message{

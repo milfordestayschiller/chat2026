@@ -1,4 +1,2 @@
-diego:12345
-ernesto333:$2a$10$6IKzv8wB2nxpq7LAoxcbLu/qae2XZMAFRt29l80kSVS/VNip3HKYG
-killer:$2a$10$aLqxqmR9Q.7.ndAdaf1sTO9qmzPAdjYwAuoOe1pmyjX0sVciIqy8K
-cris:$2a$10$XxOekDBsK/5I/5ggDUWMSOb3eHNH8/fUL84AHkb1OIb9P7zwYQsQm
+crispedro5:$2a$10$4MrqXtMqZKzOAuC32NNdy.KVEF0R9mrDFmXGtB1AwRIqnF1dbMG9.
+pedro77:$2a$10$IqWyMJY4lMkiHZDNis.On.XwO5ky.D8ZeIho704YMAdotvWaLLV02
