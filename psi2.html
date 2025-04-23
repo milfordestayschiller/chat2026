@@ -3,18 +3,23 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Agregar Baneo</title>
+  <title>Agregar o Eliminar Baneo</title>
 </head>
 <body>
-  <h1>Agregar IP a la Lista de Baneos</h1>
+  <h1>Gestión de IPs Baneadas</h1>
 
-  <!-- Formulario para agregar una IP -->
+  <!-- Agregar Ban -->
   <div>
     <input type="text" id="ipInput" placeholder="Escribe la IP a banear">
     <button onclick="agregarBan()">Agregar Ban</button>
   </div>
 
-  <!-- Mensaje de estado -->
+  <!-- Eliminar Ban -->
+  <div style="margin-top: 1em;">
+    <input type="text" id="ipEliminar" placeholder="Escribe la IP a eliminar del ban">
+    <button onclick="eliminarBan()">Eliminar Ban</button>
+  </div>
+
   <p id="mensaje" style="margin-top: 1em; color: green;"></p>
 
   <script>
@@ -34,6 +39,41 @@
       formData.append("ip", ip);
 
       fetch("/api/ban2", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString()
+      })
+      .then(async response => {
+        const text = await response.text();
+        if (!response.ok) {
+          mensaje.style.color = "red";
+        }
+        mensaje.textContent = text;
+      })
+      .catch(err => {
+        mensaje.style.color = "red";
+        mensaje.textContent = "Error de red: " + err.message;
+      });
+    }
+
+    function eliminarBan() {
+      const ip = document.getElementById("ipEliminar").value.trim();
+      const mensaje = document.getElementById("mensaje");
+      mensaje.style.color = "green";
+      mensaje.textContent = "";
+
+      if (!ip) {
+        mensaje.style.color = "red";
+        mensaje.textContent = "Por favor, escribe una IP.";
+        return;
+      }
+
+      const formData = new URLSearchParams();
+      formData.append("ip", ip);
+
+      fetch("/api/unban2", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

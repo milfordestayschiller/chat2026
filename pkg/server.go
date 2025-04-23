@@ -51,6 +51,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/bans2", GetBansAPI2())
 	mux.HandleFunc("/api/ban", AddBanAPI())
 	mux.HandleFunc("/api/ban2", AddBanAPI2())
+	mux.HandleFunc("/api/unban2", UnbanAPI())
      mux.Handle("/about", AboutPage())
 	mux.Handle("/logout", LogoutPage())
 	mux.Handle("/ws", s.WebSocket())

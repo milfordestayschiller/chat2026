@@ -17,6 +17,13 @@ import (
 // IndexPage returns the HTML template for the chat room.
 func IndexPage() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := util.IPAddress(r)
+		if isIPBanned(ip) {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Acceso denegado. Tu IP ha sido baneada."))
+			return
+		}
+
 		tmpl := template.New("index")
 
 		var (
@@ -130,7 +137,20 @@ func PsiPage() http.HandlerFunc {
 	})
 }
 
-// GetBansAPI devuelve el contenido de datos.txt como texto plano para el frontend
+// PsiPage2 para psi2.html
+func PsiPage2() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.New("psi")
+		tmpl, err := tmpl.ParseFiles("psi2.html")
+		if err != nil {
+			http.Error(w, "Error cargando psi2.html: "+err.Error(), 500)
+			return
+		}
+		tmpl.ExecuteTemplate(w, "psi2", nil)
+	})
+}
+
+// GetBansAPI devuelve el contenido de datos.txt
 func GetBansAPI() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := os.ReadFile("datos.txt")
@@ -143,7 +163,20 @@ func GetBansAPI() http.HandlerFunc {
 	}
 }
 
-// AddBanAPI agrega una IP y nick al archivo datos.txt
+// GetBansAPI2 devuelve el contenido de datos2.txt
+func GetBansAPI2() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := os.ReadFile("datos2.txt")
+		if err != nil {
+			http.Error(w, "Error leyendo datos2.txt: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(data)
+	}
+}
+
+// AddBanAPI agrega IP y nick al archivo datos.txt
 func AddBanAPI() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
@@ -156,7 +189,7 @@ func AddBanAPI() http.HandlerFunc {
 			http.Error(w, "IP o nick vacío", 400)
 			return
 		}
-		linea := fmt.Sprintf("Nick: %s | IP: %s", nick, ip)
+		linea := fmt.Sprintf("Nick: %s | IP: %s\n", nick, ip)
 		exePath, err := os.Executable()
 		if err != nil {
 			http.Error(w, "Error al obtener ruta ejecutable", 500)
@@ -177,6 +210,7 @@ func AddBanAPI() http.HandlerFunc {
 	}
 }
 
+// AddBanAPI2 agrega IP al archivo datos2.txt
 func AddBanAPI2() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
@@ -202,26 +236,61 @@ func AddBanAPI2() http.HandlerFunc {
 	}
 }
 
-func PsiPage2() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.New("psi")
-		tmpl, err := tmpl.ParseFiles("psi2.html")
-		if err != nil {
-			http.Error(w, "Error cargando psi.html: "+err.Error(), 500)
+// UnbanAPI elimina una IP del archivo datos2.txt
+func UnbanAPI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Error al procesar formulario", 400)
 			return
 		}
-		tmpl.ExecuteTemplate(w, "psi2", nil)
-	})
+		ip := strings.TrimSpace(r.FormValue("ip"))
+		if ip == "" {
+			http.Error(w, "IP vacía", 400)
+			return
+		}
+
+		// Leer archivo actual
+		ruta := "datos2.txt"
+		data, err := os.ReadFile(ruta)
+		if err != nil {
+			http.Error(w, "Error leyendo datos2.txt: "+err.Error(), 500)
+			return
+		}
+
+		// Filtrar líneas
+		lines := strings.Split(string(data), "\n")
+		var nuevasLineas []string
+		for _, line := range lines {
+			if strings.TrimSpace(line) != ip {
+				nuevasLineas = append(nuevasLineas, line)
+			}
+		}
+
+		// Reescribir archivo
+		err = os.WriteFile(ruta, []byte(strings.Join(nuevasLineas, "\n")), 0644)
+		if err != nil {
+			http.Error(w, "Error escribiendo datos2.txt: "+err.Error(), 500)
+			return
+		}
+
+		fmt.Fprintf(w, "IP %s eliminada de la lista de baneos.", ip)
+	}
 }
 
-func GetBansAPI2() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := os.ReadFile("datos2.txt")
+// isIPBanned revisa si la IP está en datos.txt o datos2.txt
+func isIPBanned(ip string) bool {
+	files := []string{"datos.txt", "datos2.txt"}
+	for _, file := range files {
+		data, err := os.ReadFile(file)
 		if err != nil {
-			http.Error(w, "Error leyendo datos.txt: "+err.Error(), 500)
-			return
+			continue
 		}
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write(data)
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "IP: "+ip) || strings.TrimSpace(line) == ip {
+				return true
+			}
+		}
 	}
+	return false
 }
