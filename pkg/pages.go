@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
@@ -142,7 +143,7 @@ func GetBansAPI() http.HandlerFunc {
 	}
 }
 
-// AddBanAPI agrega una IP al archivo datos.txt
+// AddBanAPI agrega una IP y nick al archivo datos.txt
 func AddBanAPI() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
@@ -150,24 +151,31 @@ func AddBanAPI() http.HandlerFunc {
 			return
 		}
 		ip := r.FormValue("ip")
-		if ip == "" {
-			http.Error(w, "IP vacía", 400)
+		nick := r.FormValue("nick")
+		if ip == "" || nick == "" {
+			http.Error(w, "IP o nick vacío", 400)
 			return
 		}
-		f, err := os.OpenFile("datos.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		linea := fmt.Sprintf("Nick: %s | IP: %s", nick, ip)
+		exePath, err := os.Executable()
+		if err != nil {
+			http.Error(w, "Error al obtener ruta ejecutable", 500)
+			return
+		}
+		rutaArchivo := filepath.Join(filepath.Dir(exePath), "datos.txt")
+		f, err := os.OpenFile(rutaArchivo, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			http.Error(w, "Error al abrir datos.txt: "+err.Error(), 500)
 			return
 		}
 		defer f.Close()
-		if _, err := f.WriteString(ip + "\n"); err != nil {
+		if _, err := f.WriteString(linea); err != nil {
 			http.Error(w, "Error al escribir: "+err.Error(), 500)
 			return
 		}
-		fmt.Fprintf(w, "IP %s baneada con éxito.", ip)
+		fmt.Fprintf(w, "Nick %s con IP %s baneado con éxito.", nick, ip)
 	}
 }
-
 
 func AddBanAPI2() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
