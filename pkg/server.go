@@ -50,6 +50,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/psi2", PsiPage2())
 	mux.Handle("/api/bans2", GetBansAPI2())
 	mux.HandleFunc("/api/ban", AddBanAPI())
+	mux.HandleFunc("/api/buscar", BuscarUsuarioAPI())
 	mux.HandleFunc("/api/ban2", AddBanAPI2())
 	mux.HandleFunc("/api/unban2", UnbanAPI())
      mux.Handle("/about", AboutPage())

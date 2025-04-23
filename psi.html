@@ -1,4 +1,3 @@
-
 {{ define "psi" }}
 <!DOCTYPE html>
 <html lang="es">
@@ -20,11 +19,20 @@
     <button onclick="verBaneos()">Ver Baneos</button>
   </div>
 
+  <!-- Formulario para buscar por nick o IP -->
+  <div style="margin-top: 2em;">
+    <input type="text" id="busquedaInput" placeholder="Buscar por nick o IP">
+    <button onclick="buscarUsuario()">Buscar</button>
+  </div>
+
   <!-- Mensaje de estado -->
   <p id="mensaje" style="margin-top: 1em; color: green;"></p>
 
   <!-- Área donde se mostrarán los baneos -->
   <pre id="listaBaneos" style="background: #eee; padding: 1em; display: none; white-space: pre-wrap;"></pre>
+
+  <!-- Área donde se mostrarán los resultados de búsqueda -->
+  <pre id="resultadoBusqueda" style="background: #f8f8f8; padding: 1em; margin-top: 1em; display: none; white-space: pre-wrap;"></pre>
 
   <script>
     function agregarBan() {
@@ -77,6 +85,31 @@
         .catch(err => {
           mensaje.style.color = "red";
           mensaje.textContent = "Error al obtener baneos: " + err.message;
+        });
+    }
+
+    function buscarUsuario() {
+      const query = document.getElementById("busquedaInput").value.trim();
+      const resultado = document.getElementById("resultadoBusqueda");
+      const mensaje = document.getElementById("mensaje");
+      mensaje.textContent = "";
+      resultado.style.display = "none";
+
+      if (!query) {
+        mensaje.style.color = "red";
+        mensaje.textContent = "Por favor, escribe un nick o IP para buscar.";
+        return;
+      }
+
+      fetch(`/api/buscar?query=${encodeURIComponent(query)}`)
+        .then(response => response.text())
+        .then(text => {
+          resultado.style.display = "block";
+          resultado.textContent = text || "No se encontraron resultados.";
+        })
+        .catch(err => {
+          mensaje.style.color = "red";
+          mensaje.textContent = "Error al buscar: " + err.message;
         });
     }
   </script>

@@ -300,3 +300,37 @@ func isIPBanned(ip string) bool {
 
 	return foundInDatos && foundInDatos2
 }
+
+// BuscarUsuarioAPI permite buscar coincidencias de texto en datos.txt
+func BuscarUsuarioAPI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		if query == "" {
+			http.Error(w, "Parámetro 'query' requerido", http.StatusBadRequest)
+			return
+		}
+
+		data, err := os.ReadFile("datos.txt")
+		if err != nil {
+			http.Error(w, "Error leyendo datos.txt: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		lines := strings.Split(string(data), "\n")
+		var resultados []string
+		for _, line := range lines {
+			if strings.Contains(strings.ToLower(line), strings.ToLower(query)) {
+				resultados = append(resultados, line)
+			}
+		}
+
+		if len(resultados) == 0 {
+			w.Write([]byte("No se encontraron coincidencias."))
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(strings.Join(resultados, "\n")))
+	}
+}
+
