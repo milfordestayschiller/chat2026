@@ -177,10 +177,13 @@ img {
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto 1fr;
+    color: purple !important;
 }
 
 .grid-card > .card-header {
     grid-row: 1;
+    background-color: #000 !important;
+    color: purple !important;
 }
 
 .grid-card > .video-feeds {
@@ -191,6 +194,7 @@ img {
     grid-row: 3;
     /* background-color: magenta; */
     overflow-y: scroll;
+    background: #c5c5e0 !important;
 
     /* Work around Safari bug: the chat history would just lengthen the full
        web page every time cuz it doesn't do grids well, so add a max height
@@ -351,9 +355,7 @@ div.feed.popped-out {
     position: relative;
     padding-bottom: .0rem !important;
     display: flex !important;
-    align-items: anchor-center !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap;
 }
 .emoji-button {
     position: absolute;
