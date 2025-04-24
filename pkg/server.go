@@ -215,8 +215,8 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				// Usuario válido, ahora verificamos si es moderador
 				moderators := map[string]bool{
-					"killer":   true,
-					"cris":     true,
+					"Killer":   true,
+					"Cris":     true,
 					"Ricotera": true,
 					"Denisse":  true,
 				}
@@ -226,9 +226,10 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 					token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 						"username":  username,
 						"moderator": true,
-						"exp":       time.Now().Add(24 * time.Hour).Unix(),
+					
 					})
 					tokenString, err := token.SignedString([]byte(config.Current.JWT.SecretKey))
+
 					if err != nil {
 						http.Error(w, "Error al generar token", http.StatusInternalServerError)
 						return
