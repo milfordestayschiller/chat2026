@@ -190,7 +190,7 @@ func DefaultConfig() Config {
 		},
 		TURN: TurnConfig{
 			URLs: []string{
-				"stun:stun.l.google.com:19302",
+				"stun:stun.cloudflare.com:3478",
 			},
 		},
 		WebhookURLs: []WebhookURL{

@@ -22,7 +22,7 @@ PreviewImageWidth = 360
   LandingPageURL = "https://www.example.com/enter-chat"
 
 [TURN]
-  URLs = ["stun:stun.l.google.com:19302"]
+  URLs = ["stun:stun.cloudflare.com:3478"]
   Username = ""
   Credential = ""
 
