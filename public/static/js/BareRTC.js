@@ -1863,11 +1863,13 @@ const app = Vue.createApp({
                 // how to have better luck connecting their cameras.
                 if (this.isAppleWebkit()) {
                     this.ChatClient(
-                        `There was an error opening <strong>${user.username}</strong>'s camera.<br><br>` +
-                        "<strong>Advice:</strong> You appear to be on an iPad-style browser. Webcam sharing " +
-                        "may be limited and only work if:<br>A) You are sharing your own camera first, and<br>B) "+
-                        "The person you view has the setting to auto-open your camera in return.<br>Best of luck!",
+                        `Hubo un error al abrir la cámara de <strong>${user.username}</strong>.<br><br>` +
+                        "<strong>Consejo:</strong> Parece que estás usando un navegador tipo iPad. El uso compartido de la cámara " +
+                        "puede estar limitado y solo funcionar si:<br>A) Estás compartiendo tu propia cámara primero, y<br>B) " +
+                        "La persona que estás viendo tiene activada la opción de abrir automáticamente tu cámara en respuesta.<br>¡Buena suerte!",
                     );
+                
+                
                 } else {
                     this.ChatClient(
                         `There was an error opening <strong>${user.username}</strong>'s camera.`,

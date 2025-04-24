@@ -1258,23 +1258,24 @@ class WebRTCController {
             // Invite a user to watch your camera even if they normally couldn't see.
             inviteToWatch(username) {
                 this.modalConfirm({
-                    title: "Invite to watch my webcam",
+                    title: "Invitar a ver mi cámara web",
                     icon: "fa fa-video",
-                    message: `Do you want to invite @${username} to watch your camera?\n\n` +
-                        `This will give them permission to see your camera even if, normally, they would not be able to. ` +
-                        `For example, if you have the option enabled to "require my viewer to be on webcam too" and @${username} is not on camera, ` +
-                        `by inviting them to watch they will be allowed to see your camera anyway.\n\n` +
-                        `This permission will be granted for the remainder of your chat session, but you can boot them ` +
-                        `off your camera if you change your mind later.`,
-                    buttons: ['Invite to watch', 'Cancel'],
+                    message: `¿Quieres invitar a @${username} para ver tu cámara?\n\n` +
+                        `Esto les dará permiso para ver tu cámara incluso si, normalmente, no podrían hacerlo. ` +
+                        `Por ejemplo, si tienes activada la opción de "requerir que quien me vea también esté en cámara" y @${username} no está en cámara, ` +
+                        `al invitarlo a ver, se le permitirá ver tu cámara de todas formas.\n\n` +
+                        `Este permiso se otorgará por el resto de tu sesión de chat, pero puedes expulsarlo ` +
+                        `de tu cámara si cambias de opinión más adelante.`,
+                    buttons: ['Invitar a ver', 'Cancelar'],
                 }).then(() => {
                     this.sendInviteVideo(username);
-
-                    this.ChatClient(
-                        `You have granted <strong>@${username}</strong> permission to watch your webcam. This will be in effect for the remainder of your chat session. ` +
-                            "Note: if you change your mind later, you can boot them from your camera or block them from watching by using the button " +
-                            "in their profile card.",
-                    );
+                });
+                this.ChatClient(
+                    `Has otorgado permiso a <strong>@${username}</strong> para ver tu cámara web. Esto estará vigente durante el resto de tu sesión de chat. ` +
+                        "Nota: si cambias de opinión más adelante, puedes expulsarlo de tu cámara o bloquearlo para que no vea usando el botón " +
+                        "en su tarjeta de perfil.",
+                );
+                
                 });
             },
 

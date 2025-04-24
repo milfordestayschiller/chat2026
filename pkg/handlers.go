@@ -458,7 +458,7 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	other, err := s.GetSubscriber(msg.Username)
 	if err != nil {
 		sub.ChatServer(
-			"Could not open that video: %s appears to be offline.", msg.Username,
+			"No puedo abrir el video: %s appears to be offline.", msg.Username,
 		)
 		return
 	}
