@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
+"nhooyr.io/websocket"
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/jwt"
 	"git.kirsle.net/apps/barertc/pkg/log"
@@ -93,6 +93,13 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 	if !strings.HasPrefix(msg.Channel, "@") {
 		log.Info("[%s to #%s] %s", sub.Username, msg.Channel, msg.Message)
+	}
+	if strings.Contains(msg.Message, "elchatea") ||
+   strings.Contains(msg.Message, "el chatea") ||
+   strings.Contains(msg.Message, "corito") ||
+   strings.Contains(msg.Message, "alborada") {
+		sub.conn.Close(websocket.StatusPolicyViolation, "Mensaje no permitido")
+		return
 	}
 
 	if sub.Username == "" || !sub.authenticated {
