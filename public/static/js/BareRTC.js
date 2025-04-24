@@ -1846,7 +1846,7 @@ const app = Vue.createApp({
             // If this user requests mutual viewership...
             if (this.isVideoNotAllowed(user)) {
                 this.ChatClient(
-                    `<strong>${user.username}</strong> has requested that you should share your own camera too before opening theirs.`
+                    `<strong>${user.username}</strong> Debes compartir tu propia camara antes de ver la de otros.`
                 );
                 return;
             }

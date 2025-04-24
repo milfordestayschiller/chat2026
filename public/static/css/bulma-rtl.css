@@ -9846,7 +9846,7 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
 }
 
 .pb-1 {
-  padding-bottom: 0.25rem !important;
+  padding-bottom: .0rem !important;
 }
 
 .pl-1 {

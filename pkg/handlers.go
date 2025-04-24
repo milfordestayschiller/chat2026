@@ -466,7 +466,7 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	// Enforce whether the viewer has permission to see this camera.
 	if ok, reason := s.IsVideoNotAllowed(sub, other); !ok {
 		sub.ChatServer(
-			"Could not open that video: %s", reason,
+			"video: %s", reason,
 		)
 		return
 	}
@@ -522,7 +522,7 @@ func (s *Server) IsVideoNotAllowed(sub *Subscriber, other *Subscriber) (bool, st
 		},
 		{
 			If:    !theyInvitedUs && (theirMutualRequired && !ourVideoActive),
-			Error: fmt.Sprintf("%s has requested that you should share your own camera too before opening theirs.", other.Username),
+			Error: fmt.Sprintf("%s Debes compartir tu propia camara antes de ver la de otros.`.", other.Username),
 		},
 		{
 			If:    !theyInvitedUs && (theirVIPRequired && !sub.IsVIP() && !sub.IsAdmin()),

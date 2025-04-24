@@ -348,6 +348,12 @@ div.feed.popped-out {
 /* Emoji reaction button support */
 .position-relative {
     position: relative;
+    position: relative;
+    padding-bottom: .0rem !important;
+    display: flex !important;
+    align-items: anchor-center !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
 }
 .emoji-button {
     position: absolute;
