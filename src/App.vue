@@ -3018,11 +3018,11 @@ sendSelectedVideo() {
                                 Server Connection Method
                             </label>
                             <label class="checkbox">
-                                <input type="radio" v-model="prefs.usePolling" :value="false">
+                                <input type="radio" v-model="prefs.usePolling" :value="true">
                                 WebSockets (realtime connection; recommended for most people)
                             </label>
                             <label class="checkbox">
-                                <input type="radio" v-model="prefs.usePolling" :value="true">
+                                <input type="radio" v-model="prefs.usePolling" :value="false">
                                 Polling (check for new messages every 5 seconds)
                             </label>
                             <p class="help">
