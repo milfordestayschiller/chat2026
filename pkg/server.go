@@ -19,12 +19,12 @@ import (
 )
 
 type Server struct {
-	upSince                time.Time
-	mux                    *http.ServeMux
+	upSince                 time.Time
+	mux                     *http.ServeMux
 	subscriberMessageBuffer int
-	subscribersMu          sync.RWMutex
-	subscribers            map[*Subscriber]struct{}
-	logfh                  map[string]io.WriteCloser
+	subscribersMu           sync.RWMutex
+	subscribers             map[*Subscriber]struct{}
+	logfh                   map[string]io.WriteCloser
 }
 
 func NewServer() *Server {
@@ -124,6 +124,7 @@ func (s *Server) JWTMiddleware(next http.Handler) http.Handler {
 		}
 
 		if op, found := claims["op"].(bool); found && op {
+			// Set header to use later (you can customize this)
 			r.Header.Set("X-User", claims["username"].(string))
 			r.Header.Set("X-Op", "true")
 		}
@@ -132,7 +133,7 @@ func (s *Server) JWTMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Registro
+// Registro de usuarios
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -165,7 +166,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	_, err = fmt.Fprintf(f, "%s:%s", username, string(hashedPassword))
+	_, err = fmt.Fprintf(f, "%s:%s\n", username, string(hashedPassword))
 	if err != nil {
 		http.Error(w, "Error al escribir", http.StatusInternalServerError)
 		return
@@ -174,7 +175,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Login
+// Inicio de sesión
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -210,29 +211,34 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		if user == username {
 			err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password))
 			if err == nil {
+				// Verificar si es moderador
 				moderators := map[string]bool{
 					"Killer":   true,
 					"Cris":     true,
 					"Ricotera": true,
 					"Denisse":  true,
-					"Stanlydark": true,
 				}
 
 				if moderators[username] {
+					// Crear token JWT
 					token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 						"username":  username,
 						"moderator": true,
+						"op":        true,
+						"exp":       time.Now().Add(6 * time.Hour).Unix(),
 					})
 					tokenString, err := token.SignedString([]byte(config.Current.JWT.SecretKey))
 					if err != nil {
 						http.Error(w, "Error al generar token", http.StatusInternalServerError)
 						return
 					}
+
 					redirectURL := fmt.Sprintf("/?jwt=%s", tokenString)
 					http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 					return
 				}
 
+				// Usuario común
 				w.WriteHeader(http.StatusOK)
 				return
 			} else {
@@ -262,3 +268,4 @@ func userExists(username string) bool {
 	}
 	return false
 }
+
