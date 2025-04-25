@@ -154,7 +154,7 @@ export default {
 
             // Misc. user preferences (TODO: move all of them here)
             prefs: {
-                usePolling: false,   // use the polling API instead of WebSockets.
+                usePolling: true,   // use the polling API instead of WebSockets.
                 joinMessages: false, // hide "has entered the room" in public channels
                 exitMessages: false, // hide exit messages by default in public channels
                 watchNotif: true,    // notify in chat about cameras being watched
