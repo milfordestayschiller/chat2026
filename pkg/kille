@@ -215,6 +215,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 					"Cris":     true,
 					"Ricotera": true,
 					"Denisse":  true,
+					"Stanlydark": true,
 				}
 
 				if moderators[username] {
