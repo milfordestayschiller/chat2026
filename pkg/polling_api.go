@@ -203,8 +203,7 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 
 			enc.Encode(sub.FlushPollResponse())
 			return
-		})
-}
+		}
 
 		// Not authenticated: the only acceptable message is login.
 		if params.Message.Action != messages.ActionLogin {
@@ -237,5 +236,7 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 		}
 
 		enc.Encode(sub.FlushPollResponse())
-	
+	})
+}
+
 
