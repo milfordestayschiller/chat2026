@@ -3767,7 +3767,7 @@ sendSelectedVideo() {
 </div>
 
 
-<              </div>
+            </div>
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button" :disabled="message.length === 0"
                                 title="Click to send your message" @click="sendMessage()">
