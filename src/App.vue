@@ -3753,7 +3753,7 @@ sendSelectedVideo() {
                                 <button type="button" class="button" aria-haspopup="true" aria-controls="input-emoji-picker"
                                     @click="hideEmojiPicker()">
                                     <span>
-                                        <i class="fa-regular fa-smile"></i>
+                                       
                                     </span>
                                 </button>
                             </div>
@@ -3774,7 +3774,7 @@ sendSelectedVideo() {
 
 <div class="column px-1 is-narrow" @click="showColorPalette = !showColorPalette">
   <button type="button" class="button">
-    <span><i class="fas fa-palette"></i></span>
+    
   </button>
 </div>
                         </div>
