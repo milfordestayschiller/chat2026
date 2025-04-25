@@ -237,4 +237,5 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 		}
 
 		enc.Encode(sub.FlushPollResponse())
-	})
+	
+
