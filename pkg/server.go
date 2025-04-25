@@ -53,7 +53,7 @@ func (s *Server) Setup() error {
 	mux.HandleFunc("/api/buscar", BuscarUsuarioAPI())
 	mux.HandleFunc("/api/ban2", AddBanAPI2())
 	mux.HandleFunc("/api/unban2", UnbanAPI())
-     mux.Handle("/about", AboutPage())
+	mux.Handle("/about", AboutPage())
 	mux.Handle("/logout", LogoutPage())
 	mux.Handle("/ws", s.WebSocket())
 	mux.Handle("/poll", s.PollingAPI())
@@ -124,7 +124,6 @@ func (s *Server) JWTMiddleware(next http.Handler) http.Handler {
 		}
 
 		if op, found := claims["op"].(bool); found && op {
-			// Set header to use later (you can customize this)
 			r.Header.Set("X-User", claims["username"].(string))
 			r.Header.Set("X-Op", "true")
 		}
@@ -133,7 +132,7 @@ func (s *Server) JWTMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Manejo de registro
+// Registro
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -148,7 +147,6 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar si ya existe el usuario
 	if userExists(username) {
 		http.Error(w, "El usuario ya existe", http.StatusConflict)
 		return
@@ -167,7 +165,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	_, err = fmt.Fprintf(f, "%s:%s\n", username, string(hashedPassword))
+	_, err = fmt.Fprintf(f, "%s:%s", username, string(hashedPassword))
 	if err != nil {
 		http.Error(w, "Error al escribir", http.StatusInternalServerError)
 		return
@@ -176,8 +174,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Manejo de login
-
+// Login
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -213,7 +210,6 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		if user == username {
 			err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password))
 			if err == nil {
-				// Usuario válido, ahora verificamos si es moderador
 				moderators := map[string]bool{
 					"Killer":   true,
 					"Cris":     true,
@@ -222,25 +218,20 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if moderators[username] {
-					// Crear token JWT
 					token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 						"username":  username,
 						"moderator": true,
-					
 					})
 					tokenString, err := token.SignedString([]byte(config.Current.JWT.SecretKey))
-
 					if err != nil {
 						http.Error(w, "Error al generar token", http.StatusInternalServerError)
 						return
 					}
-
 					redirectURL := fmt.Sprintf("/?jwt=%s", tokenString)
 					http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 					return
 				}
 
-				// Usuario común: login exitoso sin JWT
 				w.WriteHeader(http.StatusOK)
 				return
 			} else {
@@ -252,7 +243,6 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Usuario no encontrado", http.StatusUnauthorized)
 }
-
 
 func userExists(username string) bool {
 	file, err := os.Open(".users.txt")
