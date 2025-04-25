@@ -27,6 +27,12 @@ const DebugChannelID = "barertc-debug";
 const ReactNudgeNsfwMessageID = -451;
 
 export default {
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside);
+  },
     name: 'BareRTC',
     components: {
         // Third party components
@@ -48,13 +54,18 @@ export default {
         WebRTC.getMixin(),
     ],
     data() {
-        return {
+    return {
+      selectedColor: "",
+      showColorPalette: false,
+      basicColors: ["black", "red", "green", "blue", "orange", "purple", "pink", "brown"] ,
             // busy: false, // TODO: not used
             pageTitle: document.title,
             disconnect: false,    // don't try to reconnect (e.g. kicked)
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
-
+            showYouTubeModal: false,
+    youtubeQuery: '',
+    youtubeResults: [],
             // Disconnect spamming: don't retry too many times.
             disconnectLimit: 2,
             disconnectCount: 0,
@@ -679,6 +690,107 @@ export default {
         },
     },
     methods: {
+    toggleEmojiPicker() {
+      this.showEmojiPicker = !this.showEmojiPicker;
+      if (this.showEmojiPicker) this.showYouTubeModal = false;
+    },
+    toggleYouTubeModal() {
+      this.showYouTubeModal = !this.showYouTubeModal;
+      if (this.showYouTubeModal) this.showEmojiPicker = true;
+    },
+    handleClickOutside(event) {
+      const emojiEl = this.$refs.emojiPicker;
+      const emojiBtn = this.$refs.emojiButton;
+      const ytEl = this.$refs.youtubeModal;
+      const ytBtn = this.$refs.youtubeButton;
+
+      if (
+        this.showEmojiPicker &&
+        emojiEl &&
+        !emojiEl.contains(event.target) &&
+        !emojiBtn.contains(event.target)
+      ) {
+        this.showEmojiPicker = false;
+      }
+
+      if (
+        this.showYouTubeModal &&
+        ytEl &&
+        !ytEl.contains(event.target) &&
+        !ytBtn.contains(event.target)
+      ) {
+        this.showYouTubeModal = false;
+      }
+    },
+
+makeEmbedsDraggable() {
+  const el = document.querySelector('.youtube-embed-draggable');
+  if (!el) return;
+
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+  el.onmousedown = dragMouseDown;
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    el.style.top = (el.offsetTop - pos2) + "px";
+    el.style.left = (el.offsetLeft - pos1) + "px";
+  }
+
+  function closeDragElement() {
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+},
+
+
+selectColor(color) {
+  this.selectedColor = color;
+  this.showColorPalette = false;
+  this.message = `*Cambió su color de texto a ${color}*`;
+  this.sendMessage();
+},
+
+    
+    
+
+
+
+sendSelectedVideo() {
+  if (this.selectedVideo) {
+    const url = `https://www.youtube.com/watch?v=${this.selectedVideo.id.videoId}`;
+    const title = this.selectedVideo.snippet.title;
+    const message = `[YouTube] ${title}: ${url}`;
+    console.log("Enviando video:", message);
+    this.message = message;
+    this.sendMessage(); // Usa la función ya funcional
+    this.showYouTubeModal = false;
+    this.selectedVideo = null;
+  } else {
+    alert("Selecciona un video para enviar.");
+  }
+},
+
+
+
+
+    
+    
+    
+    
         // Load user prefs from localStorage, called on startup
         setupConfig() {
             const settings = LocalStorage.getSettings();
@@ -769,6 +881,20 @@ export default {
             }
         },
 
+        async searchYouTube() {
+    const apiKey = 'AIzaSyCPv5W9NuytrREYQZXm-cT4DYfonQk00ps';
+    const query = encodeURIComponent(this.youtubeQuery);
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${apiKey}&maxResults=5`;
+    const res = await fetch(url);
+    const data = await res.json();
+    this.youtubeResults = data.items || [];
+  },
+  sendYouTubeLink(video) {
+    const videoUrl = `https://www.youtube.com/watch?v=${video.id.videoId}`;
+    this.sendMessage(videoUrl); // Usa tu método ya existente de enviar mensaje
+    this.showYouTubeModal = false;
+  },
+
         signIn(username) {
             this.username = username;
             this.loginModal.visible = false;
@@ -808,6 +934,9 @@ export default {
             this.message = origMsg;
         },
         sendMessage() {
+  if (this.selectedColor && this.message.trim() && !this.message.startsWith("*Cambió su color de texto a")) {
+    this.message = `<span style=\\"color: ${this.selectedColor}\\">${this.message}</span>`;
+  }
             if (!this.message) {
                 return;
             }
@@ -3453,6 +3582,43 @@ export default {
                             Auto-scroll
                         </label>
                     </div>
+<!-- Botón de YouTube -->
+<div class="youtube-search-field tag">
+  <button class="button is-danger is-small" @click="showYouTubeModal = true">
+    🎥 Buscar en YouTube
+  </button>
+</div>
+<!-- Modal de búsqueda de YouTube -->
+<div class="modal" :class="{ 'is-active': showYouTubeModal }">
+  <div class="modal-background" @click="showYouTubeModal = false"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Buscar video en YouTube</p>
+      <button class="delete" aria-label="close" @click="showYouTubeModal = false"></button>
+    </header>
+    <section class="modal-card-body">
+      <div class="field">
+        <div class="control">
+          <input class="input" type="text" placeholder="Buscar..." v-model="youtubeQuery" @keyup.enter="searchYouTube">
+        </div>
+      </div>
+      <div v-if="youtubeResults.length">
+        <ul>
+          <li v-for="video in youtubeResults" :key="video.id.videoId"><label><input type="radio" name="selectedVideo" :value="video" v-model="selectedVideo" /> {{ video.snippet.title }}</label></li>
+        </ul>
+      </div>
+      <div v-else-if="youtubeQuery">
+        <p>No se encontraron resultados.</p>
+      </div>
+    </section>
+    <footer class="modal-card-foot">
+  <button class="button is-success" @click="sendSelectedVideo">ENVIAR VIDEO</button>
+  <button class="button" @click="showYouTubeModal = false">Cerrar</button>
+</footer>
+  </div>
+</div>
+
+
 
                     <div :class="fontSizeClass">
 
@@ -3550,9 +3716,17 @@ export default {
                                 <Mentionable :keys="['@']" :items="atMentionItems" offset="12" insert-space>
 
                                     <!-- My text box -->
-                                    <input type="text" class="input" id="messageBox" v-model="message"
+                                    <input type="text" class="input" id="messageBox" v-model="message" :style="{ color: selectedColor }"
                                         :placeholder="status === 'hidden' ? 'Your status is hidden, be careful not to break the illusion' : 'Write a message'" @keydown="sendTypingNotification()" autocomplete="off"
                                         :disabled="!client.connected || (status === 'hidden' && !isDM)">
+
+<div v-if="showColorPalette" class="color-palette" style="position: absolute; background: white; border: 1px solid #ccc; padding: 8px; display: flex; gap: 5px; flex-wrap: wrap; z-index: 100;">
+  <div v-for="color in basicColors" :key="color"
+       :style="{ backgroundColor: color, width: '20px', height: '20px', cursor: 'pointer', border: selectedColor === color ? '2px solid black' : '1px solid #ccc' }"
+       @click="selectColor(color)">
+  </div>
+</div>
+
 
                                     <!-- At Mention templates-->
                                     <template #no-result>
@@ -3573,7 +3747,7 @@ export default {
                             </form>
                         </div>
                         <div class="column px-1 is-narrow dropdown is-right is-up" :class="{ 'is-active': showEmojiPicker }"
-                            @click="showEmojiPicker = true">
+                            @click="showEmojiPicker = false">
                             <!-- Emoji picker for messages -->
                             <div class="dropdown-trigger">
                                 <button type="button" class="button" aria-haspopup="true" aria-controls="input-emoji-picker"
@@ -3587,11 +3761,22 @@ export default {
                                 <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
                                     label on the chat history panel -->
                                 <div class="dropdown-content p-0">
-                                    <EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
-                                        :theme="prefs.theme !== 'auto' ? prefs.theme : 'auto'" @select="onSelectEmoji">
-                                    </EmojiPicker>
+                                    <div ref="emojiPicker"><EmojiPicker :native="true" :display-recent="true" :disable-skin-tones="true"
+                                        :theme="prefs.theme !== 'auto' ? prefs.theme : 'auto'" @select="onSelectEmoji"></EmojiPicker></div>
                                 </div>
                             </div>
+<div class="column px-1 is-narrow">
+  <button type="button" class="button" @click="showYouTubeModal = true">
+    <span><i class="fab fa-youtube"></i></span>
+  </button>
+</div>
+
+
+<div class="column px-1 is-narrow" @click="showColorPalette = !showColorPalette">
+  <button type="button" class="button">
+    <span><i class="fas fa-palette"></i></span>
+  </button>
+</div>
                         </div>
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button" :disabled="message.length === 0"
