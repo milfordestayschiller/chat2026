@@ -327,7 +327,8 @@ div.feed.popped-out {
 
 /* YouTube embeds */
 .youtube-embed {
-    max-width: 100%;
+    max-width: 50%;
+    height: 50%;
 }
 
 /* The Away icon that overlays profile pics */
