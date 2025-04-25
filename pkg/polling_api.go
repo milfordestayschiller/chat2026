@@ -39,13 +39,13 @@ func PollResponseError(message string) PollResponse {
 }
 
 func (s *Server) KickIdlePollUsers() {
-	log.Debug("KickIdlePollUsers goroutine engaged")
+	log.Debug("KickIdlePollUsers goroutine running")
 	for {
 		time.Sleep(10 * time.Second)
 		for _, sub := range s.IterSubscribers() {
 			if sub.usePolling && time.Since(sub.lastPollAt) > PollingUserTimeout {
 				if sub.authenticated && sub.ChatStatus != "hidden" {
-					log.Error("KickIdlePollUsers: %s last seen %s ago", sub.Username, sub.lastPollAt)
+					log.Error("KickIdlePollUsers: %s timed out after %s", sub.Username, time.Since(sub.lastPollAt))
 
 					sub.authenticated = false
 					s.Broadcast(messages.Message{
@@ -63,12 +63,15 @@ func (s *Server) KickIdlePollUsers() {
 
 func (sub *Subscriber) FlushPollResponse() PollResponse {
 	var msgs []messages.Message
+
 	for len(sub.messages) > 0 {
-		message := <-sub.messages
+		raw := <-sub.messages
 		var msg messages.Message
-		json.Unmarshal(message, &msg)
-		msgs = append(msgs, msg)
+		if err := json.Unmarshal(raw, &msg); err == nil {
+			msgs = append(msgs, msg)
+		}
 	}
+
 	return PollResponse{
 		Username:  sub.Username,
 		SessionID: sub.sessionID,
@@ -79,6 +82,7 @@ func (sub *Subscriber) FlushPollResponse() PollResponse {
 func (s *Server) PollingAPI() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ip := util.IPAddress(r)
+
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
@@ -87,73 +91,70 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			enc.Encode(PollResponseError("Only POST methods allowed"))
 			return
-		} else if r.Header.Get("Content-Type") != "application/json" {
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
 			w.WriteHeader(http.StatusBadRequest)
 			enc.Encode(PollResponseError("Only application/json content-types allowed"))
 			return
 		}
 
 		defer r.Body.Close()
-
 		var params PollMessage
-		dec := json.NewDecoder(r.Body)
-		if err := dec.Decode(&params); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			enc.Encode(PollResponseError(err.Error()))
+			enc.Encode(PollResponseError("Invalid JSON: "+err.Error()))
 			return
 		}
 
-		log.Debug("Polling connection from %s - %s", ip, r.Header.Get("User-Agent"))
+		log.Debug("Polling from %s [%s]", ip, r.Header.Get("User-Agent"))
 
 		var sub *Subscriber
-		if params.Username != "" || params.SessionID != "" {
-			if params.Username == "" || params.SessionID == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				enc.Encode(PollResponseError("Authentication error: SessionID and Username both required."))
-				return
-			}
-
-			log.Debug("Polling API: check if %s (%s) is authenticated", params.Username, params.SessionID)
-			var authOK bool
+		if params.Username != "" && params.SessionID != "" {
 			var err error
 			sub, err = s.GetSubscriber(params.Username)
 			if err == nil && sub.sessionID == params.SessionID {
-				authOK = true
-			}
-
-			if !authOK {
-				s.DeleteSubscriber(sub)
-				w.WriteHeader(http.StatusBadRequest)
+				sub.lastPollAt = time.Now()
+			} else {
+				if sub != nil {
+					s.DeleteSubscriber(sub)
+				}
+				w.WriteHeader(http.StatusUnauthorized)
 				enc.Encode(PollResponse{
 					Messages: []messages.Message{
-						{ Action: messages.ActionError, Username: "ChatServer", Message: "Your authentication has expired, please log back into the chat again." },
-						{ Action: messages.ActionKick },
+						{
+							Action:   messages.ActionError,
+							Username: "ChatServer",
+							Message:  "Your authentication has expired, please log back into the chat again.",
+						},
+						{Action: messages.ActionKick},
 					},
 				})
 				return
 			}
-
-			sub.lastPollAt = time.Now()
 		}
 
 		if sub != nil && sub.authenticated {
 			s.OnClientMessage(sub, params.Message)
+
 			if time.Since(sub.lastPollJWT) > PingInterval {
 				sub.lastPollJWT = time.Now()
+
 				if sub.JWTClaims != nil {
-					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
-						log.Error("ReSign JWT token for %s#%d: %s", sub.Username, sub.ID, err)
-					} else {
-						sub.SendJSON(messages.Message{ Action: messages.ActionPing, JWTToken: jwt })
+					if jwt, err := sub.JWTClaims.ReSign(); err == nil {
+						sub.SendJSON(messages.Message{
+							Action:   messages.ActionPing,
+							JWTToken: jwt,
+						})
 					}
 				}
 			}
+
 			enc.Encode(sub.FlushPollResponse())
 			return
 		}
 
 		if params.Message.Action != messages.ActionLogin {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnauthorized)
 			enc.Encode(PollResponseError("Not logged in."))
 			return
 		}
@@ -161,11 +162,12 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 		ctx, cancel := context.WithCancel(r.Context())
 		sub = s.NewPollingSubscriber(ctx, cancel)
 		s.AddSubscriber(sub)
+
 		s.OnLogin(sub, params.Message)
 
 		if sub.authenticated {
 			sub.sessionID = uuid.New().String()
-			log.Debug("Polling API: new user authenticated in: %s (sid %s)", sub.Username, sub.sessionID)
+			log.Debug("Polling login: %s [%s]", sub.Username, sub.sessionID)
 		} else {
 			s.DeleteSubscriber(sub)
 		}
