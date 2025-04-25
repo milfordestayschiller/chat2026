@@ -3750,12 +3750,7 @@ sendSelectedVideo() {
                             @click="showEmojiPicker = false">
                             <!-- Emoji picker for messages -->
                             <div class="dropdown-trigger">
-                                <button type="button" class="button" aria-haspopup="true" aria-controls="input-emoji-picker"
-                                    @click="hideEmojiPicker()">
-                                    <span>
-                                       
-                                    </span>
-                                </button>
+                                
                             </div>
                             <div class="dropdown-menu" id="input-emoji-picker" role="menu" style="z-index: 9000">
                                 <!-- Note: z-index so the popup isn't covered by the "Auto-scroll"
@@ -3772,12 +3767,7 @@ sendSelectedVideo() {
 </div>
 
 
-<div class="column px-1 is-narrow" @click="showColorPalette = !showColorPalette">
-  <button type="button" class="button">
-    
-  </button>
-</div>
-                        </div>
+<              </div>
                         <div class="column pl-1 is-narrow">
                             <button type="button" class="button" :disabled="message.length === 0"
                                 title="Click to send your message" @click="sendMessage()">
